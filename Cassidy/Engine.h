@@ -18,17 +18,11 @@ namespace cassidy
   private:
     void initInstance();
     void initSurface();
-    void initDevice();
 
     VkInstance m_instance;
 
     SDL_Window* m_window;
     VkSurfaceKHR m_surface;
-
-    VkPhysicalDevice m_physicalDevice;
-    VkDevice m_device;
-    VkQueue m_graphicsQueue;
-    VkQueue m_presentQueue;
 
     cassidy::Renderer m_renderer;
 
@@ -45,12 +39,10 @@ namespace cassidy
       return VK_FALSE;
     }
 
-    const std::vector<const char*> VALIDATION_LAYERS = {
-      "VK_LAYER_KHRONOS_validation",
-    };
-
-    const std::vector<const char*> DEVICE_EXTENSIONS = {
-      VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    };
+  public:
+    // Getters and setters: --------------------------------------------------------------------------------------
+    inline SDL_Window* GetWindow()    { return m_window; }
+    inline VkInstance GetInstance()   { return m_instance; }
+    inline VkSurfaceKHR GetSurface()  { return m_surface; }
   };
 }

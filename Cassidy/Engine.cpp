@@ -14,9 +14,8 @@ void cassidy::Engine::init()
 
   initInstance();
   initSurface();
-  initDevice();
 
-  m_renderer.init();
+  m_renderer.init(this);
   std::cout << "Initialised engine!\n" << std::endl;
 }
 
@@ -89,8 +88,10 @@ void cassidy::Engine::initInstance()
       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT),
     debugCallback);
 
+  const auto& validationLayers = cassidy::Renderer::VALIDATION_LAYERS;
+
   VkInstanceCreateInfo instanceCreateInfo = cassidy::init::instanceCreateInfo(&appInfo, numRequiredExtensions,
-    extensionNames, VALIDATION_LAYERS.size(), VALIDATION_LAYERS.data(), &debugMessengerInfo);
+    extensionNames, validationLayers.size(), validationLayers.data(), &debugMessengerInfo);
 
   const VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_instance);
   delete[] extensionNames;
@@ -106,7 +107,6 @@ void cassidy::Engine::initInstance()
   m_deletionQueue.addFunction([=]() {
     vkDestroyInstance(m_instance, nullptr);
   });
-
 }
 
 void cassidy::Engine::initSurface()
@@ -115,43 +115,5 @@ void cassidy::Engine::initSurface()
 
   m_deletionQueue.addFunction([=]() {
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-  });
-}
-
-void cassidy::Engine::initDevice()
-{
-  m_physicalDevice = cassidy::helper::pickPhysicalDevice(m_instance);
-  if (m_physicalDevice == VK_NULL_HANDLE)
-  {
-    std::cout << "ERROR: Failed to find physical device!\n" << std::endl;
-    return;
-  }
-
-  QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_surface);
-
-  std::vector<VkDeviceQueueCreateInfo> queueInfos;
-  std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
-
-  float queuePriority = 1.0f;
-  for (uint32_t queueFamily : uniqueQueueFamilies)
-  {
-    VkDeviceQueueCreateInfo queueInfo = cassidy::init::deviceQueueCreateInfo(queueFamily, 1, &queuePriority);
-    queueInfos.push_back(queueInfo);
-  }
-
-  VkPhysicalDeviceFeatures deviceFeatures = {};
-  deviceFeatures.samplerAnisotropy = VK_TRUE;
-
-  VkDeviceCreateInfo deviceInfo = cassidy::init::deviceCreateInfo(queueInfos.data(), queueInfos.size(),
-    &deviceFeatures, DEVICE_EXTENSIONS.size(), DEVICE_EXTENSIONS.data(), VALIDATION_LAYERS.size(),
-    VALIDATION_LAYERS.data());
-
-  vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device);
-
-  vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
-  vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &m_presentQueue);
-
-  m_deletionQueue.addFunction([=]() {
-    vkDestroyDevice(m_device, nullptr);
   });
 }

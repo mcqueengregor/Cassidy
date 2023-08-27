@@ -88,3 +88,61 @@ VkDeviceCreateInfo cassidy::init::deviceCreateInfo(const VkDeviceQueueCreateInfo
 
   return info;
 }
+
+VkSwapchainCreateInfoKHR cassidy::init::swapchainCreateInfo(SwapchainSupportDetails details, QueueFamilyIndices indices,
+  VkSurfaceKHR surface, VkSurfaceFormatKHR surfaceFormat, VkPresentModeKHR presentMode, VkExtent2D extent,
+  VkImageUsageFlags usageFlags)
+{
+  VkSwapchainCreateInfoKHR info = {};
+  info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  info.surface = surface;
+
+  // Hold one more image than necessary, so the renderer can write to another image while the driver is busy:
+  uint32_t imageCount = details.capabilities.minImageCount + 1;
+
+  if (details.capabilities.maxImageCount > 0 && imageCount > details.capabilities.maxImageCount)
+    imageCount = details.capabilities.maxImageCount;
+
+  info.minImageCount = imageCount;
+  info.imageFormat = surfaceFormat.format;
+  info.imageColorSpace = surfaceFormat.colorSpace;
+  info.imageExtent = extent;
+  info.imageArrayLayers = 1;
+  info.imageUsage = usageFlags;
+
+  info.preTransform = details.capabilities.currentTransform;
+  info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  info.presentMode = presentMode;
+  info.clipped = VK_TRUE;
+
+  info.oldSwapchain = VK_NULL_HANDLE;
+
+  if (indices.graphicsFamily != indices.presentFamily)
+  {
+    const uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+    info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    info.queueFamilyIndexCount = 2;
+    info.pQueueFamilyIndices = queueFamilyIndices;
+  }
+  else
+    info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  return info;
+}
+
+VkImageViewCreateInfo cassidy::init::imageViewCreateInfo(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint8_t mipLevels)
+{
+  VkImageViewCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  info.image = image;
+  info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  info.format = format;
+  info.subresourceRange.aspectMask = aspectFlags;
+  info.subresourceRange.baseMipLevel = 0;
+  info.subresourceRange.levelCount = mipLevels;
+  info.subresourceRange.baseArrayLayer = 0;
+  info.subresourceRange.layerCount = 1;
+
+  return info;
+}

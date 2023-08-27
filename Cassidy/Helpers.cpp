@@ -1,6 +1,10 @@
 #include "Helpers.h"
+#include <SDL.h>
+#include <SDL_vulkan.h>
+
 #include <map>
 #include <vector>
+#include <algorithm>
 #include <iostream>
 
 // Assign a score to a physical device given its capabilities:
@@ -67,7 +71,7 @@ VkPhysicalDevice cassidy::helper::pickPhysicalDevice(VkInstance instance)
   }
 }
 
-// 
+// Find queue families that exist on the given physical device:
 QueueFamilyIndices cassidy::helper::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
   QueueFamilyIndices indices;
@@ -94,5 +98,75 @@ QueueFamilyIndices cassidy::helper::findQueueFamilies(VkPhysicalDevice device, V
   }
 
   return indices;
+}
+
+SwapchainSupportDetails cassidy::helper::querySwapchainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
+{
+  SwapchainSupportDetails details;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+  uint32_t formatCount;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+  if (formatCount > 0)
+  {
+    details.formats.resize(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+  }
+
+  uint32_t presentModeCount;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+  
+  if (presentModeCount > 0)
+  {
+    details.presentModes.resize(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+  }
+
+  return details;
+}
+
+bool cassidy::helper::isSwapchainPresentModeSupported(uint32_t numAvailableModes, VkPresentModeKHR* availableModes, VkPresentModeKHR desiredMode)
+{
+  for (uint32_t i = 0; i < numAvailableModes; ++i)
+  {
+    if (availableModes[i] == desiredMode)
+      return true;
+  }
+  return false;
+}
+
+bool cassidy::helper::isSwapchainSurfaceFormatSupported(uint32_t numAvailableFormats, VkSurfaceFormatKHR* availableFormats, VkSurfaceFormatKHR desiredFormat)
+{
+  for (uint32_t i = 0; i < numAvailableFormats; ++i)
+  {
+    if (availableFormats[i].format == desiredFormat.format && availableFormats[i].colorSpace == desiredFormat.colorSpace)
+      return true;
+  }
+  return false;
+}
+
+VkExtent2D cassidy::helper::chooseSwapchainExtent(SDL_Window* window, VkSurfaceCapabilitiesKHR capabilities)
+{
+  // Account for window managers that set width and height to the max value of uint32_t (~4 billion):
+  if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+    return capabilities.currentExtent;
+
+  int width;
+  int height;
+
+  SDL_Vulkan_GetDrawableSize(window, &width, &height);
+
+  VkExtent2D actualExtent = {
+    static_cast<uint32_t>(width),
+    static_cast<uint32_t>(height)
+  };
+
+  actualExtent.width = std::clamp(actualExtent.width, 
+    capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+  actualExtent.height = std::clamp(actualExtent.height,
+    capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+  return actualExtent;
 }
 
