@@ -1,6 +1,6 @@
 #pragma once
-#include "Renderer.h"
-#include "Types.h"
+#include "Core/Renderer.h"
+#include "Utils/Types.h"
 
 #include <vulkan/vulkan.h>
 #include <iostream>

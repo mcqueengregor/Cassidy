@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "Types.h"
+#include "Utils/Types.h"
 
 // Forward declarations:
 class SDL_Window;

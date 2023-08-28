@@ -1,4 +1,4 @@
-#include "Utils/Initialisers.h"
+#include "Initialisers.h"
 
 VkApplicationInfo cassidy::init::applicationInfo(const char* appName, uint8_t engineVersionVariant, uint8_t engineVersionMaj,
   uint8_t engineVersionMin, uint8_t engineVersionPatch, uint32_t apiVersion)

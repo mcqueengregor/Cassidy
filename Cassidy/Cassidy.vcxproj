@@ -116,7 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.261.0\Include;C:\Pegs Stuff\Libraries\Libs&amp;Includes\Include;C:\Pegs Stuff\Libraries\SDL2-2.24.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.261.0\Include;C:\Pegs Stuff\Libraries\Libs&amp;Includes\Include;C:\Pegs Stuff\Libraries\SDL2-2.24.2\include;$(SolutionDir)\Cassidy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -134,7 +134,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.261.0\Include;C:\Pegs Stuff\Libraries\Libs&amp;Includes\Include;C:\Pegs Stuff\Libraries\SDL2-2.24.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.261.0\Include;C:\Pegs Stuff\Libraries\Libs&amp;Includes\Include;C:\Pegs Stuff\Libraries\SDL2-2.24.2\include;$(SolutionDir)\Cassidy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -147,18 +147,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Engine.cpp" />
-    <ClCompile Include="Helpers.cpp" />
-    <ClCompile Include="Initialisers.cpp" />
+    <ClCompile Include="Core\Engine.cpp" />
+    <ClCompile Include="Core\Renderer.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Utils\Helpers.cpp" />
+    <ClCompile Include="Utils\Initialisers.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine.h" />
-    <ClInclude Include="Helpers.h" />
-    <ClInclude Include="Initialisers.h" />
-    <ClInclude Include="Renderer.h" />
-    <ClInclude Include="Types.h" />
+    <ClInclude Include="Core\Engine.h" />
+    <ClInclude Include="Core\Renderer.h" />
+    <ClInclude Include="Utils\Helpers.h" />
+    <ClInclude Include="Utils\Initialisers.h" />
+    <ClInclude Include="Utils\Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

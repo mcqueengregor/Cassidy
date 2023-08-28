@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include "Types.h"
+#include "Utils/Types.h"
 
 namespace cassidy::init
 {

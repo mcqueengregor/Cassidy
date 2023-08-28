@@ -1,7 +1,7 @@
 #include "Renderer.h"
-#include "Engine.h"
-#include "Helpers.h"
-#include "Initialisers.h"
+#include "Core/Engine.h"
+#include "Utils/Helpers.h"
+#include "Utils/Initialisers.h"
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
