@@ -6,11 +6,6 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-
 #include <set>
 #include <iostream>
 
@@ -35,14 +30,14 @@ void cassidy::Renderer::release()
 
 void cassidy::Renderer::initLogicalDevice()
 {
-  m_physicalDevice = cassidy::helper::pickPhysicalDevice(m_engineRef->GetInstance());
+  m_physicalDevice = cassidy::helper::pickPhysicalDevice(m_engineRef->getInstance());
   if (m_physicalDevice == VK_NULL_HANDLE)
   {
     std::cout << "ERROR: Failed to find physical device!\n" << std::endl;
     return;
   }
 
-  QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->GetSurface());
+  QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
 
   std::vector<VkDeviceQueueCreateInfo> queueInfos;
   std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -75,22 +70,22 @@ void cassidy::Renderer::initLogicalDevice()
 
 void cassidy::Renderer::initSwapchain()
 {
-  SwapchainSupportDetails details = cassidy::helper::querySwapchainSupport(m_physicalDevice, m_engineRef->GetSurface());
+  SwapchainSupportDetails details = cassidy::helper::querySwapchainSupport(m_physicalDevice, m_engineRef->getSurface());
 
   // If desired format isn't available on the chosen physical device, default to the first available format:
   const VkSurfaceFormatKHR desiredFormat = { VK_FORMAT_B8G8R8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-  VkSurfaceFormatKHR surfaceFormat = cassidy::helper::isSwapchainSurfaceFormatSupported(details.formats.size(), details.formats.data(), desiredFormat) ?
-    desiredFormat : details.formats[0];
+  VkSurfaceFormatKHR surfaceFormat = cassidy::helper::isSwapchainSurfaceFormatSupported(details.formats.size(), details.formats.data(), 
+    desiredFormat) ? desiredFormat : details.formats[0];
 
   // If desired present mode isn't available on the chosen physical device, default to FIFO (guaranteed to be avaiable):
   const VkPresentModeKHR desiredMode = VK_PRESENT_MODE_MAILBOX_KHR;
-  VkPresentModeKHR presentMode = cassidy::helper::isSwapchainPresentModeSupported(details.presentModes.size(), details.presentModes.data(), desiredMode) ?
-    desiredMode : VK_PRESENT_MODE_FIFO_KHR;
+  VkPresentModeKHR presentMode = cassidy::helper::isSwapchainPresentModeSupported(details.presentModes.size(), details.presentModes.data(), 
+    desiredMode) ? desiredMode : VK_PRESENT_MODE_FIFO_KHR;
 
-  VkExtent2D extent = cassidy::helper::chooseSwapchainExtent(m_engineRef->GetWindow(), details.capabilities);
+  VkExtent2D extent = cassidy::helper::chooseSwapchainExtent(m_engineRef->getWindow(), details.capabilities);
 
-  QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->GetSurface());
-  VkSwapchainCreateInfoKHR swapchainInfo = cassidy::init::swapchainCreateInfo(details, indices, m_engineRef->GetSurface(),
+  QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
+  VkSwapchainCreateInfoKHR swapchainInfo = cassidy::init::swapchainCreateInfo(details, indices, m_engineRef->getSurface(),
     surfaceFormat, presentMode, extent, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
   vkCreateSwapchainKHR(m_device, &swapchainInfo, nullptr, &m_swapchain.swapchain);

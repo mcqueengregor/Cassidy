@@ -41,8 +41,8 @@ namespace cassidy
 
   public:
     // Getters and setters: --------------------------------------------------------------------------------------
-    inline SDL_Window* GetWindow()    { return m_window; }
-    inline VkInstance GetInstance()   { return m_instance; }
-    inline VkSurfaceKHR GetSurface()  { return m_surface; }
+    inline SDL_Window* getWindow()    { return m_window; }
+    inline VkInstance getInstance()   { return m_instance; }
+    inline VkSurfaceKHR getSurface()  { return m_surface; }
   };
 }

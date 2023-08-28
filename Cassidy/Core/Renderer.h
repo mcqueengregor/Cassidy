@@ -7,6 +7,8 @@ class SDL_Window;
 
 namespace cassidy
 {
+  class Engine;
+
   struct Swapchain
   {
     VkSwapchainKHR swapchain;
@@ -24,8 +26,6 @@ namespace cassidy
     }
   };
 
-  class Engine;
-
   class Renderer
   {
   public:
@@ -41,6 +41,14 @@ namespace cassidy
       VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
 
+    static inline std::vector<VkDynamicState> DYNAMIC_STATES = {
+      VK_DYNAMIC_STATE_VIEWPORT,
+      VK_DYNAMIC_STATE_SCISSOR,
+    };
+
+    VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; }
+    VkDevice getLogicalDevice() { return m_device; }
+    Swapchain getSwapchain() { return m_swapchain; }
 
   private:
     void initLogicalDevice();

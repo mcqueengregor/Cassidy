@@ -148,6 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Core\Engine.cpp" />
+    <ClCompile Include="Core\Pipeline.cpp" />
     <ClCompile Include="Core\Renderer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Utils\Helpers.cpp" />
@@ -155,6 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Engine.h" />
+    <ClInclude Include="Core\Pipeline.h" />
     <ClInclude Include="Core\Renderer.h" />
     <ClInclude Include="Utils\Helpers.h" />
     <ClInclude Include="Utils\Initialisers.h" />

@@ -170,3 +170,23 @@ VkExtent2D cassidy::helper::chooseSwapchainExtent(SDL_Window* window, VkSurfaceC
   return actualExtent;
 }
 
+VkFormat cassidy::helper::findSupportedFormat(VkPhysicalDevice physicalDevice, uint32_t numFormats, VkFormat* formats, VkImageTiling tiling, VkFormatFeatureFlags features)
+{
+  for (uint32_t i = 0; i < numFormats; ++i)
+  {
+    VkFormatProperties properties;
+    vkGetPhysicalDeviceFormatProperties(physicalDevice, formats[i], &properties);
+
+    switch (tiling)
+    {
+    case VK_IMAGE_TILING_LINEAR:
+      if (properties.linearTilingFeatures & features == features)
+        return formats[i];
+    case VK_IMAGE_TILING_OPTIMAL:
+      if (properties.optimalTilingFeatures & features == features)
+        return formats[i];
+    }
+  }
+  throw std::runtime_error("ERROR: Failed to find supported format!");
+}
+
