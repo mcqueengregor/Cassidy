@@ -162,6 +162,10 @@
     <ClInclude Include="Utils\Initialisers.h" />
     <ClInclude Include="Utils\Types.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Shaders\helloTriangle.frag" />
+    <None Include="..\Shaders\helloTriangle.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

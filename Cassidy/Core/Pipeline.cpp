@@ -12,18 +12,19 @@ cassidy::Pipeline::Pipeline(cassidy::Renderer* renderer, const std::string& vert
   init(renderer, vertexFilepath, fragmentFilepath);
 }
 
-cassidy::Pipeline::~Pipeline()
-{
-  vkDestroyPipeline(m_rendererRef->getLogicalDevice(), m_graphicsPipeline, nullptr);
-  vkDestroyPipelineLayout(m_rendererRef->getLogicalDevice(), m_pipelineLayout, nullptr);
-}
-
 void cassidy::Pipeline::init(cassidy::Renderer* renderer, const std::string& vertexFilepath, const std::string& fragmentFilepath)
 {
   m_rendererRef = renderer;
 
   initRenderPass();
   initGraphicsPipeline(vertexFilepath, fragmentFilepath);
+}
+
+void cassidy::Pipeline::release()
+{
+  vkDestroyPipeline(m_rendererRef->getLogicalDevice(), m_graphicsPipeline, nullptr);
+  vkDestroyPipelineLayout(m_rendererRef->getLogicalDevice(), m_pipelineLayout, nullptr);
+  vkDestroyRenderPass(m_rendererRef->getLogicalDevice(), m_renderPass, nullptr);
 }
 
 SpirvShaderCode cassidy::Pipeline::loadSpirv(const std::string& filepath)
@@ -77,6 +78,8 @@ void cassidy::Pipeline::initRenderPass()
   VkRenderPassCreateInfo renderPassInfo = cassidy::init::renderPassCreateInfo(2, attachments, 1, &subpass, 1, &dependency);
 
   vkCreateRenderPass(m_rendererRef->getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass);
+
+  std::cout << "Created pipeline render pass!" << std::endl;
 }
 
 void cassidy::Pipeline::initGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath)
@@ -141,16 +144,19 @@ void cassidy::Pipeline::initGraphicsPipeline(const std::string& vertexFilepath, 
 
   vkCreatePipelineLayout(m_rendererRef->getLogicalDevice(), &pipelineLayout, nullptr, &m_pipelineLayout);
 
-  VkGraphicsPipelineCreateInfo pipelineInfo = cassidy::init::graphicsPipelineCreateInfo(2, shaderStages,
-    &vertexInput, &viewportState,
-    &rasteriser, &multisampling,
-    &depthStencil, &colourBlendState,
-    &dynamicState, m_pipelineLayout,
-    m_renderPass, 0);
+  VkGraphicsPipelineCreateInfo pipelineInfo = cassidy::init::graphicsPipelineCreateInfo(
+    2, shaderStages,
+    &vertexInput, &inputAssembly,
+    &viewportState, &rasteriser, 
+    &multisampling, &depthStencil,
+    &colourBlendState, &dynamicState, 
+    m_pipelineLayout, m_renderPass, 0);
 
   vkCreateGraphicsPipelines(m_rendererRef->getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline);
 
   vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), vertexModule, nullptr);
   vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), fragmentModule, nullptr);
+
+  std::cout << "Created graphics pipeline!\n" << std::endl;
 }
 

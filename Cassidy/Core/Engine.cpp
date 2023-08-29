@@ -35,6 +35,11 @@ void cassidy::Engine::run()
         if (e.key.keysym.sym == SDLK_ESCAPE)
           isRunning = false;
       }
+
+      if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED)
+      {
+        m_renderer.rebuildSwapchain();
+      }
     }
   }
 }
@@ -53,7 +58,7 @@ void cassidy::Engine::initInstance()
 
   VkApplicationInfo appInfo = cassidy::init::applicationInfo("Cassidy v0.0.1", 0, 0, 1, 0, VK_API_VERSION_1_3);
   m_window = SDL_CreateWindow(appInfo.pApplicationName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-    1920, 1080, SDL_WindowFlags::SDL_WINDOW_VULKAN);
+    1920, 1080, SDL_WindowFlags::SDL_WINDOW_VULKAN | SDL_WindowFlags::SDL_WINDOW_RESIZABLE);
 
   m_deletionQueue.addFunction([=]() {
     SDL_DestroyWindow(m_window);

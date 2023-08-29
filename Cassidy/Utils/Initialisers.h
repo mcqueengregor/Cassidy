@@ -147,11 +147,12 @@ namespace cassidy::init
     uint32_t numShaderStages,
     VkPipelineShaderStageCreateInfo* shaderStages,
     VkPipelineVertexInputStateCreateInfo* vertexInput,
+    VkPipelineInputAssemblyStateCreateInfo* inputAssembly,
     VkPipelineViewportStateCreateInfo* viewportState,
     VkPipelineRasterizationStateCreateInfo* rasteriser,
     VkPipelineMultisampleStateCreateInfo* multisampling,
     VkPipelineDepthStencilStateCreateInfo* depthStencil,
-    VkPipelineColorBlendStateCreateInfo* colorBlendState,
+    VkPipelineColorBlendStateCreateInfo* colourBlendState,
     VkPipelineDynamicStateCreateInfo* dynamicState,
     VkPipelineLayout pipelineLayout,
     VkRenderPass renderPass,
@@ -191,5 +192,24 @@ namespace cassidy::init
     VkSubpassDescription* subpasses,
     uint32_t numSubpassDependencies,
     VkSubpassDependency* subpassDependencies
+  );
+
+  // Command buffer/pool create infos:
+  VkCommandPoolCreateInfo commandPoolCreateInfo(
+    VkCommandPoolCreateFlags flags,
+    uint32_t queueFamilyIndex
+  );
+  VkCommandBufferAllocateInfo commandBufferAllocInfo(
+    const VkCommandPool& pool,
+    VkCommandBufferLevel level,
+    uint32_t numBuffers
+  );
+
+  // Framebuffer create info:
+  VkFramebufferCreateInfo framebufferCreateInfo(
+    const VkRenderPass& renderPass,
+    uint32_t numAttachments,
+    VkImageView* attachments,
+    VkExtent2D extent
   );
 }

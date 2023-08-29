@@ -5,7 +5,7 @@
 
 namespace cassidy
 {
-  struct Swapchain;
+  // Forward declarations:
   class Renderer;
 
   class Pipeline
@@ -14,9 +14,8 @@ namespace cassidy
     Pipeline() {};
     Pipeline(cassidy::Renderer* renderer, const std::string& vertexFilepath, const std::string& fragmentFilepath);
 
-    ~Pipeline();
-
     void init(cassidy::Renderer* renderer, const std::string& vertexFilepath, const std::string& fragmentFilepath);
+    void release();
 
     SpirvShaderCode loadSpirv(const std::string& filepath);
 
@@ -27,6 +26,9 @@ namespace cassidy
       COMPUTE   = 2,
       GEOMETRY  = 3,
     };
+
+    // Getters/setters: ------------------------------------------------------------------------------------------
+    VkRenderPass getRenderPass() { return m_renderPass; }
 
   private:
     void initRenderPass();

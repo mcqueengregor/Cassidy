@@ -15,6 +15,8 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
 
   initLogicalDevice();
   initSwapchain();
+  initPipelines();
+  initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
 }
 
 void cassidy::Renderer::draw()
@@ -111,9 +113,75 @@ void cassidy::Renderer::initSwapchain()
     vkCreateImageView(m_device, &imageViewInfo, nullptr, &m_swapchain.imageViews[i]);
   }
 
-  m_deletionQueue.addFunction([=]() {
+  VkFormat depthFormats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+  const VkFormat& format = cassidy::helper::findSupportedFormat(m_physicalDevice, 3, depthFormats,
+    VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+  m_deletionQueue.addFunction([&]() {
     m_swapchain.release(m_device);
   });
 
   std::cout << "Created swapchain!\n" << std::endl;
+}
+
+void cassidy::Renderer::initPipelines()
+{
+  m_helloTrianglePipeline.init(this, "../Shaders/helloTriangleVert.spv", "../Shaders/helloTriangleFrag.spv");
+
+  m_deletionQueue.addFunction([=]() {
+    m_helloTrianglePipeline.release();
+  });
+}
+
+void cassidy::Renderer::initSwapchainFramebuffers()
+{
+  m_swapchain.framebuffers.resize(m_swapchain.imageViews.size());
+
+  for (uint8_t i = 0; i < m_swapchain.imageViews.size(); ++i)
+  {
+    VkImageView attachments[] = { m_swapchain.imageViews[i], m_swapchain.depthView };
+
+    VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_helloTrianglePipeline.getRenderPass(),
+      2, attachments, m_swapchain.extent);
+
+    vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapchain.framebuffers[i]);
+  }
+  std::cout << "Created swapchain framebuffers!\n" << std::endl;
+}
+
+void cassidy::Renderer::initCommandPool()
+{
+  QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
+
+  VkCommandPoolCreateInfo poolInfo = cassidy::init::commandPoolCreateInfo(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+    indices.graphicsFamily.value());
+
+  vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
+
+  std::cout << "Created command pool!\n" << std::endl;
+}
+
+void cassidy::Renderer::initCommandBuffers()
+{
+  m_commandBuffers.resize(FRAMES_IN_FLIGHT);
+
+  VkCommandBufferAllocateInfo allocInfo = cassidy::init::commandBufferAllocInfo(m_commandPool,
+    VK_COMMAND_BUFFER_LEVEL_PRIMARY, FRAMES_IN_FLIGHT);
+
+  vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data());
+
+  std::cout << "Allocated " << FRAMES_IN_FLIGHT << " command buffers!\n" << std::endl;
+}
+
+void cassidy::Renderer::rebuildSwapchain()
+{
+  int width;
+  int height;
+
+  SDL_Window* window = m_engineRef->getWindow();
+  SDL_GetWindowSize(window, &width, &height);
+
+  m_swapchain.release(m_device);
+  initSwapchain();
+  initSwapchainFramebuffers();
 }

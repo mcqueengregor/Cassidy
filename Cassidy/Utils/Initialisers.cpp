@@ -318,6 +318,7 @@ VkPipelineViewportStateCreateInfo cassidy::init::pipelineViewportStateCreateInfo
   VkViewport* viewports, uint32_t numScissors, VkRect2D* scissors)
 {
   VkPipelineViewportStateCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
   info.viewportCount = numViewports;
   info.pViewports = viewports;
   info.scissorCount = numScissors;
@@ -349,20 +350,23 @@ VkPipelineLayoutCreateInfo cassidy::init::pipelineLayoutCreateInfo(uint32_t numD
 }
 
 VkGraphicsPipelineCreateInfo cassidy::init::graphicsPipelineCreateInfo(uint32_t numShaderStages,
-  VkPipelineShaderStageCreateInfo* shaderStages, VkPipelineVertexInputStateCreateInfo* vertexInput, 
-  VkPipelineViewportStateCreateInfo* viewportState, VkPipelineRasterizationStateCreateInfo* rasteriser, 
-  VkPipelineMultisampleStateCreateInfo* multisampling, VkPipelineDepthStencilStateCreateInfo* depthStencil, 
-  VkPipelineColorBlendStateCreateInfo* colorBlendState, VkPipelineDynamicStateCreateInfo* dynamicState,
-  VkPipelineLayout pipelineLayout, VkRenderPass renderPass, uint32_t subpass)
+  VkPipelineShaderStageCreateInfo* shaderStages, VkPipelineVertexInputStateCreateInfo* vertexInput,
+  VkPipelineInputAssemblyStateCreateInfo* inputAssembly,  VkPipelineViewportStateCreateInfo* viewportState, 
+  VkPipelineRasterizationStateCreateInfo* rasteriser, VkPipelineMultisampleStateCreateInfo* multisampling, 
+  VkPipelineDepthStencilStateCreateInfo* depthStencil, VkPipelineColorBlendStateCreateInfo* colourBlendState, 
+  VkPipelineDynamicStateCreateInfo* dynamicState, VkPipelineLayout pipelineLayout, 
+  VkRenderPass renderPass, uint32_t subpass)
 {
   VkGraphicsPipelineCreateInfo info = {};
   info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   info.stageCount = numShaderStages;
   info.pStages = shaderStages;
   info.pVertexInputState = vertexInput;
+  info.pInputAssemblyState = inputAssembly;
   info.pViewportState = viewportState;
   info.pRasterizationState = rasteriser;
   info.pMultisampleState = multisampling;
+  info.pColorBlendState = colourBlendState;
   info.pDepthStencilState = depthStencil;
   info.pDynamicState = dynamicState;
 
@@ -375,25 +379,97 @@ VkGraphicsPipelineCreateInfo cassidy::init::graphicsPipelineCreateInfo(uint32_t 
 
 VkAttachmentDescription cassidy::init::attachmentDescription(VkFormat format, VkSampleCountFlagBits samples, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkImageLayout initialLayout, VkImageLayout finalLayout)
 {
-  return VkAttachmentDescription();
+  VkAttachmentDescription desc = {};
+  desc.format = format;
+  desc.samples = samples;
+  desc.loadOp = loadOp;
+  desc.storeOp = storeOp;
+  desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  desc.initialLayout = initialLayout;
+  desc.finalLayout = finalLayout;
+
+  return desc;
 }
 
 VkAttachmentReference cassidy::init::attachmentReference(uint32_t index, VkImageLayout layout)
 {
-  return VkAttachmentReference();
+  VkAttachmentReference ref = {};
+  ref.attachment = index;
+  ref.layout = layout;
+
+  return ref;
 }
 
 VkSubpassDescription cassidy::init::subpassDescription(VkPipelineBindPoint bindPoint, uint32_t numColourAttachments, VkAttachmentReference* colourAttachments, VkAttachmentReference* depthStencilAttachment)
 {
-  return VkSubpassDescription();
+  VkSubpassDescription desc = {};
+  desc.pipelineBindPoint = bindPoint;
+  desc.colorAttachmentCount = numColourAttachments;
+  desc.pColorAttachments = colourAttachments;
+  desc.pDepthStencilAttachment = depthStencilAttachment;
+
+  return desc;
 }
 
 VkSubpassDependency cassidy::init::subpassDependency(uint32_t srcSubpass, uint32_t dstSubpass, VkPipelineStageFlags srcStageMask, VkAccessFlagBits srcAccessMask, VkPipelineStageFlags dstStageMask, VkAccessFlags dstAccessMask)
 {
-  return VkSubpassDependency();
+  VkSubpassDependency dependency = {};
+  dependency.srcSubpass = srcSubpass;
+  dependency.dstSubpass = dstSubpass;
+  dependency.srcStageMask = srcStageMask;
+  dependency.dstStageMask = dstStageMask;
+  dependency.srcAccessMask = srcAccessMask;
+  dependency.dstAccessMask = dstAccessMask;
+
+  return dependency;
 }
 
 VkRenderPassCreateInfo cassidy::init::renderPassCreateInfo(uint32_t numAttachments, VkAttachmentDescription* attachments, uint32_t numSubpasses, VkSubpassDescription* subpasses, uint32_t numSubpassDependencies, VkSubpassDependency* subpassDependencies)
 {
-  return VkRenderPassCreateInfo();
+  VkRenderPassCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  info.attachmentCount = numAttachments;
+  info.pAttachments = attachments;
+  info.subpassCount = numSubpasses;
+  info.pSubpasses = subpasses;
+  info.dependencyCount = numSubpassDependencies;
+  info.pDependencies = subpassDependencies;
+
+  return info;
+}
+
+VkCommandPoolCreateInfo cassidy::init::commandPoolCreateInfo(VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex)
+{
+  VkCommandPoolCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  info.flags = flags;
+  info.queueFamilyIndex = queueFamilyIndex;
+
+  return info;
+}
+
+VkCommandBufferAllocateInfo cassidy::init::commandBufferAllocInfo(const VkCommandPool& pool, VkCommandBufferLevel level, uint32_t numBuffers)
+{
+  VkCommandBufferAllocateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  info.commandPool = pool;
+  info.level = level;
+  info.commandBufferCount = numBuffers;
+  
+  return info;
+}
+
+VkFramebufferCreateInfo cassidy::init::framebufferCreateInfo(const VkRenderPass& renderPass, uint32_t numAttachments, VkImageView* attachments, VkExtent2D extent)
+{
+  VkFramebufferCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  info.renderPass = renderPass;
+  info.attachmentCount = numAttachments;
+  info.pAttachments = attachments;
+  info.width = extent.width;
+  info.height = extent.height;
+  info.layers = 1;
+
+  return info;
 }
