@@ -40,7 +40,12 @@ void cassidy::Engine::run()
       {
         m_renderer.rebuildSwapchain();
       }
+
     }
+    // If window isn't minimised, run renderer:
+    const uint32_t windowFlags = SDL_GetWindowFlags(m_window);
+    if ((windowFlags & SDL_WINDOW_MINIMIZED) == 0)
+      m_renderer.draw();
   }
 }
 

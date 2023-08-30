@@ -16,19 +16,20 @@ namespace cassidy
     std::vector<VkImage> images;
     std::vector<VkImageView> imageViews;
     std::vector<VkFramebuffer> framebuffers;
+    AllocatedImage depthImage;
     VkImageView depthView;
     VkFormat imageFormat;
     VkExtent2D extent;
 
-    void release(VkDevice device)
+    void release(VkDevice device, VmaAllocator allocator)
     {
       for (uint32_t i = 0; i < images.size(); ++i)
       {
-        vkDestroyImage(device, images[i], nullptr);
         vkDestroyImageView(device, imageViews[i], nullptr);
         vkDestroyFramebuffer(device, framebuffers[i], nullptr);
       }
 
+      vmaDestroyImage(allocator, depthImage.image, depthImage.allocation);
       vkDestroyImageView(device, depthView, nullptr);
       vkDestroySwapchainKHR(device, swapchain, nullptr);
     }
@@ -63,6 +64,10 @@ namespace cassidy
     Swapchain getSwapchain() { return m_swapchain; }
 
   private:
+    void recordCommandBuffers(uint32_t imageIndex);
+    void submitCommandBuffers(uint32_t imageIndex);
+
+    void initMemoryAllocator();
     void initLogicalDevice();
     void initSwapchain();
 
@@ -70,23 +75,35 @@ namespace cassidy
     void initSwapchainFramebuffers();
     void initCommandPool();
     void initCommandBuffers();
-
+    void initSyncObjects();
 
     Engine* m_engineRef;
 
-    DeletionQueue m_deletionQueue;
-
+    // Essential objects:
     Swapchain m_swapchain;
-
     VkPhysicalDevice m_physicalDevice;
     VkDevice m_device;
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
 
+    // Pipelines:
     Pipeline m_helloTrianglePipeline;
 
+    // Command objects:
     VkCommandPool m_commandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
+
+    // Synchronisation objects:
+    std::vector<VkSemaphore> m_imageAvailableSemaphores;
+    std::vector<VkSemaphore> m_renderFinishedSemaphores;
+    std::vector<VkFence> m_inFlightFences;
+
+    // Memory allocator and allocated objects:
+    VmaAllocator m_allocator;
+
+    // Misc.:
+    DeletionQueue m_deletionQueue;
+    uint32_t m_currentFrameIndex;
 
     const uint8_t FRAMES_IN_FLIGHT = 2;
   };

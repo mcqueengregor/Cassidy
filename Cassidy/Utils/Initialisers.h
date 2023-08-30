@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include "Utils/Types.h"
 
 namespace cassidy::init
@@ -59,12 +58,26 @@ namespace cassidy::init
     VkImageUsageFlags usageFlags
   );
 
-  // Image view create info:
+  // Image and image view create infos:
+  VkImageCreateInfo imageCreateInfo(
+    VkImageType type,
+    VkExtent3D extent3D,
+    uint8_t mipLevels,
+    VkFormat format,
+    VkImageTiling tiling,
+    VkImageUsageFlags usageFlags
+  );
   VkImageViewCreateInfo imageViewCreateInfo(
     VkImage image,
     VkFormat format, 
     VkImageAspectFlags aspectFlags, 
     uint8_t mipLevels
+  );
+
+  // VMA memory allocation create info:
+  VmaAllocationCreateInfo vmaAllocationCreateInfo(
+    VmaMemoryUsage usageFlags,
+    VkMemoryPropertyFlags memoryFlags
   );
 
   // Shader module create info:
@@ -211,5 +224,45 @@ namespace cassidy::init
     uint32_t numAttachments,
     VkImageView* attachments,
     VkExtent2D extent
+  );
+
+  // Semaphore and fence create infos:
+  VkSemaphoreCreateInfo semaphoreCreateInfo(
+    VkSemaphoreCreateFlags flags
+  );
+  VkFenceCreateInfo fenceCreateInfo(
+    VkFenceCreateFlags flags
+  );
+
+  // Command structs:
+  VkCommandBufferBeginInfo commandBufferBeginInfo(
+    VkCommandBufferUsageFlags flags,
+    const VkCommandBufferInheritanceInfo* inheritanceInfo
+  );
+  VkRenderPassBeginInfo renderPassBeginInfo(
+    VkRenderPass renderPass,
+    VkFramebuffer framebuffer,
+    VkOffset2D offset,
+    VkExtent2D extent,
+    uint8_t numClearValues,
+    VkClearValue* clearValues
+  );
+
+  // Command submit/present structs:
+  VkSubmitInfo submitInfo(
+    uint32_t numWaitSemaphores,
+    VkSemaphore* waitSemaphores,
+    VkPipelineStageFlags* waitDstStageMask,
+    uint32_t numSignalSemaphores,
+    VkSemaphore* signalSemaphores,
+    uint32_t numCommandBuffers,
+    VkCommandBuffer* commandBuffers
+  );
+  VkPresentInfoKHR presentInfo(
+    uint32_t numWaitSemaphores,
+    VkSemaphore* waitSemaphores,
+    uint32_t numSwapchains,
+    VkSwapchainKHR* swapchains,
+    uint32_t* imageIndices
   );
 }

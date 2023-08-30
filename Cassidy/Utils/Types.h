@@ -6,6 +6,8 @@
 #include <functional>
 #include <optional>
 
+#include "Vendor/vma/vk_mem_alloc.h"
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/vec4.hpp>
@@ -94,4 +96,12 @@ struct Vertex
 
     return descs;
   }
+};
+
+// An image object allocated with Vulkan Memory Allocator
+struct AllocatedImage
+{
+  VkImage image;
+  VmaAllocation allocation;
+  VkFormat format;
 };

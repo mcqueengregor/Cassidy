@@ -28,6 +28,7 @@ namespace cassidy
     };
 
     // Getters/setters: ------------------------------------------------------------------------------------------
+    VkPipeline getGraphicsPipeline() { return m_graphicsPipeline; }
     VkRenderPass getRenderPass() { return m_renderPass; }
 
   private:

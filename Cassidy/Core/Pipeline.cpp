@@ -109,11 +109,11 @@ void cassidy::Pipeline::initGraphicsPipeline(const std::string& vertexFilepath, 
   auto bindingDescription = Vertex::getBindingDesc();
   auto attributeDescriptions = Vertex::getAttributeDescs();
 
-  VkPipelineVertexInputStateCreateInfo vertexInput = cassidy::init::pipelineVertexInputStateCreateInfo(1,
-    &bindingDescription, 3, attributeDescriptions.data());
+  // TODO: Add vertex binding and attributes back in for vertex buffers!
+  VkPipelineVertexInputStateCreateInfo vertexInput = cassidy::init::pipelineVertexInputStateCreateInfo(0,
+    &bindingDescription, 0, attributeDescriptions.data());
 
-  VkPipelineInputAssemblyStateCreateInfo inputAssembly = cassidy::init::pipelineInputAssemblyStateCreateInfo
-  (VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+  VkPipelineInputAssemblyStateCreateInfo inputAssembly = cassidy::init::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
   VkViewport viewport = cassidy::init::viewport(0.0f, 0.0f, 
     m_rendererRef->getSwapchain().extent.width, m_rendererRef->getSwapchain().extent.height);
@@ -125,8 +125,9 @@ void cassidy::Pipeline::initGraphicsPipeline(const std::string& vertexFilepath, 
 
   VkPipelineViewportStateCreateInfo viewportState = cassidy::init::pipelineViewportStateCreateInfo(1, &viewport, 1, &scissor);
 
+  // TODO: Fix back culling/triangle face winding issue:
   VkPipelineRasterizationStateCreateInfo rasteriser = cassidy::init::pipelineRasterizationStateCreateInfo(
-    VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT);
+    VK_POLYGON_MODE_FILL, 0);
 
   VkPipelineMultisampleStateCreateInfo multisampling = cassidy::init::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 

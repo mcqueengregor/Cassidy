@@ -131,6 +131,28 @@ VkSwapchainCreateInfoKHR cassidy::init::swapchainCreateInfo(SwapchainSupportDeta
   return info;
 }
 
+VkImageCreateInfo cassidy::init::imageCreateInfo(VkImageType type, VkExtent3D extent3D, uint8_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usageFlags)
+{
+  VkImageCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  info.imageType = type;
+  info.extent.width = extent3D.width;
+  info.extent.height = extent3D.height;
+  info.extent.depth = extent3D.depth;
+  info.mipLevels = mipLevels;
+  info.arrayLayers = 1;
+
+  info.format = format;
+  info.tiling = tiling;
+
+  info.usage = usageFlags;
+  info.samples = VK_SAMPLE_COUNT_1_BIT;
+  info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  return info;
+}
+
 VkImageViewCreateInfo cassidy::init::imageViewCreateInfo(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
   uint8_t mipLevels)
 {
@@ -144,6 +166,15 @@ VkImageViewCreateInfo cassidy::init::imageViewCreateInfo(VkImage image, VkFormat
   info.subresourceRange.levelCount = mipLevels;
   info.subresourceRange.baseArrayLayer = 0;
   info.subresourceRange.layerCount = 1;
+
+  return info;
+}
+
+VmaAllocationCreateInfo cassidy::init::vmaAllocationCreateInfo(VmaMemoryUsage usageFlags, VkMemoryPropertyFlags memoryFlags)
+{
+  VmaAllocationCreateInfo info = {};
+  info.usage = usageFlags;
+  info.requiredFlags = memoryFlags;
 
   return info;
 }
@@ -470,6 +501,81 @@ VkFramebufferCreateInfo cassidy::init::framebufferCreateInfo(const VkRenderPass&
   info.width = extent.width;
   info.height = extent.height;
   info.layers = 1;
+
+  return info;
+}
+
+VkSemaphoreCreateInfo cassidy::init::semaphoreCreateInfo(VkSemaphoreCreateFlags flags)
+{
+  VkSemaphoreCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  info.flags = flags;
+
+  return info;
+}
+
+VkFenceCreateInfo cassidy::init::fenceCreateInfo(VkFenceCreateFlags flags)
+{
+  VkFenceCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  info.flags = flags;
+  
+  return info;
+}
+
+VkCommandBufferBeginInfo cassidy::init::commandBufferBeginInfo(VkCommandBufferUsageFlags flags, const VkCommandBufferInheritanceInfo* inheritanceInfo)
+{
+  VkCommandBufferBeginInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  info.flags = flags;
+  info.pInheritanceInfo = inheritanceInfo;
+
+  return info;
+}
+
+VkRenderPassBeginInfo cassidy::init::renderPassBeginInfo(VkRenderPass renderPass, VkFramebuffer framebuffer, VkOffset2D offset, VkExtent2D extent, uint8_t numClearValues, VkClearValue* clearValues)
+{
+  VkRenderPassBeginInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  info.renderPass = renderPass;
+  info.framebuffer = framebuffer;
+  
+  info.renderArea.offset = offset;
+  info.renderArea.extent = extent;
+
+  info.clearValueCount = numClearValues;
+  info.pClearValues = clearValues;
+  
+  return info;
+}
+
+VkSubmitInfo cassidy::init::submitInfo(uint32_t numWaitSemaphores, VkSemaphore* waitSemaphores, VkPipelineStageFlags* waitDstStageMask, uint32_t numSignalSemaphores, VkSemaphore* signalSemaphores, uint32_t numCommandBuffers, VkCommandBuffer* commandBuffers)
+{
+  VkSubmitInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  info.waitSemaphoreCount = numWaitSemaphores;
+  info.pWaitSemaphores = waitSemaphores;
+  info.pWaitDstStageMask = waitDstStageMask;
+  info.signalSemaphoreCount = numSignalSemaphores;
+  info.pSignalSemaphores = signalSemaphores;
+
+  info.commandBufferCount = numCommandBuffers;
+  info.pCommandBuffers = commandBuffers;
+
+  return info;
+}
+
+VkPresentInfoKHR cassidy::init::presentInfo(uint32_t numWaitSemaphores, VkSemaphore* waitSemaphores, uint32_t numSwapchains, VkSwapchainKHR* swapchains, uint32_t* imageIndices)
+{
+  VkPresentInfoKHR info = {};
+  info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  info.waitSemaphoreCount = numWaitSemaphores;
+  info.pWaitSemaphores = waitSemaphores;
+  
+  info.swapchainCount = numSwapchains;
+  info.pSwapchains = swapchains;
+  info.pImageIndices = imageIndices;
+  info.pResults = nullptr;
 
   return info;
 }
