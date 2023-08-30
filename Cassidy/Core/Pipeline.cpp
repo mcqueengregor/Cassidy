@@ -125,9 +125,8 @@ void cassidy::Pipeline::initGraphicsPipeline(const std::string& vertexFilepath, 
 
   VkPipelineViewportStateCreateInfo viewportState = cassidy::init::pipelineViewportStateCreateInfo(1, &viewport, 1, &scissor);
 
-  // TODO: Fix back culling/triangle face winding issue:
   VkPipelineRasterizationStateCreateInfo rasteriser = cassidy::init::pipelineRasterizationStateCreateInfo(
-    VK_POLYGON_MODE_FILL, 0);
+    VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT);
 
   VkPipelineMultisampleStateCreateInfo multisampling = cassidy::init::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 

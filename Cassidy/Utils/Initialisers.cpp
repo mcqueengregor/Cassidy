@@ -257,7 +257,7 @@ VkPipelineRasterizationStateCreateInfo cassidy::init::pipelineRasterizationState
   info.polygonMode = polygonMode;
   info.lineWidth = 1.0f;
   info.cullMode = cullFlags;
-  info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+  info.frontFace = VK_FRONT_FACE_CLOCKWISE;
   info.depthBiasEnable = VK_FALSE;
   info.depthBiasConstantFactor = 0.0f;
   info.depthBiasClamp = 0.0f;
