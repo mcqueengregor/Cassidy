@@ -111,6 +111,16 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
   }
 }
 
+void cassidy::Renderer::allocateBuffer()
+{
+  VkBufferCreateInfo bufferInfo = cassidy::init::bufferCreateInfo(triangleVertices.size() * sizeof(Vertex),
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+  VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_GPU_ONLY,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+
+}
+
 void cassidy::Renderer::initLogicalDevice()
 {
   m_physicalDevice = cassidy::helper::pickPhysicalDevice(m_engineRef->getInstance());
@@ -309,6 +319,10 @@ void cassidy::Renderer::initSyncObjects()
   }
 
   std::cout << "Created synchronisation objects!\n" << std::endl;
+}
+
+void cassidy::Renderer::initVertexBuffers()
+{
 }
 
 void cassidy::Renderer::rebuildSwapchain()

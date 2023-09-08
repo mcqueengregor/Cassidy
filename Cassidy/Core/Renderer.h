@@ -66,6 +66,8 @@ namespace cassidy
   private:
     void recordCommandBuffers(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
+    
+    void allocateBuffer();
 
     void initMemoryAllocator();
     void initLogicalDevice();
@@ -76,6 +78,8 @@ namespace cassidy
     void initCommandPool();
     void initCommandBuffers();
     void initSyncObjects();
+
+    void initVertexBuffers();
 
     Engine* m_engineRef;
 
@@ -106,5 +110,13 @@ namespace cassidy
     uint32_t m_currentFrameIndex;
 
     const uint8_t FRAMES_IN_FLIGHT = 2;
+
+    const std::vector<Vertex> triangleVertices =
+    {
+      {{ 0.0f, -0.5f, 0.0f},  {0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+      {{ 0.5f,  0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
+      {{-0.5f,  0.5f,  0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}}
+    };
+    const AllocatedBuffer triangleVertexBuffer; // TODO: Temp
   };
 }

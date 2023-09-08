@@ -579,3 +579,14 @@ VkPresentInfoKHR cassidy::init::presentInfo(uint32_t numWaitSemaphores, VkSemaph
 
   return info;
 }
+
+VkBufferCreateInfo cassidy::init::bufferCreateInfo(uint32_t size, VkBufferUsageFlags usage)
+{
+  VkBufferCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  info.size = size;
+  info.usage = usage;
+  info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // NOTE: May need to change this if async compute is used?
+
+  return info;
+}

@@ -110,8 +110,8 @@ void cassidy::Pipeline::initGraphicsPipeline(const std::string& vertexFilepath, 
   auto attributeDescriptions = Vertex::getAttributeDescs();
 
   // TODO: Add vertex binding and attributes back in for vertex buffers!
-  VkPipelineVertexInputStateCreateInfo vertexInput = cassidy::init::pipelineVertexInputStateCreateInfo(0,
-    &bindingDescription, 0, attributeDescriptions.data());
+  VkPipelineVertexInputStateCreateInfo vertexInput = cassidy::init::pipelineVertexInputStateCreateInfo(1,
+    &bindingDescription, attributeDescriptions.size(), attributeDescriptions.data());
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = cassidy::init::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 

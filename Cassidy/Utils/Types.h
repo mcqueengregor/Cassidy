@@ -105,3 +105,10 @@ struct AllocatedImage
   VmaAllocation allocation;
   VkFormat format;
 };
+
+// A buffer object allocated with Vulkan Memory Allocator
+struct AllocatedBuffer
+{
+  VkBuffer buffer;
+  VmaAllocation allocation;
+};

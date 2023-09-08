@@ -265,4 +265,11 @@ namespace cassidy::init
     VkSwapchainKHR* swapchains,
     uint32_t* imageIndices
   );
+
+  // Buffer create infos:
+  VkBufferCreateInfo bufferCreateInfo(
+    uint32_t size,
+    VkBufferUsageFlags usage
+  );
+  
 }
