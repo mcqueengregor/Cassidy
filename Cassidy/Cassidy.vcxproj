@@ -151,6 +151,8 @@
     <ClCompile Include="Core\Engine.cpp" />
     <ClCompile Include="Core\Pipeline.cpp" />
     <ClCompile Include="Core\Renderer.cpp" />
+    <ClCompile Include="Core\EventHandler.cpp" />
+    <ClCompile Include="Core\InputHandler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Utils\Helpers.cpp" />
     <ClCompile Include="Utils\Initialisers.cpp" />
@@ -160,6 +162,8 @@
     <ClInclude Include="Core\Engine.h" />
     <ClInclude Include="Core\Pipeline.h" />
     <ClInclude Include="Core\Renderer.h" />
+    <ClInclude Include="Core\EventHandler.h" />
+    <ClInclude Include="Core\InputHandler.h" />
     <ClInclude Include="Utils\Helpers.h" />
     <ClInclude Include="Utils\Initialisers.h" />
     <ClInclude Include="Utils\Types.h" />

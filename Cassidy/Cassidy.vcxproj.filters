@@ -34,6 +34,12 @@
     <ClCompile Include="Core\Camera.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\EventHandler.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\InputHandler.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Engine.h">
@@ -55,6 +61,12 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\Camera.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\EventHandler.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\InputHandler.h">
       <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>
