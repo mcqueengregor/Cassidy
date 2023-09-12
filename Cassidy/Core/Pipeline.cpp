@@ -140,7 +140,9 @@ void cassidy::Pipeline::initGraphicsPipeline(const std::string& vertexFilepath, 
   VkPipelineDepthStencilStateCreateInfo depthStencil = cassidy::init::pipelineDepthStencilStateCreateInfo(VK_TRUE, VK_TRUE,
     VK_COMPARE_OP_LESS);
 
-  VkPipelineLayoutCreateInfo pipelineLayout = cassidy::init::pipelineLayoutCreateInfo(0, nullptr, 0, nullptr);
+  VkPushConstantRange pushConstantRange = cassidy::init::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants));
+
+  VkPipelineLayoutCreateInfo pipelineLayout = cassidy::init::pipelineLayoutCreateInfo(0, nullptr, 1, &pushConstantRange);
 
   vkCreatePipelineLayout(m_rendererRef->getLogicalDevice(), &pipelineLayout, nullptr, &m_pipelineLayout);
 

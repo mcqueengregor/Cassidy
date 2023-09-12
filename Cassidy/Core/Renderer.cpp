@@ -24,6 +24,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initCommandPool();
   initCommandBuffers();
   initSyncObjects();
+  initVertexBuffers();
 
   m_currentFrameIndex = 0;
 }
@@ -86,7 +87,26 @@ void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
     VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, m_swapchain.extent);
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-    vkCmdDraw(cmd, 3, 1, 0, 0);
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(cmd, 0, 1, &m_triangleVertexBuffer.buffer, &offset);
+
+    // Build world and viewProj matrices, upload to GPU via push constants:
+    const glm::vec3 camPos = glm::vec3(0.0f, 0.0f, -3.0f);
+    const glm::mat4 view = glm::translate(glm::mat4(1.0f), camPos);
+
+    glm::mat4 proj = glm::perspective(glm::radians(70.0f), 
+      static_cast<float>(m_engineRef->getWindowDim().x) / static_cast<float>(m_engineRef->getWindowDim().y), 
+      0.1f, 300.0f);
+    proj[1][1] *= -1.0f;  // Invert projection's transformation to y-coord to match Vulkan's expectations.
+
+    glm::mat4 world = glm::mat4(1.0f);
+
+    const DefaultPushConstants pushConstants = { world, proj * view };
+
+    vkCmdPushConstants(cmd, m_helloTrianglePipeline.getLayout(),
+      VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants), &pushConstants);
+
+    vkCmdDraw(cmd, triangleVertices.size(), 1, 0, 0);
   }
   vkCmdEndRenderPass(cmd);
   vkEndCommandBuffer(cmd);
@@ -111,14 +131,75 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
   }
 }
 
-void cassidy::Renderer::allocateBuffer()
+AllocatedBuffer cassidy::Renderer::allocateBuffer(const std::vector<Vertex>& vertices)
 {
-  VkBufferCreateInfo bufferInfo = cassidy::init::bufferCreateInfo(triangleVertices.size() * sizeof(Vertex),
-    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-  VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_GPU_ONLY,
+  // Build CPU-side staging buffer:
+  VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(vertices.size() * sizeof(Vertex),
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+  VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_CPU_ONLY,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
+  AllocatedBuffer stagingBuffer;
 
+  vmaCreateBuffer(m_allocator, &stagingBufferInfo, &bufferAllocInfo,
+    &stagingBuffer.buffer,
+    &stagingBuffer.allocation,
+    nullptr);
+
+  // Write vertex data to newly-allocated buffer:
+  void* data;
+  vmaMapMemory(m_allocator, stagingBuffer.allocation, &data);
+  memcpy(data, vertices.data(), vertices.size() * sizeof(Vertex));
+  vmaUnmapMemory(m_allocator, stagingBuffer.allocation);
+
+  VkBufferCreateInfo vertexBufferInfo = cassidy::init::bufferCreateInfo(vertices.size() * sizeof(Vertex),
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+
+  bufferAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+  AllocatedBuffer newBuffer;
+
+  vmaCreateBuffer(m_allocator, &vertexBufferInfo, &bufferAllocInfo, 
+    &newBuffer.buffer,
+    &newBuffer.allocation,
+    nullptr);
+
+  // Execute copy command for CPU-side staging buffer -> GPU-side vertex buffer:
+  uploadBuffer([=](VkCommandBuffer cmd) {
+    VkBufferCopy copy = {};
+    copy.dstOffset = 0;
+    copy.srcOffset = 0;
+    copy.size = vertices.size() * sizeof(Vertex);
+    vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newBuffer.buffer, 1, &copy);
+  });
+
+  m_deletionQueue.addFunction([=]() {
+    vmaDestroyBuffer(m_allocator, newBuffer.buffer, newBuffer.allocation);
+  });
+
+  vmaDestroyBuffer(m_allocator, stagingBuffer.buffer, stagingBuffer.allocation);
+
+  return newBuffer;
+}
+
+void cassidy::Renderer::uploadBuffer(std::function<void(VkCommandBuffer cmd)>&& function)
+{
+  VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    nullptr);
+
+  vkBeginCommandBuffer(m_uploadCommandBuffer, &beginInfo);
+  {
+    function(m_uploadCommandBuffer);
+  }
+  vkEndCommandBuffer(m_uploadCommandBuffer);
+
+  VkSubmitInfo submitInfo = cassidy::init::submitInfo(0, nullptr, 0, 0, nullptr, 1, &m_uploadCommandBuffer);
+  vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_uploadFence);
+
+  vkWaitForFences(m_device, 1, &m_uploadFence, VK_TRUE, UINT64_MAX);
+  vkResetFences(m_device, 1, &m_uploadFence);
+
+  vkResetCommandPool(m_device, m_uploadCommandPool, 0);
 }
 
 void cassidy::Renderer::initLogicalDevice()
@@ -272,28 +353,43 @@ void cassidy::Renderer::initCommandPool()
 {
   QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
 
-  VkCommandPoolCreateInfo poolInfo = cassidy::init::commandPoolCreateInfo(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+  // Create command pool for graphics commands:
+  VkCommandPoolCreateInfo graphicsPoolInfo = cassidy::init::commandPoolCreateInfo(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
     indices.graphicsFamily.value());
 
-  vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
+  vkCreateCommandPool(m_device, &graphicsPoolInfo, nullptr, &m_graphicsCommandPool);
+
+  // Create command pool for upload commands:
+  VkCommandPoolCreateInfo uploadPoolInfo = cassidy::init::commandPoolCreateInfo(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+    indices.graphicsFamily.value());
+
+  vkCreateCommandPool(m_device, &uploadPoolInfo, nullptr, &m_uploadCommandPool);
 
   m_deletionQueue.addFunction([=]() {
-    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+    vkDestroyCommandPool(m_device, m_graphicsCommandPool, nullptr);
+    vkDestroyCommandPool(m_device, m_uploadCommandPool, nullptr);
   });
 
-  std::cout << "Created command pool!\n" << std::endl;
+  std::cout << "Created command pools!\n" << std::endl;
 }
 
 void cassidy::Renderer::initCommandBuffers()
 {
   m_commandBuffers.resize(FRAMES_IN_FLIGHT);
 
-  VkCommandBufferAllocateInfo allocInfo = cassidy::init::commandBufferAllocInfo(m_commandPool,
+  // Allocate command buffers for graphics commands:
+  VkCommandBufferAllocateInfo graphicsAllocInfo = cassidy::init::commandBufferAllocInfo(m_graphicsCommandPool,
     VK_COMMAND_BUFFER_LEVEL_PRIMARY, FRAMES_IN_FLIGHT);
 
-  vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data());
+  vkAllocateCommandBuffers(m_device, &graphicsAllocInfo, m_commandBuffers.data());
+  std::cout << "Allocated " << std::to_string(FRAMES_IN_FLIGHT) << " graphics command buffers!\n";
 
-  std::cout << "Allocated " << std::to_string(FRAMES_IN_FLIGHT) << " command buffers!\n" << std::endl;
+  // Allocate command buffer for upload commands:
+  VkCommandBufferAllocateInfo uploadAllocInfo = cassidy::init::commandBufferAllocInfo(m_uploadCommandPool,
+    VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+
+  vkAllocateCommandBuffers(m_device, &uploadAllocInfo, &m_uploadCommandBuffer);
+  std::cout << "Allocated upload command buffer!\n" << std::endl;
 }
 
 void cassidy::Renderer::initSyncObjects()
@@ -318,11 +414,21 @@ void cassidy::Renderer::initSyncObjects()
     });
   }
 
+  fenceInfo.flags = 0;
+  vkCreateFence(m_device, &fenceInfo, nullptr, &m_uploadFence);
+
+  m_deletionQueue.addFunction([=]() {
+    vkDestroyFence(m_device, m_uploadFence, nullptr);
+  });
+
   std::cout << "Created synchronisation objects!\n" << std::endl;
 }
 
 void cassidy::Renderer::initVertexBuffers()
 {
+  m_triangleVertexBuffer = allocateBuffer(triangleVertices);
+
+  std::cout << "Created vertex buffers!\n" << std::endl;
 }
 
 void cassidy::Renderer::rebuildSwapchain()

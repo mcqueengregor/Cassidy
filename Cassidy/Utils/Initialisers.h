@@ -172,6 +172,13 @@ namespace cassidy::init
     uint32_t subpass
   );
 
+  // Push constant range:
+  VkPushConstantRange pushConstantRange(
+    VkShaderStageFlags stageFlags,
+    uint32_t offset,
+    uint32_t size
+    );
+
   // Render pass create infos:
   VkAttachmentDescription attachmentDescription(VkFormat format, 
     VkSampleCountFlagBits samples, 

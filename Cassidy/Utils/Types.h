@@ -12,6 +12,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/gtx/transform.hpp>
 
 // Deletion queue concept from https://vkguide.dev/docs/chapter-2/cleanup/:
 struct DeletionQueue
@@ -111,4 +112,10 @@ struct AllocatedBuffer
 {
   VkBuffer buffer;
   VmaAllocation allocation;
+};
+
+struct DefaultPushConstants
+{
+  glm::mat4 world;
+  glm::mat4 viewProj;
 };

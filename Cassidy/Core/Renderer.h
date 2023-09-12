@@ -67,7 +67,8 @@ namespace cassidy
     void recordCommandBuffers(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
     
-    void allocateBuffer();
+    AllocatedBuffer allocateBuffer(const std::vector<Vertex>& vertices);
+    void uploadBuffer(std::function<void(VkCommandBuffer cmd)>&& function);
 
     void initMemoryAllocator();
     void initLogicalDevice();
@@ -93,14 +94,20 @@ namespace cassidy
     // Pipelines:
     Pipeline m_helloTrianglePipeline;
 
+    // Rendering data:
+    DefaultPushConstants m_matrixPushConstants;
+
     // Command objects:
-    VkCommandPool m_commandPool;
+    VkCommandPool m_graphicsCommandPool;
+    VkCommandPool m_uploadCommandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
+    VkCommandBuffer m_uploadCommandBuffer;
 
     // Synchronisation objects:
     std::vector<VkSemaphore> m_imageAvailableSemaphores;
     std::vector<VkSemaphore> m_renderFinishedSemaphores;
     std::vector<VkFence> m_inFlightFences;
+    VkFence m_uploadFence;
 
     // Memory allocator and allocated objects:
     VmaAllocator m_allocator;
@@ -117,6 +124,6 @@ namespace cassidy
       {{ 0.5f,  0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
       {{-0.5f,  0.5f,  0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}}
     };
-    const AllocatedBuffer triangleVertexBuffer; // TODO: Temp
+    AllocatedBuffer m_triangleVertexBuffer; // TODO: Temp
   };
 }

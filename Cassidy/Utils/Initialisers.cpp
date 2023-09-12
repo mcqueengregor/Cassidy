@@ -257,7 +257,7 @@ VkPipelineRasterizationStateCreateInfo cassidy::init::pipelineRasterizationState
   info.polygonMode = polygonMode;
   info.lineWidth = 1.0f;
   info.cullMode = cullFlags;
-  info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+  info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
   info.depthBiasEnable = VK_FALSE;
   info.depthBiasConstantFactor = 0.0f;
   info.depthBiasClamp = 0.0f;
@@ -406,6 +406,16 @@ VkGraphicsPipelineCreateInfo cassidy::init::graphicsPipelineCreateInfo(uint32_t 
   info.subpass = subpass;
 
   return info;
+}
+
+VkPushConstantRange cassidy::init::pushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size)
+{
+  VkPushConstantRange range = {};
+  range.stageFlags = stageFlags;
+  range.offset = offset;
+  range.size = size;
+
+  return range;
 }
 
 VkAttachmentDescription cassidy::init::attachmentDescription(VkFormat format, VkSampleCountFlagBits samples, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkImageLayout initialLayout, VkImageLayout finalLayout)

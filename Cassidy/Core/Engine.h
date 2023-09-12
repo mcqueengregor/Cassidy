@@ -11,6 +11,9 @@ namespace cassidy
   class Engine
   {
   public:
+    Engine();
+    Engine(glm::vec2 windowDimensions);
+
     void init();
     void run();
     void release();
@@ -23,6 +26,7 @@ namespace cassidy
 
     SDL_Window* m_window;
     VkSurfaceKHR m_surface;
+    glm::uvec2 m_windowDimensions;
 
     cassidy::Renderer m_renderer;
 
@@ -42,6 +46,7 @@ namespace cassidy
   public:
     // Getters and setters: --------------------------------------------------------------------------------------
     inline SDL_Window* getWindow()    { return m_window; }
+    inline glm::uvec2 getWindowDim()  { return m_windowDimensions; }
     inline VkInstance getInstance()   { return m_instance; }
     inline VkSurfaceKHR getSurface()  { return m_surface; }
   };

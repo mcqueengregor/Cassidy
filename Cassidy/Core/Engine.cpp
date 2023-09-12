@@ -8,6 +8,16 @@
 #include "Utils/Initialisers.h"
 #include "Utils/Helpers.h"
 
+cassidy::Engine::Engine() :
+  m_windowDimensions(glm::vec2(1920, 1080))
+{
+}
+
+cassidy::Engine::Engine(glm::vec2 windowDimensions) :
+  m_windowDimensions(windowDimensions)
+{
+}
+
 void cassidy::Engine::init()
 {
   std::cout << "Initialising engine..." << std::endl;
@@ -71,11 +81,14 @@ void cassidy::Engine::initInstance()
 
   // Get extensions required by SDL:
   unsigned int numRequiredExtensions;
-  SDL_Vulkan_GetInstanceExtensions(m_window, &numRequiredExtensions, NULL);
-  const char** extensionNames = new const char* [sizeof(char*) * numRequiredExtensions];
-  const SDL_bool extResult = SDL_Vulkan_GetInstanceExtensions(m_window, &numRequiredExtensions, extensionNames);
+  if (SDL_Vulkan_GetInstanceExtensions(m_window, &numRequiredExtensions, NULL) != SDL_TRUE)
+  {
+    std::cout << "ERROR: SDL couldn't find number of required extensions!\n";
+    return;
+  }
 
-  if (extResult == SDL_TRUE)
+  const char** extensionNames = new const char* [sizeof(char*) * numRequiredExtensions];
+  if (SDL_Vulkan_GetInstanceExtensions(m_window, &numRequiredExtensions, extensionNames) == SDL_TRUE)
   {
     std::cout << numRequiredExtensions << " required extensions for SDL: " << std::endl;
     for (uint8_t i = 0; i < numRequiredExtensions; ++i)
