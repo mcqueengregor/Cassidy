@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Core\Camera.cpp" />
     <ClCompile Include="Core\Engine.cpp" />
     <ClCompile Include="Core\Pipeline.cpp" />
     <ClCompile Include="Core\Renderer.cpp" />
@@ -155,6 +156,7 @@
     <ClCompile Include="Utils\Initialisers.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Core\Camera.h" />
     <ClInclude Include="Core\Engine.h" />
     <ClInclude Include="Core\Pipeline.h" />
     <ClInclude Include="Core\Renderer.h" />

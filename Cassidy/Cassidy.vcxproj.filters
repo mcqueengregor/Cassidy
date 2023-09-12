@@ -31,6 +31,9 @@
     <ClCompile Include="Core\Pipeline.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\Camera.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Engine.h">
@@ -49,6 +52,9 @@
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="Core\Pipeline.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Camera.h">
       <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>

@@ -36,7 +36,7 @@ void cassidy::Engine::run()
 
   while (isRunning)
   {
-    while (SDL_PollEvent(&e) != 0)
+    while (SDL_PollEvent(&e))
     {
       if (e.type == SDL_QUIT)
         isRunning = false;
@@ -46,11 +46,11 @@ void cassidy::Engine::run()
           isRunning = false;
       }
 
+      // If window was resized, get renderer to rebuild its swapchain:
       if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED)
       {
         m_renderer.rebuildSwapchain();
       }
-
     }
     // If window isn't minimised, run renderer:
     const uint32_t windowFlags = SDL_GetWindowFlags(m_window);
