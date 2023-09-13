@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Renderer.h"
+#include "Core/EventHandler.h"
 #include "Utils/Types.h"
 
 #include <vulkan/vulkan.h>
@@ -28,6 +29,7 @@ namespace cassidy
     VkSurfaceKHR m_surface;
     glm::uvec2 m_windowDimensions;
 
+    cassidy::EventHandler m_eventHandler;
     cassidy::Renderer m_renderer;
 
     DeletionQueue m_deletionQueue;

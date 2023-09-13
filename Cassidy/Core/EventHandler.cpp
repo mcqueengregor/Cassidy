@@ -1,15 +1,20 @@
 #include "EventHandler.h"
 #include <SDL.h>
 
-void EventHandler::init()
+void cassidy::EventHandler::init()
 {
-  m_inputHandler.init();
+  InputHandler::init();
 }
 
-void EventHandler::processEvent(SDL_Event* event)
+void cassidy::EventHandler::processEvent(SDL_Event* event)
 {
   switch (event->type)
   {
-
+  case SDL_KEYDOWN:
+    InputHandler::setKeyDown(event->key.keysym.sym);
+    break;
+  case SDL_KEYUP:
+    InputHandler::setKeyUp(event->key.keysym.sym);
+    break;
   }
 }

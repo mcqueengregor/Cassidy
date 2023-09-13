@@ -26,6 +26,8 @@ void cassidy::Engine::init()
   initSurface();
 
   m_renderer.init(this);
+  m_eventHandler.init();
+
   std::cout << "Initialised engine!\n" << std::endl;
 }
 
@@ -38,13 +40,10 @@ void cassidy::Engine::run()
   {
     while (SDL_PollEvent(&e))
     {
+      m_eventHandler.processEvent(&e);
+
       if (e.type == SDL_QUIT)
         isRunning = false;
-      else if (e.type == SDL_KEYDOWN)
-      {
-        if (e.key.keysym.sym == SDLK_ESCAPE)
-          isRunning = false;
-      }
 
       // If window was resized, get renderer to rebuild its swapchain:
       if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED)
@@ -52,6 +51,16 @@ void cassidy::Engine::run()
         m_renderer.rebuildSwapchain();
       }
     }
+
+    // Log key state changes between this frame and the previous frame:
+    InputHandler::updateKeyStates();
+
+    if (InputHandler::isKeyPressed(SDLK_ESCAPE))
+    {
+      isRunning = false;
+    }
+
+
     // If window isn't minimised, run renderer:
     const uint32_t windowFlags = SDL_GetWindowFlags(m_window);
     if ((windowFlags & SDL_WINDOW_MINIMIZED) == 0)
