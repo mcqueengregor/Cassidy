@@ -166,6 +166,7 @@
     <ClInclude Include="Core\InputHandler.h" />
     <ClInclude Include="Utils\Helpers.h" />
     <ClInclude Include="Utils\Initialisers.h" />
+    <ClInclude Include="Utils\Keycode.h" />
     <ClInclude Include="Utils\Types.h" />
   </ItemGroup>
   <ItemGroup>

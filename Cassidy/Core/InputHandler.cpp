@@ -1,5 +1,7 @@
 #include "InputHandler.h"
 
+#include <iostream>
+
 void InputHandler::initImpl()
 {
   for (uint16_t i = 0; i < KEYBOARD_SIZE; ++i)
@@ -29,30 +31,36 @@ void InputHandler::updateKeyStatesImpl()
 
 void InputHandler::setKeyDownImpl(SDL_Keycode keyCode)
 {
-  m_keyboardStates[static_cast<int32_t>(keyCode)] = true;
+  std::cout << "Pressed " << SDL_GetKeyName(keyCode) << " down!" << std::endl;
+  Keycode convertedCode = KEYCODE_CONVERSION_TABLE.at(keyCode);
+
+  m_keyboardStates[static_cast<uint16_t>(convertedCode)] = true;
 }
 
 void InputHandler::setKeyUpImpl(SDL_Keycode keyCode)
 {
-  m_keyboardStates[static_cast<int32_t>(keyCode)] = false;
+  std::cout << "Released " << SDL_GetKeyName(keyCode) << "!" << std::endl;
+  Keycode convertedCode = KEYCODE_CONVERSION_TABLE.at(keyCode);
+
+  m_keyboardStates[static_cast<uint16_t>(convertedCode)] = false;
 }
 
-bool InputHandler::isKeyPressedImpl(SDL_Keycode keyCode)
+bool InputHandler::isKeyPressedImpl(Keycode keyCode)
 {
-  return m_keyboardDowns[static_cast<int32_t>(keyCode)];
+  return m_keyboardDowns[static_cast<uint16_t>(keyCode)];
 }
 
-bool InputHandler::isKeyHeldImpl(SDL_Keycode keyCode)
+bool InputHandler::isKeyHeldImpl(Keycode keyCode)
 {
-  return m_keyboardStates[static_cast<int32_t>(keyCode)];
+  return m_keyboardStates[static_cast<uint16_t>(keyCode)];
 }
 
-bool InputHandler::isKeyReleasedImpl(SDL_Keycode keyCode)
+bool InputHandler::isKeyReleasedImpl(Keycode keyCode)
 {
-  return m_keyboardUps[static_cast<int32_t>(keyCode)];
+  return m_keyboardUps[static_cast<uint16_t>(keyCode)];
 }
 
-bool InputHandler::isKeyUpImpl(SDL_Keycode keyCode)
+bool InputHandler::isKeyUpImpl(Keycode keyCode)
 {
-  return !m_keyboardStates[static_cast<int32_t>(keyCode)];
+  return !m_keyboardStates[static_cast<uint16_t>(keyCode)];
 }

@@ -55,7 +55,7 @@ void cassidy::Engine::run()
     // Log key state changes between this frame and the previous frame:
     InputHandler::updateKeyStates();
 
-    if (InputHandler::isKeyPressed(SDLK_ESCAPE))
+    if (InputHandler::isKeyPressed(Keycode::KEYCODE_ESCAPE))
     {
       isRunning = false;
     }
