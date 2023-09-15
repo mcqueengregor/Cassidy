@@ -1,5 +1,5 @@
 #include "EventHandler.h"
-#include <SDL.h>
+#include <SDL_events.h>
 
 void cassidy::EventHandler::init()
 {
@@ -15,6 +15,9 @@ void cassidy::EventHandler::processEvent(SDL_Event* event)
     break;
   case SDL_KEYUP:
     InputHandler::setKeyUp(event->key.keysym.sym);
+    break;
+  case SDL_MOUSEMOTION:
+    InputHandler::setCursorMovement(event->motion);
     break;
   }
 }

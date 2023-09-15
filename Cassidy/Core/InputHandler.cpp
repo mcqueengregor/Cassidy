@@ -2,13 +2,15 @@
 
 void InputHandler::initImpl()
 {
+  m_mouseState = { 0x0000, 0x0000, 0x0000, 0x0000, 0, 0, 0, 0, false };  // Yuck?
+
   for (uint16_t i = 0; i < KEYBOARD_SIZE; ++i)
   {
-    m_keyboardStates[i] = false;
-    m_prevKeyboardStates[i] = false;
+    m_keyboardStates[i].keyboardState = false;
+    m_keyboardStates[i].prevKeyboardState = false;
 
-    m_keyboardDowns[i] = false;
-    m_keyboardUps[i] = false;
+    m_keyboardStates[i].keyboardDown = false;
+    m_keyboardStates[i].keyboardUp = false;
   }
 }
 
@@ -16,47 +18,144 @@ void InputHandler::updateKeyStatesImpl()
 {
   for (uint16_t i = 0; i < KEYBOARD_SIZE; ++i)
   {
-    // Detect change between current frame and previous frame's inputs:
-    bool keyChange = m_keyboardStates[i] ^ m_prevKeyboardStates[i];
+    // Detect change between current frame and previous frame's keyboard inputs:
+    bool keyChange = m_keyboardStates[i].keyboardState ^ m_keyboardStates[i].prevKeyboardState;
 
-    m_prevKeyboardStates[i] = m_keyboardStates[i];
+    m_keyboardStates[i].prevKeyboardState = m_keyboardStates[i].keyboardState;
 
     // Log new keyboard states for this frame:
-    m_keyboardDowns[i] = keyChange && m_keyboardStates[i];
-    m_keyboardUps[i] = keyChange && (!m_keyboardStates[i]);
+    m_keyboardStates[i].keyboardDown = keyChange && m_keyboardStates[i].keyboardState;
+    m_keyboardStates[i].keyboardUp = keyChange && (!m_keyboardStates[i].keyboardState);
   }
+}
+
+void InputHandler::updateMouseStatesImpl()
+{
+  // If cursor is set to "locked", remember cursor's new position for offset queries but warp
+  // back to original position:
+  if (m_mouseState.isCursorLocked)
+  {
+    SDL_WarpMouseInWindow(NULL, m_mouseState.prevMouseRelativePositionX, m_mouseState.prevMouseRelativePositionY);
+  }
+  else
+  {
+    m_mouseState.mouseRelativePositionX = m_mouseState.prevMouseRelativePositionX;
+    m_mouseState.mouseRelativePositionY = m_mouseState.prevMouseRelativePositionY;
+  }
+
+  m_mouseState.mouseState = SDL_GetMouseState(&m_mouseState.mouseRelativePositionX, &m_mouseState.mouseRelativePositionY);
+
+  // Detect change between current frame and previous frame's mouse inputs:
+  uint8_t buttonChange = m_mouseState.mouseState ^ m_mouseState.prevMouseState;
+
+  m_mouseState.prevMouseState = m_mouseState.mouseState;
+
+  // Log new mouse states for this frame:
+  m_mouseState.mouseDown = buttonChange & m_mouseState.mouseState;
+  m_mouseState.mouseUp = buttonChange & (~m_mouseState.mouseState);
 }
 
 void InputHandler::setKeyDownImpl(SDL_Keycode keyCode)
 {
-  Keycode convertedCode = KEYCODE_CONVERSION_TABLE.at(keyCode);
+  KeyCode convertedCode = KEYCODE_CONVERSION_TABLE.at(keyCode);
 
-  m_keyboardStates[static_cast<uint16_t>(convertedCode)] = true;
+  m_keyboardStates[static_cast<uint16_t>(convertedCode)].keyboardState = true;
 }
 
 void InputHandler::setKeyUpImpl(SDL_Keycode keyCode)
 {
-  Keycode convertedCode = KEYCODE_CONVERSION_TABLE.at(keyCode);
+  KeyCode convertedCode = KEYCODE_CONVERSION_TABLE.at(keyCode);
 
-  m_keyboardStates[static_cast<uint16_t>(convertedCode)] = false;
+  m_keyboardStates[static_cast<uint16_t>(convertedCode)].keyboardState = false;
 }
 
-bool InputHandler::isKeyPressedImpl(Keycode keyCode)
+void InputHandler::setMouseButtonDownImpl(int mouseCode)
 {
-  return m_keyboardDowns[static_cast<uint16_t>(keyCode)];
+  m_mouseState.mouseState |= SDL_BUTTON(mouseCode);
 }
 
-bool InputHandler::isKeyHeldImpl(Keycode keyCode)
+void InputHandler::setMouseButtonUpImpl(int mouseCode)
 {
-  return m_keyboardStates[static_cast<uint16_t>(keyCode)];
+  m_mouseState.mouseState &= (~SDL_BUTTON(mouseCode));
 }
 
-bool InputHandler::isKeyReleasedImpl(Keycode keyCode)
+void InputHandler::setMouseButtonDownImpl(MouseCode mouseCode)
 {
-  return m_keyboardUps[static_cast<uint16_t>(keyCode)];
+  const uint8_t codeMask = static_cast<uint8_t>(mouseCode);
+
+  m_mouseState.mouseState |= codeMask;
 }
 
-bool InputHandler::isKeyUpImpl(Keycode keyCode)
+void InputHandler::setMouseButtonUpImpl(MouseCode mouseCode)
 {
-  return !m_keyboardStates[static_cast<uint16_t>(keyCode)];
+  const uint8_t codeMask = static_cast<uint8_t>(mouseCode);
+
+  m_mouseState.mouseState &= (~codeMask);
+}
+
+void InputHandler::setCursorMovementImpl(SDL_MouseMotionEvent event)
+{
+  m_mouseState.mouseRelativeMotionX = event.xrel;
+  m_mouseState.mouseRelativeMotionY = event.yrel;
+}
+
+bool InputHandler::isKeyPressedImpl(KeyCode keyCode)
+{
+  return m_keyboardStates[static_cast<uint16_t>(keyCode)].keyboardDown;
+}
+
+bool InputHandler::isKeyHeldImpl(KeyCode keyCode)
+{
+  return m_keyboardStates[static_cast<uint16_t>(keyCode)].keyboardState;
+}
+
+bool InputHandler::isKeyReleasedImpl(KeyCode keyCode)
+{
+  return m_keyboardStates[static_cast<uint16_t>(keyCode)].keyboardUp;
+}
+
+bool InputHandler::isKeyUpImpl(KeyCode keyCode)
+{
+  return !m_keyboardStates[static_cast<uint16_t>(keyCode)].keyboardState;
+}
+
+bool InputHandler::isMouseButtonPressedImpl(MouseCode mouseCode)
+{
+  return (m_mouseState.mouseDown & static_cast<uint8_t>(mouseCode)) != 0;
+}
+
+bool InputHandler::isMouseButtonHeldImpl(MouseCode mouseCode)
+{
+  return (m_mouseState.mouseState & static_cast<uint8_t>(mouseCode)) != 0;
+}
+
+bool InputHandler::isMouseButtonReleasedImpl(MouseCode mouseCode)
+{
+  return (m_mouseState.mouseUp & static_cast<uint8_t>(mouseCode)) != 0;
+}
+
+bool InputHandler::isMouseButtonUpImpl(MouseCode mouseCode)
+{
+  return (m_mouseState.mouseState & static_cast<uint8_t>(mouseCode)) == 0;
+}
+
+int32_t InputHandler::getCursorPositionXImpl()
+{
+  return m_mouseState.mouseRelativePositionX;
+}
+
+int32_t InputHandler::getCursorPositionYImpl()
+{
+  return m_mouseState.mouseRelativePositionY;
+}
+
+int32_t InputHandler::getCursorOffsetXImpl()
+{
+  return m_mouseState.mouseRelativeMotionX;
+}
+
+int32_t InputHandler::getCursorOffsetYImpl()
+{
+  // Inverted since y-coords of cursor relative to window range from top to bottom:
+  return -m_mouseState.mouseRelativeMotionY;
 }

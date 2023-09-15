@@ -70,10 +70,11 @@
     <ClInclude Include="Core\InputHandler.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Utils\Keycode.h">
+    <ClInclude Include="Utils\KeyCode.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Utils\GlobalTimer.h" />
+    <ClInclude Include="Utils\MouseCode.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Shaders\helloTriangle.frag">

@@ -58,7 +58,7 @@ void cassidy::Engine::run()
 
     processInput();
 
-    if (InputHandler::isKeyPressed(Keycode::KEYCODE_ESCAPE))
+    if (InputHandler::isKeyPressed(KeyCode::KEYCODE_ESCAPE))
     {
       isRunning = false;
       continue;
@@ -83,53 +83,73 @@ void cassidy::Engine::release()
 
 void cassidy::Engine::processInput()
 {
-  // Log key state changes between this frame and the previous frame:
+  // Log key and mouse state changes between this frame and the previous frame:
   InputHandler::updateKeyStates();
+  InputHandler::updateMouseStates();
+
+  if (InputHandler::isMouseButtonPressed(MouseCode::MOUSECODE_RIGHT))
+  {
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+    InputHandler::lockCursor();
+  }
+  else if (InputHandler::isMouseButtonReleased(MouseCode::MOUSECODE_RIGHT))
+  {
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    InputHandler::unlockCursor();
+  }
+  else if (InputHandler::isMouseButtonHeld(MouseCode::MOUSECODE_RIGHT))
+  {
+    if (InputHandler::getCursorOffsetX() != 0  && InputHandler::getCursorOffsetY() != 0)
+      std::cout << "(" << InputHandler::getCursorOffsetX() << ", " << InputHandler::getCursorOffsetY() << ")\n";
+
+    m_camera.turnRight(static_cast<float>(InputHandler::getCursorOffsetX()));
+    m_camera.lookUp(static_cast<float>(InputHandler::getCursorOffsetY()));
+  }
 
   // WASD horizontal camera movement controls:
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_w))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_w))
   {
     m_camera.moveForward();
   }
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_a))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_a))
   {
     m_camera.moveRight(-1.0f);
   }
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_s))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_s))
   {
     m_camera.moveForward(-1.0f);
   }
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_d))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_d))
   {
     m_camera.moveRight();
   }
 
   // Q/E vertical camera movement controls:
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_q))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_q))
   {
     m_camera.moveUp(-1.0f);
   }
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_e))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_e))
   {
     m_camera.moveUp();
   }
 
   // Arrow key camera rotation controls:
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_UP))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_UP))
   {
-    m_camera.lookUp();
+    m_camera.lookUp(1.0f);
   }
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_DOWN))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_DOWN))
   {
-    m_camera.lookDown();
+    m_camera.lookUp(-1.0f);
   }
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_LEFT))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_LEFT))
   {
-    m_camera.turnLeft();
+    m_camera.turnRight(-1.0f);
   }
-  if (InputHandler::isKeyHeld(Keycode::KEYCODE_RIGHT))
+  if (InputHandler::isKeyHeld(KeyCode::KEYCODE_RIGHT))
   {
-    m_camera.turnRight();
+    m_camera.turnRight(1.0f);
   }
 }
 

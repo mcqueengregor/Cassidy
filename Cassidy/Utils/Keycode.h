@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL.h>
+#include <SDL_keycode.h>
 
 // SDL_SCANCODE_CAPSLOCK - 126, forces new CAPSLOCK keycode to DELETE + 1:
 #define SDL_KEYCODE_CONVERT_CONSTANT (0x3FFF'FFBB)
@@ -11,7 +11,7 @@
 #define SDL_TRANSFORM_KEYCODE_TO_NEW_RANGE(x) (x % SDL_KEYCODE_RANGE_TRANSFORM_CONSTANT)
 
 // Custom keycode set built from SDL keycodes in SDL_keycode.h:
-enum class Keycode : uint16_t
+enum class KeyCode : uint16_t
 {
   KEYCODE_UNKNOWN = 0,
 

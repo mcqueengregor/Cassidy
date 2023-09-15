@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Utils/Keycode.h"
+#include "Utils/KeyCode.h"
+#include "Utils/MouseCode.h"
+#include <SDL_events.h>
 #include <unordered_map>
 
 class InputHandler
@@ -15,298 +17,367 @@ public:
 
   static inline void init() { InputHandler::get().initImpl(); }
 
-  static inline void updateKeyStates() { InputHandler::get().updateKeyStatesImpl(); }
+  static inline void updateKeyStates()    { InputHandler::get().updateKeyStatesImpl(); }
+  static inline void updateMouseStates()  { InputHandler::get().updateMouseStatesImpl(); }
 
   static inline void setKeyDown(SDL_Keycode keyCode)  { InputHandler::get().setKeyDownImpl(keyCode); }
   static inline void setKeyUp(SDL_Keycode keyCode)    { InputHandler::get().setKeyUpImpl(keyCode); }
 
-  /* 
-    Return whether or not a key satisfies a given state.
+  static inline void setMouseButtonDown(int mouseCode)  { InputHandler::get().setMouseButtonDownImpl(mouseCode); }
+  static inline void setMouseButtonUp(int mouseCode)    { InputHandler::get().setMouseButtonUpImpl(mouseCode); }
+  static inline void setMouseButtonDown(MouseCode mouseCode)  { InputHandler::get().setMouseButtonDownImpl(mouseCode); }
+  static inline void setMouseButtonUp(MouseCode mouseCode)    { InputHandler::get().setMouseButtonUpImpl(mouseCode); }
+
+  static inline void setCursorMovement(SDL_MouseMotionEvent event) { InputHandler::get().setCursorMovementImpl(event); }
+
+  static inline void lockCursor()   { InputHandler::get().m_mouseState.isCursorLocked = true; }
+  static inline void unlockCursor() { InputHandler::get().m_mouseState.isCursorLocked = false; }
+
+  /*
+    Input states:
     - "Pressed" indicates the key was pressed in this frame.
     - "Held" indicates the key was pressed in a previous frame and is still pressed.
     - "Released" indicates the key was released in this frame.
     - "Up" indicates the key was released in a previous frame and is still released.
   */
-  static inline bool isKeyPressed(Keycode keyCode)   { return InputHandler::get().isKeyPressedImpl(keyCode); }
-  static inline bool isKeyHeld(Keycode keyCode)      { return InputHandler::get().isKeyHeldImpl(keyCode); }
-  static inline bool isKeyReleased(Keycode keyCode)  { return InputHandler::get().isKeyReleasedImpl(keyCode); }
-  static inline bool isKeyUp(Keycode keyCode)        { return InputHandler::get().isKeyUpImpl(keyCode); }
+
+  static inline bool isKeyPressed(KeyCode keyCode) { return InputHandler::get().isKeyPressedImpl(keyCode); }
+  static inline bool isKeyHeld(KeyCode keyCode) { return InputHandler::get().isKeyHeldImpl(keyCode); }
+  static inline bool isKeyReleased(KeyCode keyCode) { return InputHandler::get().isKeyReleasedImpl(keyCode); }
+  static inline bool isKeyUp(KeyCode keyCode) { return InputHandler::get().isKeyUpImpl(keyCode); }
+
+  static inline bool isMouseButtonPressed(MouseCode mouseCode) { return InputHandler::get().isMouseButtonPressedImpl(mouseCode); }
+  static inline bool isMouseButtonHeld(MouseCode mouseCode) { return InputHandler::get().isMouseButtonHeldImpl(mouseCode); }
+  static inline bool isMouseButtonReleased(MouseCode mouseCode) { return InputHandler::get().isMouseButtonReleasedImpl(mouseCode); }
+  static inline bool isMouseButtonUp(MouseCode mouseCode) { return InputHandler::get().isMouseButtonUpImpl(mouseCode); }
+
+  static inline int32_t getCursorPositionX() { return InputHandler::get().getCursorPositionXImpl(); }
+  static inline int32_t getCursorPositionY() { return InputHandler::get().getCursorPositionYImpl(); }
+
+  static inline int32_t getCursorOffsetX() { return InputHandler::get().getCursorOffsetXImpl(); }
+  static inline int32_t getCursorOffsetY() { return InputHandler::get().getCursorOffsetYImpl(); }
 
 private:
   InputHandler() {}
-  
+
   void initImpl();
   void updateKeyStatesImpl();
+  void updateMouseStatesImpl();
 
   void setKeyDownImpl(SDL_Keycode keyCode);
   void setKeyUpImpl(SDL_Keycode keyCode);
 
-  bool isKeyPressedImpl(Keycode keyCode);
-  bool isKeyHeldImpl(Keycode keyCode);
-  bool isKeyReleasedImpl(Keycode keyCode);
-  bool isKeyUpImpl(Keycode keyCode);
+  void setMouseButtonDownImpl(int mouseCode);
+  void setMouseButtonUpImpl(int mouseCode);
+  void setMouseButtonDownImpl(MouseCode mouseCode);
+  void setMouseButtonUpImpl(MouseCode mouseCode);
+
+  void setCursorMovementImpl(SDL_MouseMotionEvent event);
+
+  bool isKeyPressedImpl(KeyCode keyCode);
+  bool isKeyHeldImpl(KeyCode keyCode);
+  bool isKeyReleasedImpl(KeyCode keyCode);
+  bool isKeyUpImpl(KeyCode keyCode);
+
+  bool isMouseButtonPressedImpl(MouseCode mouseCode);
+  bool isMouseButtonHeldImpl(MouseCode mouseCode);
+  bool isMouseButtonReleasedImpl(MouseCode mouseCode);
+  bool isMouseButtonUpImpl(MouseCode mouseCode);
+
+  int32_t getCursorPositionXImpl();
+  int32_t getCursorPositionYImpl();
+
+  int32_t getCursorOffsetXImpl();
+  int32_t getCursorOffsetYImpl();
 
   // Keyboard states:
   static const uint16_t KEYBOARD_SIZE = SDL_TRANSFORM_KEYCODE_TO_NEW_RANGE(SDLK_SLEEP);
 
-  bool m_keyboardStates[KEYBOARD_SIZE];
-  bool m_prevKeyboardStates[KEYBOARD_SIZE];
+  // Defined as bitmasks to store all 5 button states, as well as position of cursor relative
+  // to window and other attributes:
+  struct MouseState
+  {
+    uint8_t mouseState;
+    uint8_t prevMouseState;
 
-  bool m_keyboardDowns[KEYBOARD_SIZE];
-  bool m_keyboardUps[KEYBOARD_SIZE];
+    uint8_t mouseUp;
+    uint8_t mouseDown;
 
-  const std::unordered_map<SDL_Keycode, Keycode> KEYCODE_CONVERSION_TABLE = {
-    { SDLK_UNKNOWN, Keycode::KEYCODE_UNKNOWN },
+    int32_t mouseRelativePositionX;
+    int32_t mouseRelativePositionY;
 
-    { SDLK_RETURN, Keycode::KEYCODE_RETURN },
-    { SDLK_ESCAPE, Keycode::KEYCODE_ESCAPE },
-    { SDLK_BACKSPACE, Keycode::KEYCODE_BACKSPACE },
-    { SDLK_TAB, Keycode::KEYCODE_TAB },
-    { SDLK_SPACE, Keycode::KEYCODE_SPACE },
-    { SDLK_EXCLAIM, Keycode::KEYCODE_EXCLAIM },
-    { SDLK_QUOTEDBL, Keycode::KEYCODE_QUOTEDBL },
-    { SDLK_HASH, Keycode::KEYCODE_HASH },
-    { SDLK_PERCENT, Keycode::KEYCODE_PERCENT },
-    { SDLK_DOLLAR, Keycode::KEYCODE_DOLLAR },
-    { SDLK_AMPERSAND, Keycode::KEYCODE_AMPERSAND },
-    { SDLK_QUOTE, Keycode::KEYCODE_QUOTE },
-    { SDLK_LEFTPAREN, Keycode::KEYCODE_LEFTPAREN },
-    { SDLK_RIGHTPAREN, Keycode::KEYCODE_RIGHTPAREN },
-    { SDLK_ASTERISK, Keycode::KEYCODE_ASTERISK },
-    { SDLK_PLUS, Keycode::KEYCODE_PLUS },
-    { SDLK_COMMA, Keycode::KEYCODE_COMMA },
-    { SDLK_MINUS, Keycode::KEYCODE_MINUS },
-    { SDLK_PERIOD, Keycode::KEYCODE_PERIOD },
-    { SDLK_SLASH, Keycode::KEYCODE_SLASH },
-    { SDLK_0, Keycode::KEYCODE_0 },
-    { SDLK_1, Keycode::KEYCODE_1 },
-    { SDLK_2, Keycode::KEYCODE_2 },
-    { SDLK_3, Keycode::KEYCODE_3 },
-    { SDLK_4, Keycode::KEYCODE_4 },
-    { SDLK_5, Keycode::KEYCODE_5 },
-    { SDLK_6, Keycode::KEYCODE_6 },
-    { SDLK_7, Keycode::KEYCODE_7 },
-    { SDLK_8, Keycode::KEYCODE_8 },
-    { SDLK_9, Keycode::KEYCODE_9 },
-    { SDLK_COLON, Keycode::KEYCODE_COLON },
-    { SDLK_SEMICOLON, Keycode::KEYCODE_SEMICOLON },
-    { SDLK_LESS, Keycode::KEYCODE_LESS },
-    { SDLK_EQUALS, Keycode::KEYCODE_EQUALS },
-    { SDLK_GREATER, Keycode::KEYCODE_GREATER },
-    { SDLK_QUESTION, Keycode::KEYCODE_QUESTION },
-    { SDLK_AT, Keycode::KEYCODE_AT },
+    int32_t prevMouseRelativePositionX;
+    int32_t prevMouseRelativePositionY;
+
+    int32_t mouseRelativeMotionX;
+    int32_t mouseRelativeMotionY;
+
+    bool isCursorLocked;
+  } m_mouseState;
+
+  // Defined as array of struct of bools, since there are too many potential keys to store as a single mask:
+  // TODO: Rework to arrays of 64-bit masks for better memory packing?
+  struct KeyboardState
+  {
+    bool keyboardState;
+    bool prevKeyboardState;
+
+    bool keyboardDown;
+    bool keyboardUp;
+  } m_keyboardStates[KEYBOARD_SIZE];
+
+  const std::unordered_map<SDL_Keycode, KeyCode> KEYCODE_CONVERSION_TABLE = {
+    { SDLK_UNKNOWN, KeyCode::KEYCODE_UNKNOWN },
+
+    { SDLK_RETURN, KeyCode::KEYCODE_RETURN },
+    { SDLK_ESCAPE, KeyCode::KEYCODE_ESCAPE },
+    { SDLK_BACKSPACE, KeyCode::KEYCODE_BACKSPACE },
+    { SDLK_TAB, KeyCode::KEYCODE_TAB },
+    { SDLK_SPACE, KeyCode::KEYCODE_SPACE },
+    { SDLK_EXCLAIM, KeyCode::KEYCODE_EXCLAIM },
+    { SDLK_QUOTEDBL, KeyCode::KEYCODE_QUOTEDBL },
+    { SDLK_HASH, KeyCode::KEYCODE_HASH },
+    { SDLK_PERCENT, KeyCode::KEYCODE_PERCENT },
+    { SDLK_DOLLAR, KeyCode::KEYCODE_DOLLAR },
+    { SDLK_AMPERSAND, KeyCode::KEYCODE_AMPERSAND },
+    { SDLK_QUOTE, KeyCode::KEYCODE_QUOTE },
+    { SDLK_LEFTPAREN, KeyCode::KEYCODE_LEFTPAREN },
+    { SDLK_RIGHTPAREN, KeyCode::KEYCODE_RIGHTPAREN },
+    { SDLK_ASTERISK, KeyCode::KEYCODE_ASTERISK },
+    { SDLK_PLUS, KeyCode::KEYCODE_PLUS },
+    { SDLK_COMMA, KeyCode::KEYCODE_COMMA },
+    { SDLK_MINUS, KeyCode::KEYCODE_MINUS },
+    { SDLK_PERIOD, KeyCode::KEYCODE_PERIOD },
+    { SDLK_SLASH, KeyCode::KEYCODE_SLASH },
+    { SDLK_0, KeyCode::KEYCODE_0 },
+    { SDLK_1, KeyCode::KEYCODE_1 },
+    { SDLK_2, KeyCode::KEYCODE_2 },
+    { SDLK_3, KeyCode::KEYCODE_3 },
+    { SDLK_4, KeyCode::KEYCODE_4 },
+    { SDLK_5, KeyCode::KEYCODE_5 },
+    { SDLK_6, KeyCode::KEYCODE_6 },
+    { SDLK_7, KeyCode::KEYCODE_7 },
+    { SDLK_8, KeyCode::KEYCODE_8 },
+    { SDLK_9, KeyCode::KEYCODE_9 },
+    { SDLK_COLON, KeyCode::KEYCODE_COLON },
+    { SDLK_SEMICOLON, KeyCode::KEYCODE_SEMICOLON },
+    { SDLK_LESS, KeyCode::KEYCODE_LESS },
+    { SDLK_EQUALS, KeyCode::KEYCODE_EQUALS },
+    { SDLK_GREATER, KeyCode::KEYCODE_GREATER },
+    { SDLK_QUESTION, KeyCode::KEYCODE_QUESTION },
+    { SDLK_AT, KeyCode::KEYCODE_AT },
 
     /*
        Skip uppercase letters
      */
 
-    { SDLK_LEFTBRACKET, Keycode::KEYCODE_LEFTBRACKET },
-    { SDLK_BACKSLASH, Keycode::KEYCODE_BACKSLASH },
-    { SDLK_RIGHTBRACKET, Keycode::KEYCODE_RIGHTBRACKET },
-    { SDLK_CARET, Keycode::KEYCODE_CARET },
-    { SDLK_UNDERSCORE, Keycode::KEYCODE_UNDERSCORE },
-    { SDLK_BACKQUOTE, Keycode::KEYCODE_BACKQUOTE },
-    { SDLK_a, Keycode::KEYCODE_a },
-    { SDLK_b, Keycode::KEYCODE_b },
-    { SDLK_c, Keycode::KEYCODE_c },
-    { SDLK_d, Keycode::KEYCODE_d },
-    { SDLK_e, Keycode::KEYCODE_e },
-    { SDLK_f, Keycode::KEYCODE_f },
-    { SDLK_g, Keycode::KEYCODE_g },
-    { SDLK_h, Keycode::KEYCODE_h },
-    { SDLK_i, Keycode::KEYCODE_i },
-    { SDLK_j, Keycode::KEYCODE_j },
-    { SDLK_k, Keycode::KEYCODE_k },
-    { SDLK_l, Keycode::KEYCODE_l },
-    { SDLK_m, Keycode::KEYCODE_m },
-    { SDLK_n, Keycode::KEYCODE_n },
-    { SDLK_o, Keycode::KEYCODE_o },
-    { SDLK_p, Keycode::KEYCODE_p },
-    { SDLK_q, Keycode::KEYCODE_q },
-    { SDLK_r, Keycode::KEYCODE_r },
-    { SDLK_s, Keycode::KEYCODE_s },
-    { SDLK_t, Keycode::KEYCODE_t },
-    { SDLK_u, Keycode::KEYCODE_u },
-    { SDLK_v, Keycode::KEYCODE_v },
-    { SDLK_w, Keycode::KEYCODE_w },
-    { SDLK_x, Keycode::KEYCODE_x },
-    { SDLK_y, Keycode::KEYCODE_y },
-    { SDLK_z, Keycode::KEYCODE_z },
+    { SDLK_LEFTBRACKET, KeyCode::KEYCODE_LEFTBRACKET },
+    { SDLK_BACKSLASH, KeyCode::KEYCODE_BACKSLASH },
+    { SDLK_RIGHTBRACKET, KeyCode::KEYCODE_RIGHTBRACKET },
+    { SDLK_CARET, KeyCode::KEYCODE_CARET },
+    { SDLK_UNDERSCORE, KeyCode::KEYCODE_UNDERSCORE },
+    { SDLK_BACKQUOTE, KeyCode::KEYCODE_BACKQUOTE },
+    { SDLK_a, KeyCode::KEYCODE_a },
+    { SDLK_b, KeyCode::KEYCODE_b },
+    { SDLK_c, KeyCode::KEYCODE_c },
+    { SDLK_d, KeyCode::KEYCODE_d },
+    { SDLK_e, KeyCode::KEYCODE_e },
+    { SDLK_f, KeyCode::KEYCODE_f },
+    { SDLK_g, KeyCode::KEYCODE_g },
+    { SDLK_h, KeyCode::KEYCODE_h },
+    { SDLK_i, KeyCode::KEYCODE_i },
+    { SDLK_j, KeyCode::KEYCODE_j },
+    { SDLK_k, KeyCode::KEYCODE_k },
+    { SDLK_l, KeyCode::KEYCODE_l },
+    { SDLK_m, KeyCode::KEYCODE_m },
+    { SDLK_n, KeyCode::KEYCODE_n },
+    { SDLK_o, KeyCode::KEYCODE_o },
+    { SDLK_p, KeyCode::KEYCODE_p },
+    { SDLK_q, KeyCode::KEYCODE_q },
+    { SDLK_r, KeyCode::KEYCODE_r },
+    { SDLK_s, KeyCode::KEYCODE_s },
+    { SDLK_t, KeyCode::KEYCODE_t },
+    { SDLK_u, KeyCode::KEYCODE_u },
+    { SDLK_v, KeyCode::KEYCODE_v },
+    { SDLK_w, KeyCode::KEYCODE_w },
+    { SDLK_x, KeyCode::KEYCODE_x },
+    { SDLK_y, KeyCode::KEYCODE_y },
+    { SDLK_z, KeyCode::KEYCODE_z },
 
-    { SDLK_CAPSLOCK, Keycode::KEYCODE_CAPSLOCK },
+    { SDLK_CAPSLOCK, KeyCode::KEYCODE_CAPSLOCK },
 
-    { SDLK_F1, Keycode::KEYCODE_F1 },
-    { SDLK_F2, Keycode::KEYCODE_F2 },
-    { SDLK_F3, Keycode::KEYCODE_F3 },
-    { SDLK_F4, Keycode::KEYCODE_F4 },
-    { SDLK_F5, Keycode::KEYCODE_F5 },
-    { SDLK_F6, Keycode::KEYCODE_F6 },
-    { SDLK_F7, Keycode::KEYCODE_F7 },
-    { SDLK_F8, Keycode::KEYCODE_F8 },
-    { SDLK_F9, Keycode::KEYCODE_F9 },
-    { SDLK_F10, Keycode::KEYCODE_F10 },
-    { SDLK_F11, Keycode::KEYCODE_F11 },
-    { SDLK_F12, Keycode::KEYCODE_F12 },
+    { SDLK_F1, KeyCode::KEYCODE_F1 },
+    { SDLK_F2, KeyCode::KEYCODE_F2 },
+    { SDLK_F3, KeyCode::KEYCODE_F3 },
+    { SDLK_F4, KeyCode::KEYCODE_F4 },
+    { SDLK_F5, KeyCode::KEYCODE_F5 },
+    { SDLK_F6, KeyCode::KEYCODE_F6 },
+    { SDLK_F7, KeyCode::KEYCODE_F7 },
+    { SDLK_F8, KeyCode::KEYCODE_F8 },
+    { SDLK_F9, KeyCode::KEYCODE_F9 },
+    { SDLK_F10, KeyCode::KEYCODE_F10 },
+    { SDLK_F11, KeyCode::KEYCODE_F11 },
+    { SDLK_F12, KeyCode::KEYCODE_F12 },
 
-    { SDLK_PRINTSCREEN, Keycode::KEYCODE_PRINTSCREEN },
-    { SDLK_SCROLLLOCK, Keycode::KEYCODE_SCROLLLOCK },
-    { SDLK_PAUSE, Keycode::KEYCODE_PAUSE },
-    { SDLK_INSERT, Keycode::KEYCODE_INSERT },
-    { SDLK_HOME, Keycode::KEYCODE_HOME },
-    { SDLK_PAGEUP, Keycode::KEYCODE_PAGEUP },
-    { SDLK_DELETE, Keycode::KEYCODE_DELETE },
-    { SDLK_END, Keycode::KEYCODE_END },
-    { SDLK_PAGEDOWN, Keycode::KEYCODE_PAGEDOWN },
-    { SDLK_RIGHT, Keycode::KEYCODE_RIGHT },
-    { SDLK_LEFT, Keycode::KEYCODE_LEFT },
-    { SDLK_DOWN, Keycode::KEYCODE_DOWN },
-    { SDLK_UP, Keycode::KEYCODE_UP },
+    { SDLK_PRINTSCREEN, KeyCode::KEYCODE_PRINTSCREEN },
+    { SDLK_SCROLLLOCK, KeyCode::KEYCODE_SCROLLLOCK },
+    { SDLK_PAUSE, KeyCode::KEYCODE_PAUSE },
+    { SDLK_INSERT, KeyCode::KEYCODE_INSERT },
+    { SDLK_HOME, KeyCode::KEYCODE_HOME },
+    { SDLK_PAGEUP, KeyCode::KEYCODE_PAGEUP },
+    { SDLK_DELETE, KeyCode::KEYCODE_DELETE },
+    { SDLK_END, KeyCode::KEYCODE_END },
+    { SDLK_PAGEDOWN, KeyCode::KEYCODE_PAGEDOWN },
+    { SDLK_RIGHT, KeyCode::KEYCODE_RIGHT },
+    { SDLK_LEFT, KeyCode::KEYCODE_LEFT },
+    { SDLK_DOWN, KeyCode::KEYCODE_DOWN },
+    { SDLK_UP, KeyCode::KEYCODE_UP },
 
-    { SDLK_NUMLOCKCLEAR, Keycode::KEYCODE_NUMLOCKCLEAR },
-    { SDLK_KP_DIVIDE, Keycode::KEYCODE_KP_DIVIDE },
-    { SDLK_KP_MULTIPLY, Keycode::KEYCODE_KP_MULTIPLY },
-    { SDLK_KP_MINUS, Keycode::KEYCODE_KP_MINUS },
-    { SDLK_KP_PLUS, Keycode::KEYCODE_KP_PLUS },
-    { SDLK_KP_ENTER, Keycode::KEYCODE_KP_ENTER },
-    { SDLK_KP_1, Keycode::KEYCODE_KP_1 },
-    { SDLK_KP_2, Keycode::KEYCODE_KP_2 },
-    { SDLK_KP_3, Keycode::KEYCODE_KP_3 },
-    { SDLK_KP_4, Keycode::KEYCODE_KP_4 },
-    { SDLK_KP_5, Keycode::KEYCODE_KP_5 },
-    { SDLK_KP_6, Keycode::KEYCODE_KP_6 },
-    { SDLK_KP_7, Keycode::KEYCODE_KP_7 },
-    { SDLK_KP_8, Keycode::KEYCODE_KP_8 },
-    { SDLK_KP_9, Keycode::KEYCODE_KP_9 },
-    { SDLK_KP_0, Keycode::KEYCODE_KP_0 },
-    { SDLK_KP_PERIOD, Keycode::KEYCODE_KP_PERIOD },
+    { SDLK_NUMLOCKCLEAR, KeyCode::KEYCODE_NUMLOCKCLEAR },
+    { SDLK_KP_DIVIDE, KeyCode::KEYCODE_KP_DIVIDE },
+    { SDLK_KP_MULTIPLY, KeyCode::KEYCODE_KP_MULTIPLY },
+    { SDLK_KP_MINUS, KeyCode::KEYCODE_KP_MINUS },
+    { SDLK_KP_PLUS, KeyCode::KEYCODE_KP_PLUS },
+    { SDLK_KP_ENTER, KeyCode::KEYCODE_KP_ENTER },
+    { SDLK_KP_1, KeyCode::KEYCODE_KP_1 },
+    { SDLK_KP_2, KeyCode::KEYCODE_KP_2 },
+    { SDLK_KP_3, KeyCode::KEYCODE_KP_3 },
+    { SDLK_KP_4, KeyCode::KEYCODE_KP_4 },
+    { SDLK_KP_5, KeyCode::KEYCODE_KP_5 },
+    { SDLK_KP_6, KeyCode::KEYCODE_KP_6 },
+    { SDLK_KP_7, KeyCode::KEYCODE_KP_7 },
+    { SDLK_KP_8, KeyCode::KEYCODE_KP_8 },
+    { SDLK_KP_9, KeyCode::KEYCODE_KP_9 },
+    { SDLK_KP_0, KeyCode::KEYCODE_KP_0 },
+    { SDLK_KP_PERIOD, KeyCode::KEYCODE_KP_PERIOD },
 
-    { SDLK_APPLICATION, Keycode::KEYCODE_APPLICATION },
-    { SDLK_POWER, Keycode::KEYCODE_POWER },
-    { SDLK_KP_EQUALS, Keycode::KEYCODE_KP_EQUALS },
-    { SDLK_F13, Keycode::KEYCODE_F13 },
-    { SDLK_F14, Keycode::KEYCODE_F14 },
-    { SDLK_F15, Keycode::KEYCODE_F15 },
-    { SDLK_F16, Keycode::KEYCODE_F16 },
-    { SDLK_F17, Keycode::KEYCODE_F17 },
-    { SDLK_F18, Keycode::KEYCODE_F18 },
-    { SDLK_F19, Keycode::KEYCODE_F19 },
-    { SDLK_F20, Keycode::KEYCODE_F20 },
-    { SDLK_F21, Keycode::KEYCODE_F21 },
-    { SDLK_F22, Keycode::KEYCODE_F22 },
-    { SDLK_F23, Keycode::KEYCODE_F23 },
-    { SDLK_F24, Keycode::KEYCODE_F24 },
-    { SDLK_EXECUTE, Keycode::KEYCODE_EXECUTE },
-    { SDLK_HELP, Keycode::KEYCODE_HELP },
-    { SDLK_MENU, Keycode::KEYCODE_MENU },
-    { SDLK_SELECT, Keycode::KEYCODE_SELECT },
-    { SDLK_STOP, Keycode::KEYCODE_STOP },
-    { SDLK_AGAIN, Keycode::KEYCODE_AGAIN },
-    { SDLK_UNDO, Keycode::KEYCODE_UNDO },
-    { SDLK_CUT, Keycode::KEYCODE_CUT },
-    { SDLK_COPY, Keycode::KEYCODE_COPY },
-    { SDLK_PASTE, Keycode::KEYCODE_PASTE },
-    { SDLK_FIND, Keycode::KEYCODE_FIND },
-    { SDLK_MUTE, Keycode::KEYCODE_MUTE },
-    { SDLK_VOLUMEUP, Keycode::KEYCODE_VOLUMEUP },
-    { SDLK_VOLUMEDOWN, Keycode::KEYCODE_VOLUMEDOWN },
-    { SDLK_KP_COMMA, Keycode::KEYCODE_KP_COMMA },
-    { SDLK_KP_EQUALSAS400, Keycode::KEYCODE_KP_EQUALSAS400 },
+    { SDLK_APPLICATION, KeyCode::KEYCODE_APPLICATION },
+    { SDLK_POWER, KeyCode::KEYCODE_POWER },
+    { SDLK_KP_EQUALS, KeyCode::KEYCODE_KP_EQUALS },
+    { SDLK_F13, KeyCode::KEYCODE_F13 },
+    { SDLK_F14, KeyCode::KEYCODE_F14 },
+    { SDLK_F15, KeyCode::KEYCODE_F15 },
+    { SDLK_F16, KeyCode::KEYCODE_F16 },
+    { SDLK_F17, KeyCode::KEYCODE_F17 },
+    { SDLK_F18, KeyCode::KEYCODE_F18 },
+    { SDLK_F19, KeyCode::KEYCODE_F19 },
+    { SDLK_F20, KeyCode::KEYCODE_F20 },
+    { SDLK_F21, KeyCode::KEYCODE_F21 },
+    { SDLK_F22, KeyCode::KEYCODE_F22 },
+    { SDLK_F23, KeyCode::KEYCODE_F23 },
+    { SDLK_F24, KeyCode::KEYCODE_F24 },
+    { SDLK_EXECUTE, KeyCode::KEYCODE_EXECUTE },
+    { SDLK_HELP, KeyCode::KEYCODE_HELP },
+    { SDLK_MENU, KeyCode::KEYCODE_MENU },
+    { SDLK_SELECT, KeyCode::KEYCODE_SELECT },
+    { SDLK_STOP, KeyCode::KEYCODE_STOP },
+    { SDLK_AGAIN, KeyCode::KEYCODE_AGAIN },
+    { SDLK_UNDO, KeyCode::KEYCODE_UNDO },
+    { SDLK_CUT, KeyCode::KEYCODE_CUT },
+    { SDLK_COPY, KeyCode::KEYCODE_COPY },
+    { SDLK_PASTE, KeyCode::KEYCODE_PASTE },
+    { SDLK_FIND, KeyCode::KEYCODE_FIND },
+    { SDLK_MUTE, KeyCode::KEYCODE_MUTE },
+    { SDLK_VOLUMEUP, KeyCode::KEYCODE_VOLUMEUP },
+    { SDLK_VOLUMEDOWN, KeyCode::KEYCODE_VOLUMEDOWN },
+    { SDLK_KP_COMMA, KeyCode::KEYCODE_KP_COMMA },
+    { SDLK_KP_EQUALSAS400, KeyCode::KEYCODE_KP_EQUALSAS400 },
 
-    { SDLK_ALTERASE, Keycode::KEYCODE_ALTERASE },
-    { SDLK_SYSREQ, Keycode::KEYCODE_SYSREQ },
-    { SDLK_CANCEL, Keycode::KEYCODE_CANCEL },
-    { SDLK_CLEAR, Keycode::KEYCODE_CLEAR },
-    { SDLK_PRIOR, Keycode::KEYCODE_PRIOR },
-    { SDLK_RETURN2, Keycode::KEYCODE_RETURN2 },
-    { SDLK_SEPARATOR, Keycode::KEYCODE_SEPARATOR },
-    { SDLK_OUT, Keycode::KEYCODE_OUT },
-    { SDLK_OPER, Keycode::KEYCODE_OPER },
-    { SDLK_CLEARAGAIN, Keycode::KEYCODE_CLEARAGAIN },
-    { SDLK_CRSEL, Keycode::KEYCODE_CRSEL },
-    { SDLK_EXSEL, Keycode::KEYCODE_EXSEL },
+    { SDLK_ALTERASE, KeyCode::KEYCODE_ALTERASE },
+    { SDLK_SYSREQ, KeyCode::KEYCODE_SYSREQ },
+    { SDLK_CANCEL, KeyCode::KEYCODE_CANCEL },
+    { SDLK_CLEAR, KeyCode::KEYCODE_CLEAR },
+    { SDLK_PRIOR, KeyCode::KEYCODE_PRIOR },
+    { SDLK_RETURN2, KeyCode::KEYCODE_RETURN2 },
+    { SDLK_SEPARATOR, KeyCode::KEYCODE_SEPARATOR },
+    { SDLK_OUT, KeyCode::KEYCODE_OUT },
+    { SDLK_OPER, KeyCode::KEYCODE_OPER },
+    { SDLK_CLEARAGAIN, KeyCode::KEYCODE_CLEARAGAIN },
+    { SDLK_CRSEL, KeyCode::KEYCODE_CRSEL },
+    { SDLK_EXSEL, KeyCode::KEYCODE_EXSEL },
 
-    { SDLK_KP_00, Keycode::KEYCODE_KP_00 },
-    { SDLK_KP_000, Keycode::KEYCODE_KP_000 },
-    { SDLK_THOUSANDSSEPARATOR, Keycode::KEYCODE_THOUSANDSSEPARATOR },
-    { SDLK_DECIMALSEPARATOR, Keycode::KEYCODE_DECIMALSEPARATOR },
-    { SDLK_CURRENCYUNIT, Keycode::KEYCODE_CURRENCYUNIT },
-    { SDLK_CURRENCYSUBUNIT, Keycode::KEYCODE_CURRENCYSUBUNIT },
-    { SDLK_KP_LEFTPAREN, Keycode::KEYCODE_KP_LEFTPAREN },
-    { SDLK_KP_RIGHTPAREN, Keycode::KEYCODE_KP_RIGHTPAREN },
-    { SDLK_KP_LEFTBRACE, Keycode::KEYCODE_KP_LEFTBRACE },
-    { SDLK_KP_RIGHTBRACE, Keycode::KEYCODE_KP_RIGHTBRACE },
-    { SDLK_KP_TAB, Keycode::KEYCODE_KP_TAB },
-    { SDLK_KP_BACKSPACE, Keycode::KEYCODE_KP_BACKSPACE },
-    { SDLK_KP_A, Keycode::KEYCODE_KP_A },
-    { SDLK_KP_B, Keycode::KEYCODE_KP_B },
-    { SDLK_KP_C, Keycode::KEYCODE_KP_C },
-    { SDLK_KP_D, Keycode::KEYCODE_KP_D },
-    { SDLK_KP_E, Keycode::KEYCODE_KP_E },
-    { SDLK_KP_F, Keycode::KEYCODE_KP_F },
-    { SDLK_KP_XOR, Keycode::KEYCODE_KP_XOR },
-    { SDLK_KP_POWER, Keycode::KEYCODE_KP_POWER },
-    { SDLK_KP_PERCENT, Keycode::KEYCODE_KP_PERCENT },
-    { SDLK_KP_LESS, Keycode::KEYCODE_KP_LESS },
-    { SDLK_KP_GREATER, Keycode::KEYCODE_KP_GREATER },
-    { SDLK_KP_AMPERSAND, Keycode::KEYCODE_KP_AMPERSAND },
-    { SDLK_KP_DBLAMPERSAND, Keycode::KEYCODE_KP_DBLAMPERSAND },
-    { SDLK_KP_COLON, Keycode::KEYCODE_KP_COLON },
-    { SDLK_KP_HASH, Keycode::KEYCODE_KP_HASH },
-    { SDLK_KP_SPACE, Keycode::KEYCODE_KP_SPACE },
-    { SDLK_KP_AT, Keycode::KEYCODE_KP_AT },
-    { SDLK_KP_EXCLAM, Keycode::KEYCODE_KP_EXCLAIM },
-    { SDLK_KP_MEMSTORE, Keycode::KEYCODE_KP_MEMSTORE },
-    { SDLK_KP_MEMRECALL, Keycode::KEYCODE_KP_MEMRECALL },
-    { SDLK_KP_MEMCLEAR, Keycode::KEYCODE_KP_MEMCLEAR },
-    { SDLK_KP_MEMADD, Keycode::KEYCODE_KP_MEMADD },
-    { SDLK_KP_MEMSUBTRACT, Keycode::KEYCODE_KP_MEMSUBTRACT },
-    { SDLK_KP_MEMMULTIPLY, Keycode::KEYCODE_KP_MEMMULTIPLY },
-    { SDLK_KP_MEMDIVIDE, Keycode::KEYCODE_KP_MEMDIVIDE },
-    { SDLK_KP_PLUSMINUS, Keycode::KEYCODE_KP_PLUSMINUS },
-    { SDLK_KP_CLEAR, Keycode::KEYCODE_KP_CLEAR },
-    { SDLK_KP_CLEARENTRY, Keycode::KEYCODE_KP_CLEARENTRY },
-    { SDLK_KP_BINARY, Keycode::KEYCODE_KP_BINARY },
-    { SDLK_KP_OCTAL, Keycode::KEYCODE_KP_OCTAL },
-    { SDLK_KP_DECIMAL, Keycode::KEYCODE_KP_DECIMAL },
-    { SDLK_KP_HEXADECIMAL, Keycode::KEYCODE_KP_HEXADECIMAL },
+    { SDLK_KP_00, KeyCode::KEYCODE_KP_00 },
+    { SDLK_KP_000, KeyCode::KEYCODE_KP_000 },
+    { SDLK_THOUSANDSSEPARATOR, KeyCode::KEYCODE_THOUSANDSSEPARATOR },
+    { SDLK_DECIMALSEPARATOR, KeyCode::KEYCODE_DECIMALSEPARATOR },
+    { SDLK_CURRENCYUNIT, KeyCode::KEYCODE_CURRENCYUNIT },
+    { SDLK_CURRENCYSUBUNIT, KeyCode::KEYCODE_CURRENCYSUBUNIT },
+    { SDLK_KP_LEFTPAREN, KeyCode::KEYCODE_KP_LEFTPAREN },
+    { SDLK_KP_RIGHTPAREN, KeyCode::KEYCODE_KP_RIGHTPAREN },
+    { SDLK_KP_LEFTBRACE, KeyCode::KEYCODE_KP_LEFTBRACE },
+    { SDLK_KP_RIGHTBRACE, KeyCode::KEYCODE_KP_RIGHTBRACE },
+    { SDLK_KP_TAB, KeyCode::KEYCODE_KP_TAB },
+    { SDLK_KP_BACKSPACE, KeyCode::KEYCODE_KP_BACKSPACE },
+    { SDLK_KP_A, KeyCode::KEYCODE_KP_A },
+    { SDLK_KP_B, KeyCode::KEYCODE_KP_B },
+    { SDLK_KP_C, KeyCode::KEYCODE_KP_C },
+    { SDLK_KP_D, KeyCode::KEYCODE_KP_D },
+    { SDLK_KP_E, KeyCode::KEYCODE_KP_E },
+    { SDLK_KP_F, KeyCode::KEYCODE_KP_F },
+    { SDLK_KP_XOR, KeyCode::KEYCODE_KP_XOR },
+    { SDLK_KP_POWER, KeyCode::KEYCODE_KP_POWER },
+    { SDLK_KP_PERCENT, KeyCode::KEYCODE_KP_PERCENT },
+    { SDLK_KP_LESS, KeyCode::KEYCODE_KP_LESS },
+    { SDLK_KP_GREATER, KeyCode::KEYCODE_KP_GREATER },
+    { SDLK_KP_AMPERSAND, KeyCode::KEYCODE_KP_AMPERSAND },
+    { SDLK_KP_DBLAMPERSAND, KeyCode::KEYCODE_KP_DBLAMPERSAND },
+    { SDLK_KP_COLON, KeyCode::KEYCODE_KP_COLON },
+    { SDLK_KP_HASH, KeyCode::KEYCODE_KP_HASH },
+    { SDLK_KP_SPACE, KeyCode::KEYCODE_KP_SPACE },
+    { SDLK_KP_AT, KeyCode::KEYCODE_KP_AT },
+    { SDLK_KP_EXCLAM, KeyCode::KEYCODE_KP_EXCLAIM },
+    { SDLK_KP_MEMSTORE, KeyCode::KEYCODE_KP_MEMSTORE },
+    { SDLK_KP_MEMRECALL, KeyCode::KEYCODE_KP_MEMRECALL },
+    { SDLK_KP_MEMCLEAR, KeyCode::KEYCODE_KP_MEMCLEAR },
+    { SDLK_KP_MEMADD, KeyCode::KEYCODE_KP_MEMADD },
+    { SDLK_KP_MEMSUBTRACT, KeyCode::KEYCODE_KP_MEMSUBTRACT },
+    { SDLK_KP_MEMMULTIPLY, KeyCode::KEYCODE_KP_MEMMULTIPLY },
+    { SDLK_KP_MEMDIVIDE, KeyCode::KEYCODE_KP_MEMDIVIDE },
+    { SDLK_KP_PLUSMINUS, KeyCode::KEYCODE_KP_PLUSMINUS },
+    { SDLK_KP_CLEAR, KeyCode::KEYCODE_KP_CLEAR },
+    { SDLK_KP_CLEARENTRY, KeyCode::KEYCODE_KP_CLEARENTRY },
+    { SDLK_KP_BINARY, KeyCode::KEYCODE_KP_BINARY },
+    { SDLK_KP_OCTAL, KeyCode::KEYCODE_KP_OCTAL },
+    { SDLK_KP_DECIMAL, KeyCode::KEYCODE_KP_DECIMAL },
+    { SDLK_KP_HEXADECIMAL, KeyCode::KEYCODE_KP_HEXADECIMAL },
 
-    { SDLK_LCTRL, Keycode::KEYCODE_LCTRL },
-    { SDLK_LSHIFT, Keycode::KEYCODE_LSHIFT },
-    { SDLK_LALT, Keycode::KEYCODE_LALT },
-    { SDLK_LGUI, Keycode::KEYCODE_LGUI },
-    { SDLK_RCTRL, Keycode::KEYCODE_RCTRL },
-    { SDLK_RSHIFT, Keycode::KEYCODE_RSHIFT },
-    { SDLK_RALT, Keycode::KEYCODE_RALT },
-    { SDLK_RGUI, Keycode::KEYCODE_RGUI },
+    { SDLK_LCTRL, KeyCode::KEYCODE_LCTRL },
+    { SDLK_LSHIFT, KeyCode::KEYCODE_LSHIFT },
+    { SDLK_LALT, KeyCode::KEYCODE_LALT },
+    { SDLK_LGUI, KeyCode::KEYCODE_LGUI },
+    { SDLK_RCTRL, KeyCode::KEYCODE_RCTRL },
+    { SDLK_RSHIFT, KeyCode::KEYCODE_RSHIFT },
+    { SDLK_RALT, KeyCode::KEYCODE_RALT },
+    { SDLK_RGUI, KeyCode::KEYCODE_RGUI },
 
-    { SDLK_MODE, Keycode::KEYCODE_MODE },
+    { SDLK_MODE, KeyCode::KEYCODE_MODE },
 
-    { SDLK_AUDIONEXT, Keycode::KEYCODE_AUDIONEXT },
-    { SDLK_AUDIOPREV, Keycode::KEYCODE_AUDIOPREV },
-    { SDLK_AUDIOSTOP, Keycode::KEYCODE_AUDIOSTOP },
-    { SDLK_AUDIOPLAY, Keycode::KEYCODE_AUDIOPLAY },
-    { SDLK_AUDIOMUTE, Keycode::KEYCODE_AUDIOMUTE },
-    { SDLK_MEDIASELECT, Keycode::KEYCODE_MEDIASELECT },
-    { SDLK_WWW, Keycode::KEYCODE_WWW },
-    { SDLK_MAIL, Keycode::KEYCODE_MAIL },
-    { SDLK_CALCULATOR, Keycode::KEYCODE_CALCULATOR },
-    { SDLK_COMPUTER, Keycode::KEYCODE_COMPUTER },
-    { SDLK_AC_SEARCH, Keycode::KEYCODE_AC_SEARCH },
-    { SDLK_AC_SEARCH, Keycode::KEYCODE_AC_SEARCH },
-    { SDLK_AC_HOME, Keycode::KEYCODE_AC_HOME },
-    { SDLK_AC_BACK, Keycode::KEYCODE_AC_BACK },
-    { SDLK_AC_FORWARD, Keycode::KEYCODE_AC_FORWARD },
-    { SDLK_AC_STOP, Keycode::KEYCODE_AC_STOP },
-    { SDLK_AC_REFRESH, Keycode::KEYCODE_AC_REFRESH },
-    { SDLK_AC_BOOKMARKS, Keycode::KEYCODE_AC_BOOKMARKS },
+    { SDLK_AUDIONEXT, KeyCode::KEYCODE_AUDIONEXT },
+    { SDLK_AUDIOPREV, KeyCode::KEYCODE_AUDIOPREV },
+    { SDLK_AUDIOSTOP, KeyCode::KEYCODE_AUDIOSTOP },
+    { SDLK_AUDIOPLAY, KeyCode::KEYCODE_AUDIOPLAY },
+    { SDLK_AUDIOMUTE, KeyCode::KEYCODE_AUDIOMUTE },
+    { SDLK_MEDIASELECT, KeyCode::KEYCODE_MEDIASELECT },
+    { SDLK_WWW, KeyCode::KEYCODE_WWW },
+    { SDLK_MAIL, KeyCode::KEYCODE_MAIL },
+    { SDLK_CALCULATOR, KeyCode::KEYCODE_CALCULATOR },
+    { SDLK_COMPUTER, KeyCode::KEYCODE_COMPUTER },
+    { SDLK_AC_SEARCH, KeyCode::KEYCODE_AC_SEARCH },
+    { SDLK_AC_SEARCH, KeyCode::KEYCODE_AC_SEARCH },
+    { SDLK_AC_HOME, KeyCode::KEYCODE_AC_HOME },
+    { SDLK_AC_BACK, KeyCode::KEYCODE_AC_BACK },
+    { SDLK_AC_FORWARD, KeyCode::KEYCODE_AC_FORWARD },
+    { SDLK_AC_STOP, KeyCode::KEYCODE_AC_STOP },
+    { SDLK_AC_REFRESH, KeyCode::KEYCODE_AC_REFRESH },
+    { SDLK_AC_BOOKMARKS, KeyCode::KEYCODE_AC_BOOKMARKS },
 
-    { SDLK_BRIGHTNESSDOWN, Keycode::KEYCODE_BRIGHTNESSDOWN },
-    { SDLK_BRIGHTNESSUP, Keycode::KEYCODE_BRIGHTNESSUP },
-    { SDLK_DISPLAYSWITCH, Keycode::KEYCODE_DISPLAYSWITCH },
-    { SDLK_KBDILLUMTOGGLE, Keycode::KEYCODE_KBDILLUMTOGGLE },
-    { SDLK_KBDILLUMDOWN, Keycode::KEYCODE_KBDILLUMDOWN },
-    { SDLK_KBDILLUMUP, Keycode::KEYCODE_KBDILLUMUP },
-    { SDLK_EJECT, Keycode::KEYCODE_EJECT },
-    { SDLK_SLEEP, Keycode::KEYCODE_SLEEP },
+    { SDLK_BRIGHTNESSDOWN, KeyCode::KEYCODE_BRIGHTNESSDOWN },
+    { SDLK_BRIGHTNESSUP, KeyCode::KEYCODE_BRIGHTNESSUP },
+    { SDLK_DISPLAYSWITCH, KeyCode::KEYCODE_DISPLAYSWITCH },
+    { SDLK_KBDILLUMTOGGLE, KeyCode::KEYCODE_KBDILLUMTOGGLE },
+    { SDLK_KBDILLUMDOWN, KeyCode::KEYCODE_KBDILLUMDOWN },
+    { SDLK_KBDILLUMUP, KeyCode::KEYCODE_KBDILLUMUP },
+    { SDLK_EJECT, KeyCode::KEYCODE_EJECT },
+    { SDLK_SLEEP, KeyCode::KEYCODE_SLEEP },
   };
 };

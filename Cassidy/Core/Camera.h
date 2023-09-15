@@ -23,10 +23,8 @@ namespace cassidy
     void moveWorldUp(float speedScalar = 1.0f);
     void moveUp(float speedScalar = 1.0f);
 
-    void turnLeft();
-    void turnRight();
-    void lookUp();
-    void lookDown();
+    void turnRight(float speedScalar);
+    void lookUp(float speedScalar);
 
   private:
     void findForward();
