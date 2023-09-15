@@ -90,14 +90,10 @@ void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &m_triangleVertexBuffer.buffer, &offset);
 
-    // Build world and viewProj matrices, upload to GPU via push constants:
-    const glm::vec3 camPos = glm::vec3(0.0f, 0.0f, -3.0f);
-    const glm::mat4 view = glm::translate(glm::mat4(1.0f), camPos);
+    // Get world and viewProj matrices, upload to GPU via push constants:
+    const glm::mat4 view = m_engineRef->getCamera().getLookatMatrix();
 
-    glm::mat4 proj = glm::perspective(glm::radians(70.0f), 
-      static_cast<float>(m_engineRef->getWindowDim().x) / static_cast<float>(m_engineRef->getWindowDim().y), 
-      0.1f, 300.0f);
-    proj[1][1] *= -1.0f;  // Invert projection's transformation to y-coord to match Vulkan's expectations.
+    glm::mat4 proj = m_engineRef->getCamera().getPerspectiveMatrix();
 
     glm::mat4 world = glm::mat4(1.0f);
 

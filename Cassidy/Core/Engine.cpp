@@ -25,6 +25,7 @@ void cassidy::Engine::init()
   initInstance();
   initSurface();
 
+  m_camera.init(this);
   m_renderer.init(this);
   m_eventHandler.init();
 
@@ -52,14 +53,18 @@ void cassidy::Engine::run()
       }
     }
 
-    // Log key state changes between this frame and the previous frame:
-    InputHandler::updateKeyStates();
+    // Update delta time and time since engine was initialised:
+    GlobalTimer::updateGlobalTimer();
+
+    processInput();
 
     if (InputHandler::isKeyPressed(Keycode::KEYCODE_ESCAPE))
     {
       isRunning = false;
+      continue;
     }
 
+    update();
 
     // If window isn't minimised, run renderer:
     const uint32_t windowFlags = SDL_GetWindowFlags(m_window);
@@ -76,11 +81,73 @@ void cassidy::Engine::release()
   std::cout << "Engine shut down!" << std::endl;
 }
 
+void cassidy::Engine::processInput()
+{
+  // Log key state changes between this frame and the previous frame:
+  InputHandler::updateKeyStates();
+
+  // WASD horizontal camera movement controls:
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_w))
+  {
+    m_camera.moveForward();
+  }
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_a))
+  {
+    m_camera.moveRight(-1.0f);
+  }
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_s))
+  {
+    m_camera.moveForward(-1.0f);
+  }
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_d))
+  {
+    m_camera.moveRight();
+  }
+
+  // Q/E vertical camera movement controls:
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_q))
+  {
+    m_camera.moveUp(-1.0f);
+  }
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_e))
+  {
+    m_camera.moveUp();
+  }
+
+  // Arrow key camera rotation controls:
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_UP))
+  {
+    m_camera.lookUp();
+  }
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_DOWN))
+  {
+    m_camera.lookDown();
+  }
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_LEFT))
+  {
+    m_camera.turnLeft();
+  }
+  if (InputHandler::isKeyHeld(Keycode::KEYCODE_RIGHT))
+  {
+    m_camera.turnRight();
+  }
+}
+
+void cassidy::Engine::update()
+{
+  m_camera.update();
+}
+
+void cassidy::Engine::updateGlobalTimer()
+{
+  uint64_t currentTimeMs = SDL_GetTicks64();
+}
+
 void cassidy::Engine::initInstance()
 {
   SDL_Init(SDL_INIT_VIDEO);
 
-  VkApplicationInfo appInfo = cassidy::init::applicationInfo("Cassidy v0.0.1", 0, 0, 1, 0, VK_API_VERSION_1_3);
+  VkApplicationInfo appInfo = cassidy::init::applicationInfo("Cassidy v0.0.2", 0, 0, 2, 0, VK_API_VERSION_1_3);
   m_window = SDL_CreateWindow(appInfo.pApplicationName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
     1920, 1080, SDL_WindowFlags::SDL_WINDOW_VULKAN | SDL_WindowFlags::SDL_WINDOW_RESIZABLE);
 

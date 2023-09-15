@@ -1,7 +1,5 @@
 #include "InputHandler.h"
 
-#include <iostream>
-
 void InputHandler::initImpl()
 {
   for (uint16_t i = 0; i < KEYBOARD_SIZE; ++i)
@@ -31,7 +29,6 @@ void InputHandler::updateKeyStatesImpl()
 
 void InputHandler::setKeyDownImpl(SDL_Keycode keyCode)
 {
-  std::cout << "Pressed " << SDL_GetKeyName(keyCode) << " down!" << std::endl;
   Keycode convertedCode = KEYCODE_CONVERSION_TABLE.at(keyCode);
 
   m_keyboardStates[static_cast<uint16_t>(convertedCode)] = true;
@@ -39,7 +36,6 @@ void InputHandler::setKeyDownImpl(SDL_Keycode keyCode)
 
 void InputHandler::setKeyUpImpl(SDL_Keycode keyCode)
 {
-  std::cout << "Released " << SDL_GetKeyName(keyCode) << "!" << std::endl;
   Keycode convertedCode = KEYCODE_CONVERSION_TABLE.at(keyCode);
 
   m_keyboardStates[static_cast<uint16_t>(convertedCode)] = false;

@@ -33,7 +33,7 @@ public:
   static inline bool isKeyUp(Keycode keyCode)        { return InputHandler::get().isKeyUpImpl(keyCode); }
 
 private:
-  InputHandler() {} // Force singleton status.
+  InputHandler() {}
   
   void initImpl();
   void updateKeyStatesImpl();

@@ -1,11 +1,12 @@
 #pragma once
 #include "Core/Renderer.h"
 #include "Core/EventHandler.h"
+#include "Core/Camera.h"
+#include "Utils/GlobalTimer.h"
 #include "Utils/Types.h"
 
 #include <vulkan/vulkan.h>
 #include <iostream>
-
 
 namespace cassidy
 {
@@ -20,6 +21,10 @@ namespace cassidy
     void release();
 
   private:
+    void processInput();
+    void update();
+
+    void updateGlobalTimer();
     void initInstance();
     void initSurface();
 
@@ -28,6 +33,8 @@ namespace cassidy
     SDL_Window* m_window;
     VkSurfaceKHR m_surface;
     glm::uvec2 m_windowDimensions;
+
+    cassidy::Camera m_camera;
 
     cassidy::EventHandler m_eventHandler;
     cassidy::Renderer m_renderer;
@@ -47,9 +54,10 @@ namespace cassidy
 
   public:
     // Getters and setters: --------------------------------------------------------------------------------------
-    inline SDL_Window* getWindow()    { return m_window; }
-    inline glm::uvec2 getWindowDim()  { return m_windowDimensions; }
-    inline VkInstance getInstance()   { return m_instance; }
-    inline VkSurfaceKHR getSurface()  { return m_surface; }
+    inline SDL_Window* getWindow()      { return m_window; }
+    inline glm::uvec2 getWindowDim()    { return m_windowDimensions; }
+    inline VkInstance getInstance()     { return m_instance; }
+    inline VkSurfaceKHR getSurface()    { return m_surface; }
+    inline cassidy::Camera& getCamera() { return m_camera; }
   };
 }

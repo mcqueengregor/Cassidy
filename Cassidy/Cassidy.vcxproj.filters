@@ -40,6 +40,7 @@
     <ClCompile Include="Core\InputHandler.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Utils\GlobalTimer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Engine.h">
@@ -72,6 +73,7 @@
     <ClInclude Include="Utils\Keycode.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="Utils\GlobalTimer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Shaders\helloTriangle.frag">
