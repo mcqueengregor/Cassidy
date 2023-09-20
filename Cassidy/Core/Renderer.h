@@ -20,6 +20,7 @@ namespace cassidy
     VkImageView depthView;
     VkFormat imageFormat;
     VkExtent2D extent;
+    bool hasBeenBuilt = false;
 
     void release(VkDevice device, VmaAllocator allocator)
     {

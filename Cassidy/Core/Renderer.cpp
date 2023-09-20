@@ -313,9 +313,14 @@ void cassidy::Renderer::initSwapchain()
 
   vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_swapchain.depthView);
 
-  m_deletionQueue.addFunction([&]() {
-    m_swapchain.release(m_device, m_allocator);
-  });
+  // Prevent multiple deletion commands on swapchain if it gets rebuilt:
+  if (!m_swapchain.hasBeenBuilt)
+  {
+    m_deletionQueue.addFunction([&]() {
+      m_swapchain.release(m_device, m_allocator);
+    });
+    m_swapchain.hasBeenBuilt = true;
+  }
 
   std::cout << "Created swapchain!\n" << std::endl;
 }
@@ -435,6 +440,7 @@ void cassidy::Renderer::rebuildSwapchain()
   SDL_Window* window = m_engineRef->getWindow();
   SDL_GetWindowSize(window, &width, &height);
 
+  vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex], VK_TRUE, UINT64_MAX);
   m_swapchain.release(m_device, m_allocator);
   initSwapchain();
   initSwapchainFramebuffers();

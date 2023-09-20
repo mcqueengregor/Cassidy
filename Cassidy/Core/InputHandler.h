@@ -20,18 +20,20 @@ public:
   static inline void updateKeyStates()    { InputHandler::get().updateKeyStatesImpl(); }
   static inline void updateMouseStates()  { InputHandler::get().updateMouseStatesImpl(); }
 
+  static inline void flushDynamicMouseStates() { InputHandler::get().flushDynamicMouseStatesImpl(); }
+
   static inline void setKeyDown(SDL_Keycode keyCode)  { InputHandler::get().setKeyDownImpl(keyCode); }
   static inline void setKeyUp(SDL_Keycode keyCode)    { InputHandler::get().setKeyUpImpl(keyCode); }
 
-  static inline void setMouseButtonDown(int mouseCode)  { InputHandler::get().setMouseButtonDownImpl(mouseCode); }
-  static inline void setMouseButtonUp(int mouseCode)    { InputHandler::get().setMouseButtonUpImpl(mouseCode); }
+  static inline void setMouseButtonDown(int mouseCode)        { InputHandler::get().setMouseButtonDownImpl(mouseCode); }
+  static inline void setMouseButtonUp(int mouseCode)          { InputHandler::get().setMouseButtonUpImpl(mouseCode); }
   static inline void setMouseButtonDown(MouseCode mouseCode)  { InputHandler::get().setMouseButtonDownImpl(mouseCode); }
   static inline void setMouseButtonUp(MouseCode mouseCode)    { InputHandler::get().setMouseButtonUpImpl(mouseCode); }
 
   static inline void setCursorMovement(SDL_MouseMotionEvent event) { InputHandler::get().setCursorMovementImpl(event); }
 
-  static inline void lockCursor()   { InputHandler::get().m_mouseState.isCursorLocked = true; }
-  static inline void unlockCursor() { InputHandler::get().m_mouseState.isCursorLocked = false; }
+  static inline void lockCursor()   { InputHandler::get().lockCursorImpl(); }
+  static inline void unlockCursor() { InputHandler::get().unlockCursorImpl(); }
 
   /*
     Input states:
@@ -63,6 +65,7 @@ private:
   void initImpl();
   void updateKeyStatesImpl();
   void updateMouseStatesImpl();
+  void flushDynamicMouseStatesImpl();
 
   void setKeyDownImpl(SDL_Keycode keyCode);
   void setKeyUpImpl(SDL_Keycode keyCode);
@@ -73,6 +76,9 @@ private:
   void setMouseButtonUpImpl(MouseCode mouseCode);
 
   void setCursorMovementImpl(SDL_MouseMotionEvent event);
+
+  void lockCursorImpl();
+  void unlockCursorImpl();
 
   bool isKeyPressedImpl(KeyCode keyCode);
   bool isKeyHeldImpl(KeyCode keyCode);
@@ -108,6 +114,9 @@ private:
 
     int32_t prevMouseRelativePositionX;
     int32_t prevMouseRelativePositionY;
+
+    int32_t mouseOriginalRelativePositionX;
+    int32_t mouseOriginalRelativePositionY;
 
     int32_t mouseRelativeMotionX;
     int32_t mouseRelativeMotionY;

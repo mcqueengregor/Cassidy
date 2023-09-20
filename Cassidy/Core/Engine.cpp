@@ -39,6 +39,8 @@ void cassidy::Engine::run()
 
   while (isRunning)
   {
+    InputHandler::flushDynamicMouseStates();
+
     while (SDL_PollEvent(&e))
     {
       m_eventHandler.processEvent(&e);
@@ -99,9 +101,6 @@ void cassidy::Engine::processInput()
   }
   else if (InputHandler::isMouseButtonHeld(MouseCode::MOUSECODE_RIGHT))
   {
-    if (InputHandler::getCursorOffsetX() != 0  && InputHandler::getCursorOffsetY() != 0)
-      std::cout << "(" << InputHandler::getCursorOffsetX() << ", " << InputHandler::getCursorOffsetY() << ")\n";
-
     m_camera.turnRight(static_cast<float>(InputHandler::getCursorOffsetX()));
     m_camera.lookUp(static_cast<float>(InputHandler::getCursorOffsetY()));
   }

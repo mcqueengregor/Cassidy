@@ -31,20 +31,8 @@ void InputHandler::updateKeyStatesImpl()
 
 void InputHandler::updateMouseStatesImpl()
 {
-  // If cursor is set to "locked", remember cursor's new position for offset queries but warp
-  // back to original position:
-  if (m_mouseState.isCursorLocked)
-  {
-    SDL_WarpMouseInWindow(NULL, m_mouseState.prevMouseRelativePositionX, m_mouseState.prevMouseRelativePositionY);
-  }
-  else
-  {
-    m_mouseState.mouseRelativePositionX = m_mouseState.prevMouseRelativePositionX;
-    m_mouseState.mouseRelativePositionY = m_mouseState.prevMouseRelativePositionY;
-  }
-
   m_mouseState.mouseState = SDL_GetMouseState(&m_mouseState.mouseRelativePositionX, &m_mouseState.mouseRelativePositionY);
-
+  
   // Detect change between current frame and previous frame's mouse inputs:
   uint8_t buttonChange = m_mouseState.mouseState ^ m_mouseState.prevMouseState;
 
@@ -53,6 +41,12 @@ void InputHandler::updateMouseStatesImpl()
   // Log new mouse states for this frame:
   m_mouseState.mouseDown = buttonChange & m_mouseState.mouseState;
   m_mouseState.mouseUp = buttonChange & (~m_mouseState.mouseState);
+}
+
+void InputHandler::flushDynamicMouseStatesImpl()
+{
+  m_mouseState.mouseRelativeMotionX = 0;
+  m_mouseState.mouseRelativeMotionY = 0;
 }
 
 void InputHandler::setKeyDownImpl(SDL_Keycode keyCode)
@@ -97,6 +91,20 @@ void InputHandler::setCursorMovementImpl(SDL_MouseMotionEvent event)
 {
   m_mouseState.mouseRelativeMotionX = event.xrel;
   m_mouseState.mouseRelativeMotionY = event.yrel;
+}
+
+void InputHandler::lockCursorImpl()
+{
+  m_mouseState.isCursorLocked = true;
+  m_mouseState.mouseOriginalRelativePositionX = m_mouseState.mouseRelativePositionX;
+  m_mouseState.mouseOriginalRelativePositionY = m_mouseState.mouseRelativePositionY;
+}
+
+void InputHandler::unlockCursorImpl()
+{
+  m_mouseState.isCursorLocked = false;
+
+  SDL_WarpMouseInWindow(NULL, m_mouseState.mouseOriginalRelativePositionX, m_mouseState.mouseOriginalRelativePositionY);
 }
 
 bool InputHandler::isKeyPressedImpl(KeyCode keyCode)
