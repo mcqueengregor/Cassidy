@@ -23,13 +23,14 @@ namespace cassidy
     void moveWorldUp(float speedScalar = 1.0f);
     void moveUp(float speedScalar = 1.0f);
 
-    void turnRight(float speedScalar);
-    void lookUp(float speedScalar);
+    void increaseYaw(float speedScalar);
+    void increasePitch(float speedScalar);
+
+    void updateProj();
 
   private:
     void findForward();
     void calculateLookat();
-    void updateProj();
 
     Engine* m_engineRef;
 

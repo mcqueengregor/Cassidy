@@ -82,7 +82,7 @@ QueueFamilyIndices cassidy::helper::findQueueFamilies(VkPhysicalDevice device, V
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-  int32_t i = 0;
+  uint32_t i = 0;
   for (const VkQueueFamilyProperties& qf : queueFamilies)
   {
     if (qf.queueFlags & VK_QUEUE_GRAPHICS_BIT)

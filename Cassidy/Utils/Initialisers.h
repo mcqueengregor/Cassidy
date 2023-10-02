@@ -55,7 +55,9 @@ namespace cassidy::init
     VkSurfaceFormatKHR surfaceFormat, 
     VkPresentModeKHR presentMode, 
     VkExtent2D extent,
-    VkImageUsageFlags usageFlags
+    VkImageUsageFlags usageFlags,
+    uint32_t numQueueFamilyIndices,
+    uint32_t* const queueFamilyIndices
   );
 
   // Image and image view create infos:

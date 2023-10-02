@@ -7,6 +7,7 @@
 
 #include "Utils/Initialisers.h"
 #include "Utils/Helpers.h"
+#include <iomanip>
 
 cassidy::Engine::Engine() :
   m_windowDimensions(glm::vec2(1920, 1080))
@@ -52,6 +53,7 @@ void cassidy::Engine::run()
       if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED)
       {
         m_renderer.rebuildSwapchain();
+        m_camera.updateProj();
       }
     }
 
@@ -99,10 +101,10 @@ void cassidy::Engine::processInput()
     SDL_SetRelativeMouseMode(SDL_FALSE);
     InputHandler::unlockCursor();
   }
-  else if (InputHandler::isMouseButtonHeld(MouseCode::MOUSECODE_RIGHT))
+  if (InputHandler::isMouseButtonHeld(MouseCode::MOUSECODE_RIGHT))
   {
-    m_camera.turnRight(static_cast<float>(InputHandler::getCursorOffsetX()));
-    m_camera.lookUp(static_cast<float>(InputHandler::getCursorOffsetY()));
+    m_camera.increaseYaw(static_cast<float>(InputHandler::getCursorOffsetX()));
+    m_camera.increasePitch(static_cast<float>(InputHandler::getCursorOffsetY()));
   }
 
   // WASD horizontal camera movement controls:
@@ -136,19 +138,19 @@ void cassidy::Engine::processInput()
   // Arrow key camera rotation controls:
   if (InputHandler::isKeyHeld(KeyCode::KEYCODE_UP))
   {
-    m_camera.lookUp(1.0f);
+    m_camera.increasePitch(1.0f);
   }
   if (InputHandler::isKeyHeld(KeyCode::KEYCODE_DOWN))
   {
-    m_camera.lookUp(-1.0f);
+    m_camera.increasePitch(-1.0f);
   }
   if (InputHandler::isKeyHeld(KeyCode::KEYCODE_LEFT))
   {
-    m_camera.turnRight(-1.0f);
+    m_camera.increaseYaw(-1.0f);
   }
   if (InputHandler::isKeyHeld(KeyCode::KEYCODE_RIGHT))
   {
-    m_camera.turnRight(1.0f);
+    m_camera.increaseYaw(1.0f);
   }
 }
 

@@ -44,12 +44,12 @@ void cassidy::Camera::moveUp(float speedScalar)
   m_position += m_up * m_moveSpeed * speedScalar * GlobalTimer::deltaTime();
 }
 
-void cassidy::Camera::turnRight(float speedScalar)
+void cassidy::Camera::increaseYaw(float speedScalar)
 {
   m_eulerAngles.y += m_rotateSensitivity * speedScalar * GlobalTimer::deltaTime();
 }
 
-void cassidy::Camera::lookUp(float speedScalar)
+void cassidy::Camera::increasePitch(float speedScalar)
 {
   m_eulerAngles.x += m_rotateSensitivity * speedScalar * GlobalTimer::deltaTime();
   m_eulerAngles.x = glm::clamp(m_eulerAngles.x, -89.0f, 89.0f);
@@ -73,7 +73,6 @@ void cassidy::Camera::findForward()
 void cassidy::Camera::calculateLookat()
 {
   m_lookat = glm::lookAt(m_position, m_position + m_forward, m_up);
-  //m_lookat = glm::translate(glm::mat4(1.0f), m_position);
 }
 
 void cassidy::Camera::updateProj()

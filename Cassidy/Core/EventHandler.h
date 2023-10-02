@@ -11,7 +11,7 @@ namespace cassidy
   public:
     void init();
 
-    void processEvent(SDL_Event* event);
+    void processEvent(SDL_Event* sdlEvent);
 
   private:
 

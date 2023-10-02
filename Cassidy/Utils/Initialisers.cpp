@@ -91,7 +91,7 @@ VkDeviceCreateInfo cassidy::init::deviceCreateInfo(const VkDeviceQueueCreateInfo
 
 VkSwapchainCreateInfoKHR cassidy::init::swapchainCreateInfo(SwapchainSupportDetails details, QueueFamilyIndices indices,
   VkSurfaceKHR surface, VkSurfaceFormatKHR surfaceFormat, VkPresentModeKHR presentMode, VkExtent2D extent,
-  VkImageUsageFlags usageFlags)
+  VkImageUsageFlags usageFlags, uint32_t numQueueFamilyIndices, uint32_t* const queueFamilyIndices)
 {
   VkSwapchainCreateInfoKHR info = {};
   info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -119,10 +119,8 @@ VkSwapchainCreateInfoKHR cassidy::init::swapchainCreateInfo(SwapchainSupportDeta
 
   if (indices.graphicsFamily != indices.presentFamily)
   {
-    const uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
-
     info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    info.queueFamilyIndexCount = 2;
+    info.queueFamilyIndexCount = numQueueFamilyIndices;
     info.pQueueFamilyIndices = queueFamilyIndices;
   }
   else

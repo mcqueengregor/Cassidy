@@ -6,18 +6,18 @@ void cassidy::EventHandler::init()
   InputHandler::init();
 }
 
-void cassidy::EventHandler::processEvent(SDL_Event* event)
+void cassidy::EventHandler::processEvent(SDL_Event* sdlEvent)
 {
-  switch (event->type)
+  switch (sdlEvent->type)
   {
   case SDL_KEYDOWN:
-    InputHandler::setKeyDown(event->key.keysym.sym);
+    InputHandler::setKeyDown(sdlEvent->key.keysym.sym);
     break;
   case SDL_KEYUP:
-    InputHandler::setKeyUp(event->key.keysym.sym);
+    InputHandler::setKeyUp(sdlEvent->key.keysym.sym);
     break;
   case SDL_MOUSEMOTION:
-    InputHandler::setCursorMovement(event->motion);
+    InputHandler::setCursorMovement(sdlEvent->motion);
     break;
   }
 }
