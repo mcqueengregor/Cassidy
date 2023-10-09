@@ -16,7 +16,10 @@ public:
   static inline double engineTime() { return GlobalTimer::get().m_engineTimeSecs; }
 
 private:
-  GlobalTimer() {}
+  GlobalTimer() : 
+    m_engineTimeSecs(0.0),
+    m_deltaTimeSecs(0.0f)
+  {}
 
   void updateGlobalTimerImpl();
 

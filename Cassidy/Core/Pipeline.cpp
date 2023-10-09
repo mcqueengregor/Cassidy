@@ -7,17 +7,18 @@
 #include <fstream>
 #include <iostream>
 
-cassidy::Pipeline::Pipeline(cassidy::Renderer* renderer, const std::string& vertexFilepath, const std::string& fragmentFilepath)
+cassidy::Pipeline::Pipeline(cassidy::Renderer* renderer)
 {
-  init(renderer, vertexFilepath, fragmentFilepath);
+  init(renderer);
 }
 
-void cassidy::Pipeline::init(cassidy::Renderer* renderer, const std::string& vertexFilepath, const std::string& fragmentFilepath)
+cassidy::Pipeline& cassidy::Pipeline::init(cassidy::Renderer* renderer)
 {
   m_rendererRef = renderer;
 
   initRenderPass();
-  initGraphicsPipeline(vertexFilepath, fragmentFilepath);
+
+  return *this;
 }
 
 void cassidy::Pipeline::release()
@@ -25,6 +26,98 @@ void cassidy::Pipeline::release()
   vkDestroyPipeline(m_rendererRef->getLogicalDevice(), m_graphicsPipeline, nullptr);
   vkDestroyPipelineLayout(m_rendererRef->getLogicalDevice(), m_pipelineLayout, nullptr);
   vkDestroyRenderPass(m_rendererRef->getLogicalDevice(), m_renderPass, nullptr);
+}
+
+cassidy::Pipeline& cassidy::Pipeline::addPushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size)
+{
+  m_pushConstantRanges.emplace_back(cassidy::init::pushConstantRange(stageFlags, offset, size));
+
+  return *this;
+}
+
+cassidy::Pipeline& cassidy::Pipeline::addDescriptorSetLayout(VkDescriptorSetLayout setLayout)
+{
+  m_descSetLayouts.push_back(setLayout);
+
+  return *this;
+}
+
+void cassidy::Pipeline::buildGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath)
+{
+  SpirvShaderCode vertexCode = loadSpirv(vertexFilepath);
+  SpirvShaderCode fragmentCode = loadSpirv(fragmentFilepath);
+
+  // If either shader couldn't be loaded, early-out (structs automatically delete heap-allocated binaries):
+  if (!vertexCode.codeBuffer || !fragmentCode.codeBuffer)
+    return;
+
+  VkShaderModuleCreateInfo vertexModuleInfo = cassidy::init::shaderModuleCreateInfo(vertexCode);
+  VkShaderModuleCreateInfo fragmentModuleInfo = cassidy::init::shaderModuleCreateInfo(fragmentCode);
+
+  VkShaderModule vertexModule;
+  VkShaderModule fragmentModule;
+
+  vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &vertexModuleInfo, nullptr, &vertexModule);
+  vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &fragmentModuleInfo, nullptr, &fragmentModule);
+
+  // Build pipeline:
+  VkPipelineShaderStageCreateInfo shaderStages[] = {
+    cassidy::init::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexModule),
+    cassidy::init::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentModule)
+  };
+
+  auto bindingDescription = Vertex::getBindingDesc();
+  auto attributeDescriptions = Vertex::getAttributeDescs();
+
+  VkPipelineVertexInputStateCreateInfo vertexInput = cassidy::init::pipelineVertexInputStateCreateInfo(1,
+    &bindingDescription, attributeDescriptions.size(), attributeDescriptions.data());
+
+  VkPipelineInputAssemblyStateCreateInfo inputAssembly = cassidy::init::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+  VkViewport viewport = cassidy::init::viewport(0.0f, 0.0f,
+    m_rendererRef->getSwapchain().extent.width, m_rendererRef->getSwapchain().extent.height);
+
+  VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, m_rendererRef->getSwapchain().extent);
+
+  VkPipelineDynamicStateCreateInfo dynamicState = cassidy::init::pipelineDynamicStateCreateinfo(
+    static_cast<uint32_t>(cassidy::Renderer::DYNAMIC_STATES.size()), cassidy::Renderer::DYNAMIC_STATES.data());
+
+  VkPipelineViewportStateCreateInfo viewportState = cassidy::init::pipelineViewportStateCreateInfo(1, &viewport, 1, &scissor);
+
+  VkPipelineRasterizationStateCreateInfo rasteriser = cassidy::init::pipelineRasterizationStateCreateInfo(
+    VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT);
+
+  VkPipelineMultisampleStateCreateInfo multisampling = cassidy::init::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
+
+  VkPipelineColorBlendAttachmentState colourBlendAttach = cassidy::init::pipelineColorBlendAttachmentState(
+    VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    VK_FALSE, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD);
+
+  VkPipelineColorBlendStateCreateInfo colourBlendState = cassidy::init::pipelineColorBlendStateCreateInfo(1, &colourBlendAttach,
+    0.0f, 0.0f, 0.0f, 0.0f);
+
+  VkPipelineDepthStencilStateCreateInfo depthStencil = cassidy::init::pipelineDepthStencilStateCreateInfo(VK_TRUE, VK_TRUE,
+    VK_COMPARE_OP_LESS);
+
+  VkPipelineLayoutCreateInfo pipelineLayout = cassidy::init::pipelineLayoutCreateInfo(m_descSetLayouts.size(), 
+    m_descSetLayouts.data(), m_pushConstantRanges.size(), m_pushConstantRanges.data());
+
+  vkCreatePipelineLayout(m_rendererRef->getLogicalDevice(), &pipelineLayout, nullptr, &m_pipelineLayout);
+
+  VkGraphicsPipelineCreateInfo pipelineInfo = cassidy::init::graphicsPipelineCreateInfo(
+    2, shaderStages,
+    &vertexInput, &inputAssembly,
+    &viewportState, &rasteriser,
+    &multisampling, &depthStencil,
+    &colourBlendState, &dynamicState,
+    m_pipelineLayout, m_renderPass, 0);
+
+  vkCreateGraphicsPipelines(m_rendererRef->getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline);
+
+  vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), vertexModule, nullptr);
+  vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), fragmentModule, nullptr);
+
+  std::cout << "Created graphics pipeline!\n" << std::endl;
 }
 
 SpirvShaderCode cassidy::Pipeline::loadSpirv(const std::string& filepath)
@@ -81,84 +174,3 @@ void cassidy::Pipeline::initRenderPass()
 
   std::cout << "Created pipeline render pass!" << std::endl;
 }
-
-void cassidy::Pipeline::initGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath)
-{
-  SpirvShaderCode vertexCode = loadSpirv(vertexFilepath);
-  SpirvShaderCode fragmentCode = loadSpirv(fragmentFilepath);
-
-  // If either shader couldn't be loaded, early-out (structs automatically delete heap-allocated binaries):
-  if (!vertexCode.codeBuffer || !fragmentCode.codeBuffer)
-    return;
-
-  VkShaderModuleCreateInfo vertexModuleInfo = cassidy::init::shaderModuleCreateInfo(vertexCode);
-  VkShaderModuleCreateInfo fragmentModuleInfo = cassidy::init::shaderModuleCreateInfo(fragmentCode);
-
-  VkShaderModule vertexModule;
-  VkShaderModule fragmentModule;
-
-  vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &vertexModuleInfo, nullptr, &vertexModule);
-  vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &fragmentModuleInfo, nullptr, &fragmentModule);
-
-  // Build pipeline:
-  VkPipelineShaderStageCreateInfo shaderStages[] = {
-    cassidy::init::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexModule),
-    cassidy::init::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentModule)
-  };
-
-  auto bindingDescription = Vertex::getBindingDesc();
-  auto attributeDescriptions = Vertex::getAttributeDescs();
-
-  // TODO: Add vertex binding and attributes back in for vertex buffers!
-  VkPipelineVertexInputStateCreateInfo vertexInput = cassidy::init::pipelineVertexInputStateCreateInfo(1,
-    &bindingDescription, attributeDescriptions.size(), attributeDescriptions.data());
-
-  VkPipelineInputAssemblyStateCreateInfo inputAssembly = cassidy::init::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-
-  VkViewport viewport = cassidy::init::viewport(0.0f, 0.0f, 
-    m_rendererRef->getSwapchain().extent.width, m_rendererRef->getSwapchain().extent.height);
-
-  VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, m_rendererRef->getSwapchain().extent);
-
-  VkPipelineDynamicStateCreateInfo dynamicState = cassidy::init::pipelineDynamicStateCreateinfo(
-    static_cast<uint32_t>(cassidy::Renderer::DYNAMIC_STATES.size()), cassidy::Renderer::DYNAMIC_STATES.data());
-
-  VkPipelineViewportStateCreateInfo viewportState = cassidy::init::pipelineViewportStateCreateInfo(1, &viewport, 1, &scissor);
-
-  VkPipelineRasterizationStateCreateInfo rasteriser = cassidy::init::pipelineRasterizationStateCreateInfo(
-    VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT);
-
-  VkPipelineMultisampleStateCreateInfo multisampling = cassidy::init::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
-
-  VkPipelineColorBlendAttachmentState colourBlendAttach = cassidy::init::pipelineColorBlendAttachmentState(
-    VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-    VK_FALSE, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD);
-
-  VkPipelineColorBlendStateCreateInfo colourBlendState = cassidy::init::pipelineColorBlendStateCreateInfo(1, &colourBlendAttach,
-    0.0f, 0.0f, 0.0f, 0.0f);
-
-  VkPipelineDepthStencilStateCreateInfo depthStencil = cassidy::init::pipelineDepthStencilStateCreateInfo(VK_TRUE, VK_TRUE,
-    VK_COMPARE_OP_LESS);
-
-  VkPushConstantRange pushConstantRange = cassidy::init::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants));
-
-  VkPipelineLayoutCreateInfo pipelineLayout = cassidy::init::pipelineLayoutCreateInfo(0, nullptr, 1, &pushConstantRange);
-
-  vkCreatePipelineLayout(m_rendererRef->getLogicalDevice(), &pipelineLayout, nullptr, &m_pipelineLayout);
-
-  VkGraphicsPipelineCreateInfo pipelineInfo = cassidy::init::graphicsPipelineCreateInfo(
-    2, shaderStages,
-    &vertexInput, &inputAssembly,
-    &viewportState, &rasteriser, 
-    &multisampling, &depthStencil,
-    &colourBlendState, &dynamicState, 
-    m_pipelineLayout, m_renderPass, 0);
-
-  vkCreateGraphicsPipelines(m_rendererRef->getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline);
-
-  vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), vertexModule, nullptr);
-  vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), fragmentModule, nullptr);
-
-  std::cout << "Created graphics pipeline!\n" << std::endl;
-}
-

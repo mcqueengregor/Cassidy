@@ -79,7 +79,7 @@ namespace cassidy::init
   // VMA memory allocation create info:
   VmaAllocationCreateInfo vmaAllocationCreateInfo(
     VmaMemoryUsage usageFlags,
-    VkMemoryPropertyFlags memoryFlags
+    VmaAllocationCreateFlagBits allocFlags
   );
 
   // Shader module create info:
@@ -280,5 +280,52 @@ namespace cassidy::init
     uint32_t size,
     VkBufferUsageFlags usage
   );
-  
+ 
+  // Descriptor structs:
+  VkDescriptorSetLayoutBinding descriptorSetLayoutBinding(
+    uint32_t bindingIndex,
+    VkDescriptorType descriptorType,
+    uint32_t numDescriptors,
+    VkShaderStageFlags stageFlags,
+    const VkSampler* immutableSamplers
+  );
+  VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo(
+    uint32_t numBindings,
+    const VkDescriptorSetLayoutBinding* bindings
+  );
+  VkDescriptorPoolCreateInfo descriptorPoolCreateInfo(
+    uint32_t numPoolSizes,
+    const VkDescriptorPoolSize* poolSizes,
+    uint32_t maxSets
+  );
+  VkDescriptorSetAllocateInfo descriptorSetAllocateInfo(
+    VkDescriptorPool descriptorPool,
+    uint32_t numDescriptorSets,
+    const VkDescriptorSetLayout* setLayouts
+  );
+  VkDescriptorBufferInfo descriptorBufferInfo(
+    VkBuffer bufferHandle,
+    uint32_t offset,
+    uint32_t range
+  );
+  VkDescriptorImageInfo descriptorImageInfo(
+    VkImageLayout imageLayout,
+    VkImageView imageView,
+    VkSampler sampler
+  );
+  VkWriteDescriptorSet writeDescriptorSet(
+    VkDescriptorSet dstSet,
+    uint32_t dstBinding,
+    VkDescriptorType descriptorType,
+    uint32_t numDescriptors,
+    const VkDescriptorBufferInfo* bufferInfo
+  );
+  VkWriteDescriptorSet writeDescriptorSet(
+    VkDescriptorSet dstSet,
+    uint32_t dstBinding,
+    uint32_t dstArrayElement,
+    VkDescriptorType descriptorType,
+    uint32_t numDescriptors,
+    const VkDescriptorImageInfo* imageInfo
+  );
 }

@@ -19,11 +19,12 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initLogicalDevice();
   initMemoryAllocator();
   initSwapchain();
-  initPipelines();
-  initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
   initCommandPool();
   initCommandBuffers();
   initSyncObjects();
+  initDescriptorSets();
+  initPipelines();
+  initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
   initVertexBuffers();
 
   m_currentFrameIndex = 0;
@@ -90,6 +91,8 @@ void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &m_triangleVertexBuffer.buffer, &offset);
 
+    // TODO: Replace push constants info w/ uniform buffer update and descriptor set bind logic
+
     // Get world and viewProj matrices, upload to GPU via push constants:
     const glm::mat4 view = m_engineRef->getCamera().getLookatMatrix();
 
@@ -127,13 +130,13 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
   }
 }
 
-AllocatedBuffer cassidy::Renderer::allocateBuffer(const std::vector<Vertex>& vertices)
+AllocatedBuffer cassidy::Renderer::allocateVertexBuffer(const std::vector<Vertex>& vertices)
 {
   // Build CPU-side staging buffer:
   VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(vertices.size() * sizeof(Vertex),
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-  VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_CPU_ONLY,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
+    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
   AllocatedBuffer stagingBuffer;
 
@@ -151,7 +154,7 @@ AllocatedBuffer cassidy::Renderer::allocateBuffer(const std::vector<Vertex>& ver
   VkBufferCreateInfo vertexBufferInfo = cassidy::init::bufferCreateInfo(vertices.size() * sizeof(Vertex),
     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-  bufferAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+  bufferAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
   AllocatedBuffer newBuffer;
 
@@ -174,6 +177,19 @@ AllocatedBuffer cassidy::Renderer::allocateBuffer(const std::vector<Vertex>& ver
   });
 
   vmaDestroyBuffer(m_allocator, stagingBuffer.buffer, stagingBuffer.allocation);
+
+  return newBuffer;
+}
+
+AllocatedBuffer cassidy::Renderer::allocateBuffer(uint32_t allocSize, VkBufferUsageFlags usageFlags, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlagBits allocFlags)
+{
+  VkBufferCreateInfo bufferInfo = cassidy::init::bufferCreateInfo(allocSize, usageFlags);
+
+  VmaAllocationCreateInfo allocInfo = cassidy::init::vmaAllocationCreateInfo(memoryUsage, allocFlags);
+
+  AllocatedBuffer newBuffer;
+
+  vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &newBuffer.buffer, &newBuffer.allocation, nullptr);
 
   return newBuffer;
 }
@@ -206,6 +222,9 @@ void cassidy::Renderer::initLogicalDevice()
     std::cout << "ERROR: Failed to find physical device!\n" << std::endl;
     return;
   }
+  
+  // Log chosen physical device's properties:
+  vkGetPhysicalDeviceProperties(m_physicalDevice, &m_physicalDeviceProperties);
 
   QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
 
@@ -268,7 +287,6 @@ void cassidy::Renderer::initSwapchain()
 
   VkExtent2D extent = cassidy::helper::chooseSwapchainExtent(m_engineRef->getWindow(), details.capabilities);
 
-
   QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
   uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
@@ -306,7 +324,8 @@ void cassidy::Renderer::initSwapchain()
   VkImageCreateInfo depthImageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D, { m_swapchain.extent.width, m_swapchain.extent.height, 1 },
     1, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
-  VmaAllocationCreateInfo vmaAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_GPU_ONLY, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  VmaAllocationCreateInfo vmaAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 
+    VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
   vmaCreateImage(m_allocator, &depthImageInfo, &vmaAllocInfo, 
     &m_swapchain.depthImage.image, &m_swapchain.depthImage.allocation, nullptr);
@@ -330,7 +349,9 @@ void cassidy::Renderer::initSwapchain()
 
 void cassidy::Renderer::initPipelines()
 {
-  m_helloTrianglePipeline.init(this, "../Shaders/helloTriangleVert.spv", "../Shaders/helloTriangleFrag.spv");
+  m_helloTrianglePipeline.init(this)
+    .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
+    .buildGraphicsPipeline("../Shaders/helloTriangleVert.spv", "../Shaders/helloTriangleFrag.spv");
 
   m_deletionQueue.addFunction([=]() {
     m_helloTrianglePipeline.release();
@@ -428,11 +449,95 @@ void cassidy::Renderer::initSyncObjects()
   std::cout << "Created synchronisation objects!\n" << std::endl;
 }
 
+void cassidy::Renderer::initDescriptorSets()
+{
+  initDescriptorPool();
+  initDescSetLayouts();
+  initUniformBuffers();
+
+  for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
+  {
+    VkDescriptorSetAllocateInfo perPassAllocInfo = cassidy::init::descriptorSetAllocateInfo(m_descriptorPool, 1,
+      &m_perPassSetLayout);
+    VkDescriptorSetAllocateInfo perObjectAllocInfo = cassidy::init::descriptorSetAllocateInfo(m_descriptorPool, 1,
+      &m_perObjectSetLayout);
+
+    vkAllocateDescriptorSets(m_device, &perPassAllocInfo, &m_frameData[i].perPassSet);
+    vkAllocateDescriptorSets(m_device, &perObjectAllocInfo, &m_frameData[i].perObjectSet);
+
+    VkDescriptorBufferInfo passBufferInfo = cassidy::init::descriptorBufferInfo(
+      m_frameData[i].perPassUniformBuffer.buffer, 0, sizeof(PerPassData));
+    VkDescriptorBufferInfo objectBufferInfo = cassidy::init::descriptorBufferInfo(
+      m_frameData[i].perObjectUniformBuffer.buffer, 0, sizeof(PerObjectData));
+
+    VkWriteDescriptorSet passWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perPassSet, 0,
+      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, &passBufferInfo);
+    VkWriteDescriptorSet objectWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perObjectSet, 0,
+      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, &objectBufferInfo);
+
+    VkWriteDescriptorSet writes[] = { passWrite, objectWrite };
+    vkUpdateDescriptorSets(m_device, 2, writes, 0, nullptr);
+  }
+}
+
+void cassidy::Renderer::initDescSetLayouts()
+{
+  VkDescriptorSetLayoutBinding perPassBinding = cassidy::init::descriptorSetLayoutBinding(0, 
+    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr);
+  VkDescriptorSetLayoutBinding perObjectBinding = cassidy::init::descriptorSetLayoutBinding(0, 
+    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr);
+
+  VkDescriptorSetLayoutCreateInfo perPassInfo = cassidy::init::descriptorSetLayoutCreateInfo(1, &perPassBinding);
+  VkDescriptorSetLayoutCreateInfo perObjectInfo = cassidy::init::descriptorSetLayoutCreateInfo(1, &perObjectBinding);
+
+  vkCreateDescriptorSetLayout(m_device, &perPassInfo, nullptr, &m_perPassSetLayout);
+  vkCreateDescriptorSetLayout(m_device, &perObjectInfo, nullptr, &m_perObjectSetLayout);
+
+  m_deletionQueue.addFunction([=]() {
+    vkDestroyDescriptorSetLayout(m_device, m_perPassSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(m_device, m_perObjectSetLayout, nullptr);
+  });
+}
+
+void cassidy::Renderer::initDescriptorPool()
+{
+  const uint32_t NUM_SIZES = 2;
+  VkDescriptorPoolSize poolSizes[NUM_SIZES] = {
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
+  };
+
+  VkDescriptorPoolCreateInfo info = cassidy::init::descriptorPoolCreateInfo(NUM_SIZES, poolSizes,
+    static_cast<uint32_t>(FRAMES_IN_FLIGHT) * NUM_SIZES);
+
+  vkCreateDescriptorPool(m_device, &info, nullptr, &m_descriptorPool);
+
+  m_deletionQueue.addFunction([=]() {
+    vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
+  });
+}
+
 void cassidy::Renderer::initVertexBuffers()
 {
-  m_triangleVertexBuffer = allocateBuffer(triangleVertices);
+  m_triangleVertexBuffer = allocateVertexBuffer(triangleVertices);
 
   std::cout << "Created vertex buffers!\n" << std::endl;
+}
+
+void cassidy::Renderer::initUniformBuffers()
+{
+  for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
+  {
+    m_frameData[i].perPassUniformBuffer = allocateBuffer(sizeof(PerPassData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+    m_frameData[i].perObjectUniformBuffer = allocateBuffer(sizeof(PerObjectData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+    
+    m_deletionQueue.addFunction([=]() {
+      vmaDestroyBuffer(m_allocator, m_frameData[i].perPassUniformBuffer.buffer, m_frameData[i].perPassUniformBuffer.allocation);
+      vmaDestroyBuffer(m_allocator, m_frameData[i].perObjectUniformBuffer.buffer, m_frameData[i].perObjectUniformBuffer.allocation);
+    });
+  }
 }
 
 void cassidy::Renderer::rebuildSwapchain()

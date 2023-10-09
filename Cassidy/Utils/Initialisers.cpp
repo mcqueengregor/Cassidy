@@ -168,11 +168,12 @@ VkImageViewCreateInfo cassidy::init::imageViewCreateInfo(VkImage image, VkFormat
   return info;
 }
 
-VmaAllocationCreateInfo cassidy::init::vmaAllocationCreateInfo(VmaMemoryUsage usageFlags, VkMemoryPropertyFlags memoryFlags)
+VmaAllocationCreateInfo cassidy::init::vmaAllocationCreateInfo(VmaMemoryUsage usageFlags, 
+  VmaAllocationCreateFlagBits allocFlags)
 {
   VmaAllocationCreateInfo info = {};
   info.usage = usageFlags;
-  info.requiredFlags = memoryFlags;
+  info.flags = allocFlags;
 
   return info;
 }
@@ -597,4 +598,97 @@ VkBufferCreateInfo cassidy::init::bufferCreateInfo(uint32_t size, VkBufferUsageF
   info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // NOTE: May need to change this if async compute is used?
 
   return info;
+}
+
+VkDescriptorSetLayoutBinding cassidy::init::descriptorSetLayoutBinding(uint32_t bindingIndex, VkDescriptorType descriptorType, uint32_t numDescriptors, VkShaderStageFlags stageFlags, const VkSampler* immutableSamplers)
+{
+  VkDescriptorSetLayoutBinding binding = {};
+  binding.binding = bindingIndex;
+  binding.descriptorType = descriptorType;
+  binding.descriptorCount = numDescriptors;
+  binding.stageFlags = stageFlags;
+  binding.pImmutableSamplers = immutableSamplers;
+
+  return binding;
+}
+
+VkDescriptorSetLayoutCreateInfo cassidy::init::descriptorSetLayoutCreateInfo(uint32_t numBindings, const VkDescriptorSetLayoutBinding* bindings)
+{
+  VkDescriptorSetLayoutCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  info.bindingCount = numBindings;
+  info.pBindings = bindings;
+  info.flags = 0;
+
+  return info;
+}
+
+VkDescriptorPoolCreateInfo cassidy::init::descriptorPoolCreateInfo(uint32_t numPoolSizes, const VkDescriptorPoolSize* poolSizes, uint32_t maxSets)
+{
+  VkDescriptorPoolCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  info.poolSizeCount = numPoolSizes;
+  info.pPoolSizes = poolSizes;
+  info.maxSets = maxSets;
+
+  return info;
+}
+
+VkDescriptorSetAllocateInfo cassidy::init::descriptorSetAllocateInfo(VkDescriptorPool descriptorPool, uint32_t numDescriptorSets, const VkDescriptorSetLayout* setLayouts)
+{
+  VkDescriptorSetAllocateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  info.descriptorPool = descriptorPool;
+  info.descriptorSetCount = numDescriptorSets;
+  info.pSetLayouts = setLayouts;
+
+  return info;
+}
+
+VkDescriptorBufferInfo cassidy::init::descriptorBufferInfo(VkBuffer bufferHandle, uint32_t offset, uint32_t range)
+{
+  VkDescriptorBufferInfo info = {};
+  info.buffer = bufferHandle;
+  info.offset = offset;
+  info.range = range;
+
+  return info;
+}
+
+VkDescriptorImageInfo cassidy::init::descriptorImageInfo(VkImageLayout imageLayout, VkImageView imageView, VkSampler sampler)
+{
+  VkDescriptorImageInfo info = {};
+  info.imageLayout = imageLayout;
+  info.imageView = imageView;
+  info.sampler = sampler;
+
+  return info;
+}
+
+VkWriteDescriptorSet cassidy::init::writeDescriptorSet(VkDescriptorSet dstSet, uint32_t dstBinding, VkDescriptorType descriptorType, uint32_t numDescriptors, const VkDescriptorBufferInfo* bufferInfo)
+{
+  VkWriteDescriptorSet write = {};
+  write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  write.dstSet = dstSet;
+  write.dstBinding = dstBinding;
+  write.descriptorCount = numDescriptors;
+  write.descriptorType = descriptorType;
+  write.dstArrayElement = 0;
+  write.pBufferInfo = bufferInfo;
+
+  return write;
+}
+
+VkWriteDescriptorSet cassidy::init::writeDescriptorSet(VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElement, VkDescriptorType descriptorType, uint32_t numDescriptors, const VkDescriptorImageInfo* imageInfo)
+{
+  VkWriteDescriptorSet write = {};
+  write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  write.dstSet = dstSet;
+  write.dstBinding = dstBinding;
+  write.descriptorCount = numDescriptors;
+  write.descriptorType = descriptorType;
+  write.dstArrayElement = 0;
+  write.pImageInfo = imageInfo;
+
+  return write;
 }

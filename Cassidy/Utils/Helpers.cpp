@@ -190,3 +190,16 @@ VkFormat cassidy::helper::findSupportedFormat(VkPhysicalDevice physicalDevice, u
   throw std::runtime_error("ERROR: Failed to find supported format!");
 }
 
+// https://github.com/SaschaWillems/Vulkan/tree/master/examples/dynamicuniformbuffer
+size_t cassidy::helper::padUniformBufferSize(size_t originalSize, const VkPhysicalDeviceProperties& gpuProperties)
+{
+  // Calculate a buffer size that satisfies the GPU's alignment requirements:
+  size_t minUBOAlignment = gpuProperties.limits.minUniformBufferOffsetAlignment;
+  size_t alignedSize = originalSize;
+
+  if (minUBOAlignment > 0)
+    alignedSize = (alignedSize + minUBOAlignment - 1) & ~(minUBOAlignment - 1);
+
+  return alignedSize;
+}
+

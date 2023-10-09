@@ -20,4 +20,6 @@ namespace cassidy::helper
   VkExtent2D chooseSwapchainExtent(SDL_Window* window, VkSurfaceCapabilitiesKHR capabilities);
 
   VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, uint32_t numFormats, VkFormat* formats, VkImageTiling tiling, VkFormatFeatureFlags features);
+
+  size_t padUniformBufferSize(size_t originalSize, const VkPhysicalDeviceProperties& gpuProperties);
 }

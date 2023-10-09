@@ -119,3 +119,27 @@ struct DefaultPushConstants
   glm::mat4 world;
   glm::mat4 viewProj;
 };
+
+// Layout of per-pass data accessible to shaders via uniform buffer:
+struct PerPassData
+{
+  glm::mat4 view;
+  glm::mat4 proj;
+  glm::mat4 viewProj;
+  glm::mat4 invViewProj;
+};
+
+// As above, but bound per-mesh:
+struct PerObjectData
+{
+  glm::mat4 world;
+};
+
+struct FrameData
+{
+  AllocatedBuffer perPassUniformBuffer;
+  VkDescriptorSet perPassSet;
+
+  AllocatedBuffer perObjectUniformBuffer;
+  VkDescriptorSet perObjectSet;
+};

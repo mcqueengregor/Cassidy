@@ -12,10 +12,16 @@ namespace cassidy
   {
   public:
     Pipeline() {};
-    Pipeline(cassidy::Renderer* renderer, const std::string& vertexFilepath, const std::string& fragmentFilepath);
+    Pipeline(cassidy::Renderer* rendererh);
 
-    void init(cassidy::Renderer* renderer, const std::string& vertexFilepath, const std::string& fragmentFilepath);
+    Pipeline& init(cassidy::Renderer* renderer);
     void release();
+
+    // Pipeline layout dependencies binding:
+    Pipeline& addPushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
+    Pipeline& addDescriptorSetLayout(VkDescriptorSetLayout setLayout);
+
+    void buildGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath);
 
     SpirvShaderCode loadSpirv(const std::string& filepath);
 
@@ -34,12 +40,15 @@ namespace cassidy
 
   private:
     void initRenderPass();
-    void initGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath);
 
     VkPipeline m_graphicsPipeline;
     VkPipelineLayout m_pipelineLayout;
 
     VkRenderPass m_renderPass;
+
+    // Pipeline layout dependencies (push constant ranges, descriptor sets):
+    std::vector<VkPushConstantRange> m_pushConstantRanges;
+    std::vector<VkDescriptorSetLayout> m_descSetLayouts;
 
     cassidy::Renderer* m_rendererRef;
   };

@@ -36,6 +36,8 @@ namespace cassidy
     }
   };
 
+  constexpr uint8_t FRAMES_IN_FLIGHT = 2;
+
   class Renderer
   {
   public:
@@ -68,7 +70,8 @@ namespace cassidy
     void recordCommandBuffers(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
     
-    AllocatedBuffer allocateBuffer(const std::vector<Vertex>& vertices);
+    AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
+    AllocatedBuffer allocateBuffer(uint32_t allocSize, VkBufferUsageFlags usageFlags, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlagBits allocFlags);
     void uploadBuffer(std::function<void(VkCommandBuffer cmd)>&& function);
 
     void initMemoryAllocator();
@@ -81,7 +84,12 @@ namespace cassidy
     void initCommandBuffers();
     void initSyncObjects();
 
+    void initDescriptorSets();
+    void initDescSetLayouts();
+    void initDescriptorPool();
+    
     void initVertexBuffers();
+    void initUniformBuffers();
 
     Engine* m_engineRef;
 
@@ -97,6 +105,13 @@ namespace cassidy
 
     // Rendering data:
     DefaultPushConstants m_matrixPushConstants;
+    FrameData m_frameData[FRAMES_IN_FLIGHT];
+
+    // Descriptor objects:
+    VkDescriptorPool m_descriptorPool;
+
+    VkDescriptorSetLayout m_perPassSetLayout; // (Dynamic)
+    VkDescriptorSetLayout m_perObjectSetLayout;
 
     // Command objects:
     VkCommandPool m_graphicsCommandPool;
@@ -116,15 +131,15 @@ namespace cassidy
     // Misc.:
     DeletionQueue m_deletionQueue;
     uint32_t m_currentFrameIndex;
+    VkPhysicalDeviceProperties m_physicalDeviceProperties;
 
-    const uint8_t FRAMES_IN_FLIGHT = 2;
-
+    // TODO: Temp, tidy with mesh abstraction!
     const std::vector<Vertex> triangleVertices =
     {
       {{ 0.0f,  0.5f, 0.0f},  {0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
       {{-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
       {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
     };
-    AllocatedBuffer m_triangleVertexBuffer; // TODO: Temp
+    AllocatedBuffer m_triangleVertexBuffer;
   };
 }
