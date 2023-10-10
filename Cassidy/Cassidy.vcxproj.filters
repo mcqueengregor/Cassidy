@@ -41,6 +41,9 @@
       <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Utils\GlobalTimer.cpp" />
+    <ClCompile Include="Core\Mesh.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Engine.h">
@@ -75,6 +78,9 @@
     </ClInclude>
     <ClInclude Include="Utils\GlobalTimer.h" />
     <ClInclude Include="Utils\MouseCode.h" />
+    <ClInclude Include="Core\Mesh.h">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Shaders\helloTriangle.frag">
