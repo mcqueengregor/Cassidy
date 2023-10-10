@@ -48,18 +48,51 @@ void cassidy::Renderer::draw()
 
   vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex]);
 
+  const FrameData& currentFrameData = getCurrentFrameData();
+
+  updateBuffers(currentFrameData);
   recordCommandBuffers(swapchainImageIndex);
   submitCommandBuffers(swapchainImageIndex);
 
-  m_currentFrameIndex = (m_currentFrameIndex + 1) & FRAMES_IN_FLIGHT;
+  m_currentFrameIndex = (m_currentFrameIndex + 1) % FRAMES_IN_FLIGHT;
 }
 
 void cassidy::Renderer::release()
 {
-  vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex], VK_TRUE, UINT64_MAX);
+  // Wait on all fences to prevent in-use resources from being destroyed:
+  std::vector<VkFence> fences;
+  for (const auto& f : m_inFlightFences)
+  {
+    fences.push_back(f);
+  }
+
+  vkWaitForFences(m_device, fences.size(), fences.data(), VK_TRUE, UINT64_MAX);
 
   m_deletionQueue.execute();
   std::cout << "Renderer shut down!\n" << std::endl;
+}
+
+void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
+{
+  PerPassData perPassData;
+  perPassData.view = m_engineRef->getCamera().getLookatMatrix();
+  perPassData.proj = m_engineRef->getCamera().getPerspectiveMatrix();
+  perPassData.viewProj = perPassData.proj * perPassData.view;
+  perPassData.invViewProj = glm::inverse(perPassData.viewProj);
+
+  void* perPassDataPtr;
+  vmaMapMemory(m_allocator, currentFrameData.perPassUniformBuffer.allocation, &perPassDataPtr);
+  memcpy(perPassDataPtr, &perPassData, sizeof(PerPassData));
+  vmaUnmapMemory(m_allocator, currentFrameData.perPassUniformBuffer.allocation);
+
+  PerObjectData perObjectData;
+  perObjectData.world = glm::mat4(1.0f);
+
+  char* perObjectDataPtr;
+  vmaMapMemory(m_allocator, m_perObjectUniformBufferDynamic.allocation, (void**)&perObjectDataPtr);
+  perObjectDataPtr += m_currentFrameIndex * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData), m_physicalDeviceProperties);
+  memcpy(perObjectDataPtr, &perObjectData, sizeof(PerObjectData));
+  vmaUnmapMemory(m_allocator, m_perObjectUniformBufferDynamic.allocation);
 }
 
 void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
@@ -87,6 +120,15 @@ void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
 
     VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, m_swapchain.extent);
     vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+    // Bind per-pass descriptor set to slot 0:
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
+      0, 1, &getCurrentFrameData().perPassSet, 0, nullptr);
+
+    // Bind per-object dynamic descriptor set to slot 1:
+    const uint32_t dynamicUniformOffset = m_currentFrameIndex * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData), m_physicalDeviceProperties);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
+      1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &m_triangleVertexBuffer.buffer, &offset);
@@ -351,6 +393,8 @@ void cassidy::Renderer::initPipelines()
 {
   m_helloTrianglePipeline.init(this)
     .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
+    .addDescriptorSetLayout(m_perPassSetLayout)
+    .addDescriptorSetLayout(m_perObjectSetLayout)
     .buildGraphicsPipeline("../Shaders/helloTriangleVert.spv", "../Shaders/helloTriangleFrag.spv");
 
   m_deletionQueue.addFunction([=]() {
@@ -468,7 +512,7 @@ void cassidy::Renderer::initDescriptorSets()
     VkDescriptorBufferInfo passBufferInfo = cassidy::init::descriptorBufferInfo(
       m_frameData[i].perPassUniformBuffer.buffer, 0, sizeof(PerPassData));
     VkDescriptorBufferInfo objectBufferInfo = cassidy::init::descriptorBufferInfo(
-      m_frameData[i].perObjectUniformBuffer.buffer, 0, sizeof(PerObjectData));
+      m_perObjectUniformBufferDynamic.buffer, 0, sizeof(PerObjectData));
 
     VkWriteDescriptorSet passWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perPassSet, 0,
       VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, &passBufferInfo);
@@ -526,16 +570,22 @@ void cassidy::Renderer::initVertexBuffers()
 
 void cassidy::Renderer::initUniformBuffers()
 {
+  const uint32_t objectBufferSize = FRAMES_IN_FLIGHT * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData),
+    m_physicalDeviceProperties);
+  m_perObjectUniformBufferDynamic = allocateBuffer(objectBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+  m_deletionQueue.addFunction([=]() {
+    vmaDestroyBuffer(m_allocator, m_perObjectUniformBufferDynamic.buffer, m_perObjectUniformBufferDynamic.allocation);
+  });
+
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
     m_frameData[i].perPassUniformBuffer = allocateBuffer(sizeof(PerPassData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-    m_frameData[i].perObjectUniformBuffer = allocateBuffer(sizeof(PerObjectData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-      VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     
     m_deletionQueue.addFunction([=]() {
       vmaDestroyBuffer(m_allocator, m_frameData[i].perPassUniformBuffer.buffer, m_frameData[i].perPassUniformBuffer.allocation);
-      vmaDestroyBuffer(m_allocator, m_frameData[i].perObjectUniformBuffer.buffer, m_frameData[i].perObjectUniformBuffer.allocation);
     });
   }
 }

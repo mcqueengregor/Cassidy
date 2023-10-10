@@ -80,5 +80,6 @@ void cassidy::Camera::updateProj()
   m_proj = glm::perspective(glm::radians(m_fovDegrees),
     static_cast<float>(m_engineRef->getWindowDim().x) / static_cast<float>(m_engineRef->getWindowDim().y),
     m_clipPlaneValues.x, m_clipPlaneValues.y);
-  m_proj[1][1] *= -1.0f;  // Invert clip space transformation's y-coord to match Vulkan's expectations.
+
+  m_proj[1][1] *= -1.0f;  // Invert clip space y-coord since +ve y is down in Vulkan.
 }

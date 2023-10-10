@@ -6,6 +6,19 @@ layout (location = 2) in vec3 aNormal;
 
 layout (location = 0) out vec3 fragColour;
 
+layout (set = 0, binding = 0) uniform PerPassBuffer
+{
+    mat4 view;
+    mat4 proj;
+    mat4 viewProj;
+    mat4 invViewProj;
+} perPassBuffer;
+
+layout (set = 1, binding = 0) uniform PerObjectBuffer
+{
+    mat4 world;
+} perObjectBuffer;
+
 layout (push_constant) uniform constants
 {
     mat4 world;
@@ -14,6 +27,6 @@ layout (push_constant) uniform constants
 
 void main()
 {
-    gl_Position = PushConstants.viewProj * PushConstants.world * vec4(aPos, 1.0);
+    gl_Position = perPassBuffer.viewProj * perObjectBuffer.world * vec4(aPos, 1.0);
     fragColour = aNormal;
 }

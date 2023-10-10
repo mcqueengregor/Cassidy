@@ -62,11 +62,12 @@ namespace cassidy
     };
 
     // Getters/setters: ------------------------------------------------------------------------------------------
-    VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; }
-    VkDevice getLogicalDevice() { return m_device; }
-    Swapchain getSwapchain() { return m_swapchain; }
+    inline VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; }
+    inline VkDevice getLogicalDevice() { return m_device; }
+    inline Swapchain getSwapchain() { return m_swapchain; }
 
   private:
+    void updateBuffers(const FrameData& currentFrameData);
     void recordCommandBuffers(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
     
@@ -91,6 +92,9 @@ namespace cassidy
     void initVertexBuffers();
     void initUniformBuffers();
 
+    // Inlined methods:
+    inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }
+
     Engine* m_engineRef;
 
     // Essential objects:
@@ -106,6 +110,7 @@ namespace cassidy
     // Rendering data:
     DefaultPushConstants m_matrixPushConstants;
     FrameData m_frameData[FRAMES_IN_FLIGHT];
+    AllocatedBuffer m_perObjectUniformBufferDynamic;
 
     // Descriptor objects:
     VkDescriptorPool m_descriptorPool;

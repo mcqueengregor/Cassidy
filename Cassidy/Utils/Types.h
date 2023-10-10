@@ -140,6 +140,5 @@ struct FrameData
   AllocatedBuffer perPassUniformBuffer;
   VkDescriptorSet perPassSet;
 
-  AllocatedBuffer perObjectUniformBuffer;
   VkDescriptorSet perObjectSet;
 };
