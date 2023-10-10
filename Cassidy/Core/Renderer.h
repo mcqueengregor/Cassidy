@@ -115,8 +115,8 @@ namespace cassidy
     // Descriptor objects:
     VkDescriptorPool m_descriptorPool;
 
-    VkDescriptorSetLayout m_perPassSetLayout; // (Dynamic)
-    VkDescriptorSetLayout m_perObjectSetLayout;
+    VkDescriptorSetLayout m_perPassSetLayout;
+    VkDescriptorSetLayout m_perObjectSetLayout; // (Dynamic)
 
     // Command objects:
     VkCommandPool m_graphicsCommandPool;
