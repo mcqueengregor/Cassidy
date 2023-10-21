@@ -46,6 +46,7 @@ namespace cassidy
     void release();
 
     void rebuildSwapchain();
+    void uploadBuffer(std::function<void(VkCommandBuffer cmd)>&& function);
 
     // Constant/static members and methods: ----------------------------------------------------------------------
     static inline std::vector<const char*> VALIDATION_LAYERS = {
@@ -73,7 +74,6 @@ namespace cassidy
     
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
     AllocatedBuffer allocateBuffer(uint32_t allocSize, VkBufferUsageFlags usageFlags, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlagBits allocFlags);
-    void uploadBuffer(std::function<void(VkCommandBuffer cmd)>&& function);
 
     void initMemoryAllocator();
     void initLogicalDevice();

@@ -1,12 +1,13 @@
 #include "Mesh.h"
 #include <Utils/Initialisers.h>
+#include <Core/Renderer.h>
 
 void cassidy::Mesh::release(VmaAllocator allocator)
 {
   vmaDestroyBuffer(allocator, m_vertexBuffer.buffer, m_vertexBuffer.allocation);
 }
 
-void cassidy::Mesh::allocateVertexBuffer(VkCommandBuffer uploadCmd, VmaAllocator allocator)
+void cassidy::Mesh::allocateVertexBuffer(VkCommandBuffer uploadCmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)
 {
   // Build CPU-side staging buffer:
   VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(m_vertices.size() * sizeof(Vertex),
@@ -40,7 +41,7 @@ void cassidy::Mesh::allocateVertexBuffer(VkCommandBuffer uploadCmd, VmaAllocator
     nullptr);
 
   // Execute copy command for CPU-side staging buffer -> GPU-side vertex buffer:
-  uploadBuffer([=](VkCommandBuffer cmd) {
+  rendererRef->uploadBuffer([=](VkCommandBuffer cmd) {
     VkBufferCopy copy = {};
     copy.dstOffset = 0;
     copy.srcOffset = 0;

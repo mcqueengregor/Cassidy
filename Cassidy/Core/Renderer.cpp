@@ -598,7 +598,12 @@ void cassidy::Renderer::rebuildSwapchain()
   SDL_Window* window = m_engineRef->getWindow();
   SDL_GetWindowSize(window, &width, &height);
 
-  vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex], VK_TRUE, UINT64_MAX);
+  std::vector<VkFence> fences;
+  for (const auto& f : m_inFlightFences)
+  {
+    fences.push_back(f);
+  }
+  vkWaitForFences(m_device, fences.size(), fences.data(), VK_TRUE, UINT64_MAX);
   m_swapchain.release(m_device, m_allocator);
   initSwapchain();
   initSwapchainFramebuffers();

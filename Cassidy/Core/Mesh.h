@@ -4,12 +4,14 @@
 
 namespace cassidy
 {
+  class Renderer;
+
   class Mesh
   {
   public:
     void release(VmaAllocator allocator);
 
-    void allocateVertexBuffer(VkCommandBuffer cmd, VmaAllocator allocator);
+    void allocateVertexBuffer(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef);
 
     // Getters/setters: ------------------------------------------------------------------------------------------
     inline uint32_t getNumVertices() const    { return static_cast<uint32_t>(m_vertices.size()); }
