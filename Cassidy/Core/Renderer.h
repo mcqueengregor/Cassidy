@@ -2,6 +2,7 @@
 #include <vector>
 #include "Utils/Types.h"
 #include "Core/Pipeline.h"
+#include <Core/Mesh.h>
 
 // Forward declarations:
 class SDL_Window;
@@ -84,6 +85,8 @@ namespace cassidy
     void initCommandPool();
     void initCommandBuffers();
     void initSyncObjects();
+    
+    void initMeshes();
 
     void initDescriptorSets();
     void initDescSetLayouts();
@@ -111,6 +114,10 @@ namespace cassidy
     DefaultPushConstants m_matrixPushConstants;
     FrameData m_frameData[FRAMES_IN_FLIGHT];
     AllocatedBuffer m_perObjectUniformBufferDynamic;
+
+    // Meshes:
+    Mesh m_triangleMesh;
+    Mesh m_backpackMesh;
 
     // Descriptor objects:
     VkDescriptorPool m_descriptorPool;

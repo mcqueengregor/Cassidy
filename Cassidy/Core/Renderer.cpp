@@ -22,6 +22,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initCommandPool();
   initCommandBuffers();
   initSyncObjects();
+  initMeshes();
   initDescriptorSets();
   initPipelines();
   initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
@@ -60,13 +61,7 @@ void cassidy::Renderer::draw()
 void cassidy::Renderer::release()
 {
   // Wait on all fences to prevent in-use resources from being destroyed:
-  std::vector<VkFence> fences;
-  for (const auto& f : m_inFlightFences)
-  {
-    fences.push_back(f);
-  }
-
-  vkWaitForFences(m_device, fences.size(), fences.data(), VK_TRUE, UINT64_MAX);
+  vkWaitForFences(m_device, m_inFlightFences.size(), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
 
   m_deletionQueue.execute();
   std::cout << "Renderer shut down!\n" << std::endl;
@@ -131,23 +126,9 @@ void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
     VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(cmd, 0, 1, &m_triangleVertexBuffer.buffer, &offset);
+    vkCmdBindVertexBuffers(cmd, 0, 1, &m_backpackMesh.getBuffer()->buffer, &offset);
 
-    // TODO: Replace push constants info w/ uniform buffer update and descriptor set bind logic
-
-    // Get world and viewProj matrices, upload to GPU via push constants:
-    const glm::mat4 view = m_engineRef->getCamera().getLookatMatrix();
-
-    glm::mat4 proj = m_engineRef->getCamera().getPerspectiveMatrix();
-
-    glm::mat4 world = glm::mat4(1.0f);
-
-    const DefaultPushConstants pushConstants = { world, proj * view };
-
-    vkCmdPushConstants(cmd, m_helloTrianglePipeline.getLayout(),
-      VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants), &pushConstants);
-
-    vkCmdDraw(cmd, triangleVertices.size(), 1, 0, 0);
+    vkCmdDraw(cmd, m_backpackMesh.getNumVertices(), 1, 0, 0);
   }
   vkCmdEndRenderPass(cmd);
   vkEndCommandBuffer(cmd);
@@ -493,6 +474,13 @@ void cassidy::Renderer::initSyncObjects()
   std::cout << "Created synchronisation objects!\n" << std::endl;
 }
 
+void cassidy::Renderer::initMeshes()
+{
+  m_triangleMesh.setVertices(triangleVertices);
+
+  m_backpackMesh.loadMesh("../Meshes/Backpack/backpack.obj");
+}
+
 void cassidy::Renderer::initDescriptorSets()
 {
   initDescriptorPool();
@@ -563,7 +551,13 @@ void cassidy::Renderer::initDescriptorPool()
 
 void cassidy::Renderer::initVertexBuffers()
 {
-  m_triangleVertexBuffer = allocateVertexBuffer(triangleVertices);
+  m_triangleMesh.allocateVertexBuffer(m_uploadCommandBuffer, m_allocator, this);
+  m_backpackMesh.allocateVertexBuffer(m_uploadCommandBuffer, m_allocator, this);
+
+  m_deletionQueue.addFunction([=]() {
+    m_triangleMesh.release(m_allocator);
+    m_backpackMesh.release(m_allocator);
+  });
 
   std::cout << "Created vertex buffers!\n" << std::endl;
 }
@@ -598,12 +592,7 @@ void cassidy::Renderer::rebuildSwapchain()
   SDL_Window* window = m_engineRef->getWindow();
   SDL_GetWindowSize(window, &width, &height);
 
-  std::vector<VkFence> fences;
-  for (const auto& f : m_inFlightFences)
-  {
-    fences.push_back(f);
-  }
-  vkWaitForFences(m_device, fences.size(), fences.data(), VK_TRUE, UINT64_MAX);
+  vkWaitForFences(m_device, m_inFlightFences.size(), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
   m_swapchain.release(m_device, m_allocator);
   initSwapchain();
   initSwapchainFramebuffers();
