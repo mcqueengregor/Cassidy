@@ -49,6 +49,7 @@ namespace cassidy
     void rebuildSwapchain();
     void immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
 
+
     // Constant/static members and methods: ----------------------------------------------------------------------
     static inline std::vector<const char*> VALIDATION_LAYERS = {
       "VK_LAYER_KHRONOS_validation",
@@ -71,6 +72,7 @@ namespace cassidy
   private:
     void updateBuffers(const FrameData& currentFrameData);
     void recordCommandBuffers(uint32_t imageIndex);
+    void recordGuiCommands();
     void submitCommandBuffers(uint32_t imageIndex);
     
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
@@ -95,7 +97,7 @@ namespace cassidy
     void initVertexBuffers();
     void initUniformBuffers();
 
-    void initImgui();
+    void initImGui();
 
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }

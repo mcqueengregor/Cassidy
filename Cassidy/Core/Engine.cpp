@@ -2,6 +2,10 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_sdl2.h>
+#include <imgui/imgui_impl_vulkan.h>
+
 #include <vector>
 #include <set>
 
@@ -44,6 +48,7 @@ void cassidy::Engine::run()
 
     while (SDL_PollEvent(&e))
     {
+      ImGui_ImplSDL2_ProcessEvent(&e);
       m_eventHandler.processEvent(&e);
 
       if (e.type == SDL_QUIT)
@@ -73,7 +78,13 @@ void cassidy::Engine::run()
     // If window isn't minimised, run renderer:
     const uint32_t windowFlags = SDL_GetWindowFlags(m_window);
     if ((windowFlags & SDL_WINDOW_MINIMIZED) == 0)
+    {
+      ImGui_ImplVulkan_NewFrame();
+      ImGui_ImplSDL2_NewFrame(m_window);
+      ImGui::NewFrame();
+
       m_renderer.draw();
+    }
   }
 }
 

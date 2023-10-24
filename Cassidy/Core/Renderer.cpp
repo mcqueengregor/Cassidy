@@ -9,9 +9,9 @@
 #define VMA_IMPLEMENTATION
 #include "Vendor/vma/vk_mem_alloc.h"
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl2.h"
-#include "imgui/imgui_impl_vulkan.h"
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_sdl2.h>
+#include <imgui/imgui_impl_vulkan.h>
 
 #include <set>
 #include <iostream>
@@ -31,7 +31,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initPipelines();
   initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
   initVertexBuffers();
-  initImgui();
+  initImGui();
 
   m_currentFrameIndex = 0;
 }
@@ -135,6 +135,9 @@ void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
 
     vkCmdDraw(cmd, m_backpackMesh.getNumVertices(), 1, 0, 0);
   }
+
+  recordGuiCommands();
+
   vkCmdEndRenderPass(cmd);
   vkEndCommandBuffer(cmd);
 }
@@ -240,6 +243,21 @@ void cassidy::Renderer::immediateSubmit(std::function<void(VkCommandBuffer cmd)>
   vkResetFences(m_device, 1, &m_uploadFence);
 
   vkResetCommandPool(m_device, m_uploadCommandPool, 0);
+}
+
+void cassidy::Renderer::recordGuiCommands()
+{
+  ImGui::ShowDemoWindow();
+
+  ImGui::Begin("Cassidy main");
+  {
+    ImGuiID dockspaceID = ImGui::GetID("Cassidy Dockspace");
+    ImGui::DockSpace(dockspaceID, ImVec2(0, 0), ImGuiDockNodeFlags_PassthruCentralNode);
+  }
+  ImGui::End();
+
+  ImGui::Render();
+  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffers[m_currentFrameIndex]);
 }
 
 void cassidy::Renderer::initLogicalDevice()
@@ -589,7 +607,7 @@ void cassidy::Renderer::initUniformBuffers()
   }
 }
 
-void cassidy::Renderer::initImgui()
+void cassidy::Renderer::initImGui()
 {
   const uint32_t NUM_SIZES = 11;
   VkDescriptorPoolSize poolSizes[NUM_SIZES] =
@@ -609,10 +627,12 @@ void cassidy::Renderer::initImgui()
 
   VkDescriptorPoolCreateInfo poolInfo = cassidy::init::descriptorPoolCreateInfo(NUM_SIZES, poolSizes, 1000);
 
-  VkDescriptorPool imguiPool;
-  vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &imguiPool);
+  VkDescriptorPool imGuiPool;
+  vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &imGuiPool);
 
   ImGui::CreateContext();
+  ImGuiIO& io = ImGui::GetIO();
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
   ImGui_ImplSDL2_InitForVulkan(m_engineRef->getWindow());
 
@@ -621,7 +641,7 @@ void cassidy::Renderer::initImgui()
   initInfo.PhysicalDevice = m_physicalDevice;
   initInfo.Device = m_device;
   initInfo.Queue = m_graphicsQueue;
-  initInfo.DescriptorPool = imguiPool;
+  initInfo.DescriptorPool = imGuiPool;
   initInfo.MinImageCount = m_swapchain.images.size();
   initInfo.ImageCount = m_swapchain.images.size();
   initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
@@ -635,8 +655,10 @@ void cassidy::Renderer::initImgui()
   ImGui_ImplVulkan_DestroyFontUploadObjects();
 
   m_deletionQueue.addFunction([=]() {
-    vkDestroyDescriptorPool(m_device, imguiPool, nullptr);
+    vkDestroyDescriptorPool(m_device, imGuiPool, nullptr);
     ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
     std::cout << "ImGui shut down!\n" << std::endl;
   });
 
