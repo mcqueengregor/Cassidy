@@ -247,15 +247,16 @@ void cassidy::Renderer::immediateSubmit(std::function<void(VkCommandBuffer cmd)>
 
 void cassidy::Renderer::recordGuiCommands()
 {
-  ImGui::ShowDemoWindow();
-
-  ImGui::Begin("Cassidy main");
+  ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
   {
-    ImGuiID dockspaceID = ImGui::GetID("Cassidy Dockspace");
-    ImGui::DockSpace(dockspaceID, ImVec2(0, 0), ImGuiDockNodeFlags_PassthruCentralNode);
-  }
-  ImGui::End();
+    ImGui::ShowDemoWindow();
 
+    ImGui::Begin("Cassidy main");
+    {
+      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    }
+    ImGui::End();
+  }
   ImGui::Render();
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffers[m_currentFrameIndex]);
 }
@@ -659,7 +660,6 @@ void cassidy::Renderer::initImGui()
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-    std::cout << "ImGui shut down!\n" << std::endl;
   });
 
   std::cout << "ImGui initialised!\n" << std::endl;
