@@ -44,6 +44,13 @@
     <ClCompile Include="Core\Mesh.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui.cpp" />
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_impl_sdl2.cpp" />
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_demo.cpp" />
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_draw.cpp" />
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_tables.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Engine.h">
@@ -81,6 +88,14 @@
     <ClInclude Include="Core\Mesh.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui\imgui.h" />
+    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_impl_sdl2.h" />
+    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_impl_vulkan.h" />
+    <ClInclude Include="Vendor\imgui-docking\imgui\imconfig.h" />
+    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_internal.h" />
+    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_truetype.h" />
+    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_textedit.h" />
+    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_rectpack.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Shaders\helloTriangle.frag">

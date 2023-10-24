@@ -3,7 +3,7 @@
 #include "Utils/Types.h"
 
 // Forward declarations:
-class SDL_Window;
+struct SDL_Window;
 
 namespace cassidy::helper
 {

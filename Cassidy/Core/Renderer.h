@@ -5,7 +5,7 @@
 #include <Core/Mesh.h>
 
 // Forward declarations:
-class SDL_Window;
+struct SDL_Window;
 
 namespace cassidy
 {
@@ -47,7 +47,7 @@ namespace cassidy
     void release();
 
     void rebuildSwapchain();
-    void uploadBuffer(std::function<void(VkCommandBuffer cmd)>&& function);
+    void immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
 
     // Constant/static members and methods: ----------------------------------------------------------------------
     static inline std::vector<const char*> VALIDATION_LAYERS = {
@@ -94,6 +94,8 @@ namespace cassidy
     
     void initVertexBuffers();
     void initUniformBuffers();
+
+    void initImgui();
 
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }

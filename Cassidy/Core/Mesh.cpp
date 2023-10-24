@@ -71,7 +71,7 @@ void cassidy::Mesh::allocateVertexBuffer(VkCommandBuffer uploadCmd, VmaAllocator
     nullptr);
 
   // Execute copy command for CPU-side staging buffer -> GPU-side vertex buffer:
-  rendererRef->uploadBuffer([=](VkCommandBuffer cmd) {
+  rendererRef->immediateSubmit([=](VkCommandBuffer cmd) {
     VkBufferCopy copy = {};
     copy.dstOffset = 0;
     copy.srcOffset = 0;

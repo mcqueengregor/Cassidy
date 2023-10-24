@@ -9,6 +9,10 @@
 #define VMA_IMPLEMENTATION
 #include "Vendor/vma/vk_mem_alloc.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl2.h"
+#include "imgui/imgui_impl_vulkan.h"
+
 #include <set>
 #include <iostream>
 
@@ -27,6 +31,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initPipelines();
   initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
   initVertexBuffers();
+  initImgui();
 
   m_currentFrameIndex = 0;
 }
@@ -187,7 +192,7 @@ AllocatedBuffer cassidy::Renderer::allocateVertexBuffer(const std::vector<Vertex
     nullptr);
 
   // Execute copy command for CPU-side staging buffer -> GPU-side vertex buffer:
-  uploadBuffer([=](VkCommandBuffer cmd) {
+  immediateSubmit([=](VkCommandBuffer cmd) {
     VkBufferCopy copy = {};
     copy.dstOffset = 0;
     copy.srcOffset = 0;
@@ -217,7 +222,7 @@ AllocatedBuffer cassidy::Renderer::allocateBuffer(uint32_t allocSize, VkBufferUs
   return newBuffer;
 }
 
-void cassidy::Renderer::uploadBuffer(std::function<void(VkCommandBuffer cmd)>&& function)
+void cassidy::Renderer::immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function)
 {
   VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     nullptr);
@@ -582,6 +587,60 @@ void cassidy::Renderer::initUniformBuffers()
       vmaDestroyBuffer(m_allocator, m_frameData[i].perPassUniformBuffer.buffer, m_frameData[i].perPassUniformBuffer.allocation);
     });
   }
+}
+
+void cassidy::Renderer::initImgui()
+{
+  const uint32_t NUM_SIZES = 11;
+  VkDescriptorPoolSize poolSizes[NUM_SIZES] =
+  {
+    { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+    { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+    { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } 
+  };
+
+  VkDescriptorPoolCreateInfo poolInfo = cassidy::init::descriptorPoolCreateInfo(NUM_SIZES, poolSizes, 1000);
+
+  VkDescriptorPool imguiPool;
+  vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &imguiPool);
+
+  ImGui::CreateContext();
+
+  ImGui_ImplSDL2_InitForVulkan(m_engineRef->getWindow());
+
+  ImGui_ImplVulkan_InitInfo initInfo = {};
+  initInfo.Instance = m_engineRef->getInstance();
+  initInfo.PhysicalDevice = m_physicalDevice;
+  initInfo.Device = m_device;
+  initInfo.Queue = m_graphicsQueue;
+  initInfo.DescriptorPool = imguiPool;
+  initInfo.MinImageCount = m_swapchain.images.size();
+  initInfo.ImageCount = m_swapchain.images.size();
+  initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+  ImGui_ImplVulkan_Init(&initInfo, m_helloTrianglePipeline.getRenderPass());
+
+  immediateSubmit([&](VkCommandBuffer cmd) {
+    ImGui_ImplVulkan_CreateFontsTexture(cmd);
+  });
+
+  ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+  m_deletionQueue.addFunction([=]() {
+    vkDestroyDescriptorPool(m_device, imguiPool, nullptr);
+    ImGui_ImplVulkan_Shutdown();
+    std::cout << "ImGui shut down!\n" << std::endl;
+  });
+
+  std::cout << "ImGui initialised!\n" << std::endl;
 }
 
 void cassidy::Renderer::rebuildSwapchain()
