@@ -230,19 +230,19 @@ void cassidy::Renderer::immediateSubmit(std::function<void(VkCommandBuffer cmd)>
   VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     nullptr);
 
-  vkBeginCommandBuffer(m_uploadCommandBuffer, &beginInfo);
+  vkBeginCommandBuffer(m_uploadContext.uploadCommandBuffer, &beginInfo);
   {
-    function(m_uploadCommandBuffer);
+    function(m_uploadContext.uploadCommandBuffer);
   }
-  vkEndCommandBuffer(m_uploadCommandBuffer);
+  vkEndCommandBuffer(m_uploadContext.uploadCommandBuffer);
 
-  VkSubmitInfo submitInfo = cassidy::init::submitInfo(0, nullptr, 0, 0, nullptr, 1, &m_uploadCommandBuffer);
-  vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_uploadFence);
+  VkSubmitInfo submitInfo = cassidy::init::submitInfo(0, nullptr, 0, 0, nullptr, 1, &m_uploadContext.uploadCommandBuffer);
+  vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_uploadContext.uploadFence);
 
-  vkWaitForFences(m_device, 1, &m_uploadFence, VK_TRUE, UINT64_MAX);
-  vkResetFences(m_device, 1, &m_uploadFence);
+  vkWaitForFences(m_device, 1, &m_uploadContext.uploadFence, VK_TRUE, UINT64_MAX);
+  vkResetFences(m_device, 1, &m_uploadContext.uploadFence);
 
-  vkResetCommandPool(m_device, m_uploadCommandPool, 0);
+  vkResetCommandPool(m_device, m_uploadContext.uploadCommandPool, 0);
 }
 
 void cassidy::Renderer::recordGuiCommands()
@@ -453,11 +453,11 @@ void cassidy::Renderer::initCommandPool()
   VkCommandPoolCreateInfo uploadPoolInfo = cassidy::init::commandPoolCreateInfo(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
     indices.graphicsFamily.value());
 
-  vkCreateCommandPool(m_device, &uploadPoolInfo, nullptr, &m_uploadCommandPool);
+  vkCreateCommandPool(m_device, &uploadPoolInfo, nullptr, &m_uploadContext.uploadCommandPool);
 
   m_deletionQueue.addFunction([=]() {
     vkDestroyCommandPool(m_device, m_graphicsCommandPool, nullptr);
-    vkDestroyCommandPool(m_device, m_uploadCommandPool, nullptr);
+    vkDestroyCommandPool(m_device, m_uploadContext.uploadCommandPool, nullptr);
   });
 
   std::cout << "Created command pools!\n" << std::endl;
@@ -475,10 +475,10 @@ void cassidy::Renderer::initCommandBuffers()
   std::cout << "Allocated " << std::to_string(FRAMES_IN_FLIGHT) << " graphics command buffers!\n";
 
   // Allocate command buffer for upload commands:
-  VkCommandBufferAllocateInfo uploadAllocInfo = cassidy::init::commandBufferAllocInfo(m_uploadCommandPool,
+  VkCommandBufferAllocateInfo uploadAllocInfo = cassidy::init::commandBufferAllocInfo(m_uploadContext.uploadCommandPool,
     VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
 
-  vkAllocateCommandBuffers(m_device, &uploadAllocInfo, &m_uploadCommandBuffer);
+  vkAllocateCommandBuffers(m_device, &uploadAllocInfo, &m_uploadContext.uploadCommandBuffer);
   std::cout << "Allocated upload command buffer!\n" << std::endl;
 }
 
@@ -505,10 +505,10 @@ void cassidy::Renderer::initSyncObjects()
   }
 
   fenceInfo.flags = 0;
-  vkCreateFence(m_device, &fenceInfo, nullptr, &m_uploadFence);
+  vkCreateFence(m_device, &fenceInfo, nullptr, &m_uploadContext.uploadFence);
 
   m_deletionQueue.addFunction([=]() {
-    vkDestroyFence(m_device, m_uploadFence, nullptr);
+    vkDestroyFence(m_device, m_uploadContext.uploadFence, nullptr);
   });
 
   std::cout << "Created synchronisation objects!\n" << std::endl;
@@ -591,8 +591,8 @@ void cassidy::Renderer::initDescriptorPool()
 
 void cassidy::Renderer::initVertexBuffers()
 {
-  m_triangleMesh.allocateVertexBuffer(m_uploadCommandBuffer, m_allocator, this);
-  m_backpackMesh.allocateVertexBuffer(m_uploadCommandBuffer, m_allocator, this);
+  m_triangleMesh.allocateVertexBuffer(m_uploadContext.uploadCommandBuffer, m_allocator, this);
+  m_backpackMesh.allocateVertexBuffer(m_uploadContext.uploadCommandBuffer, m_allocator, this);
 
   m_deletionQueue.addFunction([=]() {
     m_triangleMesh.release(m_allocator);

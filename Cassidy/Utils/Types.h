@@ -142,3 +142,10 @@ struct FrameData
 
   VkDescriptorSet perObjectSet;
 };
+
+struct UploadContext
+{
+  VkCommandPool uploadCommandPool;
+  VkCommandBuffer uploadCommandBuffer;
+  VkFence uploadFence;
+};

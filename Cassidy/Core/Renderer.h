@@ -122,6 +122,7 @@ namespace cassidy
     // Meshes:
     Mesh m_triangleMesh;
     Mesh m_backpackMesh;
+    UploadContext m_uploadContext;
 
     // Descriptor objects:
     VkDescriptorPool m_descriptorPool;
@@ -131,15 +132,12 @@ namespace cassidy
 
     // Command objects:
     VkCommandPool m_graphicsCommandPool;
-    VkCommandPool m_uploadCommandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
-    VkCommandBuffer m_uploadCommandBuffer;
 
     // Synchronisation objects:
     std::vector<VkSemaphore> m_imageAvailableSemaphores;
     std::vector<VkSemaphore> m_renderFinishedSemaphores;
     std::vector<VkFence> m_inFlightFences;
-    VkFence m_uploadFence;
 
     // Memory allocator and allocated objects:
     VmaAllocator m_allocator;
