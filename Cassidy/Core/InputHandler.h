@@ -22,6 +22,9 @@ public:
 
   static inline void flushDynamicMouseStates() { InputHandler::get().flushDynamicMouseStatesImpl(); }
 
+  static inline void logMousePosition() { InputHandler::get().logMousePositionImpl(); }
+  static inline void moveMouseToLoggedPosition() { InputHandler::get().moveMouseToLoggedPositionImpl(); }
+
   static inline void setKeyDown(SDL_Keycode keyCode)  { InputHandler::get().setKeyDownImpl(keyCode); }
   static inline void setKeyUp(SDL_Keycode keyCode)    { InputHandler::get().setKeyUpImpl(keyCode); }
 
@@ -34,6 +37,9 @@ public:
 
   static inline void lockCursor()   { InputHandler::get().lockCursorImpl(); }
   static inline void unlockCursor() { InputHandler::get().unlockCursorImpl(); }
+
+  static inline void hideCursor() { InputHandler::get().hideCursorImpl(); }
+  static inline void showCursor() { InputHandler::get().showCursorImpl(); }
 
   /*
     Input states:
@@ -65,7 +71,11 @@ private:
   void initImpl();
   void updateKeyStatesImpl();
   void updateMouseStatesImpl();
+  
   void flushDynamicMouseStatesImpl();
+
+  void logMousePositionImpl();
+  void moveMouseToLoggedPositionImpl();
 
   void setKeyDownImpl(SDL_Keycode keyCode);
   void setKeyUpImpl(SDL_Keycode keyCode);
@@ -79,6 +89,9 @@ private:
 
   void lockCursorImpl();
   void unlockCursorImpl();
+
+  void hideCursorImpl();
+  void showCursorImpl();
 
   bool isKeyPressedImpl(KeyCode keyCode);
   bool isKeyHeldImpl(KeyCode keyCode);
@@ -120,6 +133,9 @@ private:
 
     int32_t mouseRelativeMotionX;
     int32_t mouseRelativeMotionY;
+
+    int32_t loggedMouseRelativePositionX;
+    int32_t loggedMouseRelativePositionY;
 
     bool isCursorLocked;
   } m_mouseState;

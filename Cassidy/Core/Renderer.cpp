@@ -254,6 +254,22 @@ void cassidy::Renderer::recordGuiCommands()
     ImGui::Begin("Cassidy main");
     {
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+      ImGui::Text("SDL relative motion: (%i, %i)", InputHandler::getCursorOffsetX(), InputHandler::getCursorOffsetY());
+
+      const char* cursorStateText = "";
+      switch (SDL_ShowCursor(SDL_QUERY))
+      {
+      case SDL_ENABLE:
+        cursorStateText = "Showing cursor!";
+        break;
+      case SDL_DISABLE:
+        cursorStateText = "Hiding cursor!";
+        break;
+      default:
+        cursorStateText = "wtf";
+        break;
+      }
+      ImGui::Text(cursorStateText);
     }
     ImGui::End();
   }
@@ -328,7 +344,7 @@ void cassidy::Renderer::initSwapchain()
     desiredFormat) ? desiredFormat : details.formats[0];
 
   // If desired present mode isn't available on the chosen physical device, default to FIFO (guaranteed to be avaiable):
-  const VkPresentModeKHR desiredMode = VK_PRESENT_MODE_MAILBOX_KHR;
+  const VkPresentModeKHR desiredMode = VK_PRESENT_MODE_FIFO_KHR;
   VkPresentModeKHR presentMode = cassidy::helper::isSwapchainPresentModeSupported(details.presentModes.size(), details.presentModes.data(), 
     desiredMode) ? desiredMode : VK_PRESENT_MODE_FIFO_KHR;
 
@@ -634,6 +650,7 @@ void cassidy::Renderer::initImGui()
   ImGui::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+  io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // Handle cursor show/hide functionality ourselves.
 
   ImGui_ImplSDL2_InitForVulkan(m_engineRef->getWindow());
 

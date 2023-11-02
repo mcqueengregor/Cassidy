@@ -104,18 +104,21 @@ void cassidy::Engine::processInput()
 
   if (InputHandler::isMouseButtonPressed(MouseCode::MOUSECODE_RIGHT))
   {
-    SDL_SetRelativeMouseMode(SDL_TRUE);
-    InputHandler::lockCursor();
+    InputHandler::hideCursor();
+    InputHandler::logMousePosition();
   }
   else if (InputHandler::isMouseButtonReleased(MouseCode::MOUSECODE_RIGHT))
   {
-    SDL_SetRelativeMouseMode(SDL_FALSE);
-    InputHandler::unlockCursor();
+    InputHandler::showCursor();
+    InputHandler::moveMouseToLoggedPosition();
   }
   if (InputHandler::isMouseButtonHeld(MouseCode::MOUSECODE_RIGHT))
   {
     m_camera.increaseYaw(static_cast<float>(InputHandler::getCursorOffsetX()));
     m_camera.increasePitch(static_cast<float>(InputHandler::getCursorOffsetY()));
+
+    SDL_WarpMouseInWindow(NULL, 
+      static_cast<int>(m_windowDimensions.x / 2.0f), static_cast<int>(m_windowDimensions.y / 2.0f));
   }
 
   // WASD horizontal camera movement controls:

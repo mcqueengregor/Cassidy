@@ -28,6 +28,8 @@ namespace cassidy
 
     void updateProj();
 
+    float* getSensitivityPtr() { return &m_rotateSensitivity; }
+
   private:
     void findForward();
     void calculateLookat();

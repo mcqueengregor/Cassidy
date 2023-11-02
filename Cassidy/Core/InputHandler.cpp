@@ -1,8 +1,10 @@
 #include "InputHandler.h"
 
+#include <imgui/imgui_impl_sdl2.h>
+
 void InputHandler::initImpl()
 {
-  m_mouseState = { 0x0000, 0x0000, 0x0000, 0x0000, 0, 0, 0, 0, false };  // Yuck?
+  m_mouseState = { 0x0000, 0x0000, 0x0000, 0x0000, 0, 0, 0, 0, 0, 0, false };  // Yuck?
 
   for (uint16_t i = 0; i < KEYBOARD_SIZE; ++i)
   {
@@ -47,6 +49,17 @@ void InputHandler::flushDynamicMouseStatesImpl()
 {
   m_mouseState.mouseRelativeMotionX = 0;
   m_mouseState.mouseRelativeMotionY = 0;
+}
+
+void InputHandler::logMousePositionImpl()
+{
+  m_mouseState.loggedMouseRelativePositionX = m_mouseState.mouseRelativePositionX;
+  m_mouseState.loggedMouseRelativePositionY = m_mouseState.mouseRelativePositionY;
+}
+
+void InputHandler::moveMouseToLoggedPositionImpl()
+{
+  SDL_WarpMouseInWindow(NULL, m_mouseState.loggedMouseRelativePositionX, m_mouseState.loggedMouseRelativePositionY);
 }
 
 void InputHandler::setKeyDownImpl(SDL_Keycode keyCode)
@@ -105,6 +118,16 @@ void InputHandler::unlockCursorImpl()
   m_mouseState.isCursorLocked = false;
 
   SDL_WarpMouseInWindow(NULL, m_mouseState.mouseOriginalRelativePositionX, m_mouseState.mouseOriginalRelativePositionY);
+}
+
+void InputHandler::hideCursorImpl()
+{
+  SDL_ShowCursor(SDL_DISABLE);
+}
+
+void InputHandler::showCursorImpl()
+{
+  SDL_ShowCursor(SDL_ENABLE);
 }
 
 bool InputHandler::isKeyPressedImpl(KeyCode keyCode)
