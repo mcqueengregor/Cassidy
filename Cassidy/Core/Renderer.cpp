@@ -270,9 +270,29 @@ void cassidy::Renderer::recordGuiCommands()
         break;
       }
       ImGui::Text(cursorStateText);
+
+      const ImVec2& size = ImGui::GetWindowContentRegionMax();
+      ImGui::Text("Window dim: (%f, %f)", size.x, size.y);
     }
     ImGui::End();
+
+    // TODO: Once textures are implemented, add an ImGui viewport sampler, create
+    // ImGui descriptor set for swapchain image and display in viewport widget.
+    // (https://github.com/ocornut/imgui/wiki/image-loading-and-displaying-examples#example-for-vulkan-users)
+    //ImGui::Begin("Viewport");
+    //{
+    //  ImGui::Image()
+    //}
+    //ImGui::End();
   }
+
+  ImGui::Begin("Test window");
+  {
+    const ImVec2& size = ImGui::GetWindowContentRegionMax();
+    ImGui::Text("Window dim: (%f, %f)", size.x, size.y);
+  }
+  ImGui::End();
+
   ImGui::Render();
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffers[m_currentFrameIndex]);
 }
@@ -519,6 +539,14 @@ void cassidy::Renderer::initMeshes()
   m_triangleMesh.setVertices(triangleVertices);
 
   m_backpackMesh.loadMesh("../Meshes/Backpack/backpack.obj");
+  m_backpackAlbedo.load("../Meshes/Backpack/diffuse.jpg", m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
+  m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
+    VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
+
+  m_deletionQueue.addFunction([=]() {
+    m_backpackAlbedo.release(m_device, m_allocator);
+    vkDestroySampler(m_device, m_linearSampler, nullptr);
+  });
 }
 
 void cassidy::Renderer::initDescriptorSets()
@@ -541,14 +569,18 @@ void cassidy::Renderer::initDescriptorSets()
       m_frameData[i].perPassUniformBuffer.buffer, 0, sizeof(PerPassData));
     VkDescriptorBufferInfo objectBufferInfo = cassidy::init::descriptorBufferInfo(
       m_perObjectUniformBufferDynamic.buffer, 0, sizeof(PerObjectData));
+    VkDescriptorImageInfo objectTextureInfo = cassidy::init::descriptorImageInfo(
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackAlbedo.getImageView(), m_linearSampler);
 
     VkWriteDescriptorSet passWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perPassSet, 0,
       VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, &passBufferInfo);
-    VkWriteDescriptorSet objectWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perObjectSet, 0,
+    VkWriteDescriptorSet objectBufferWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perObjectSet, 0,
       VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, &objectBufferInfo);
+    VkWriteDescriptorSet objectTextureWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perObjectSet, 1,
+      VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &objectTextureInfo);
 
-    VkWriteDescriptorSet writes[] = { passWrite, objectWrite };
-    vkUpdateDescriptorSets(m_device, 2, writes, 0, nullptr);
+    VkWriteDescriptorSet writes[] = { passWrite, objectBufferWrite, objectTextureWrite };
+    vkUpdateDescriptorSets(m_device, 3, writes, 0, nullptr);
   }
 }
 
@@ -556,11 +588,15 @@ void cassidy::Renderer::initDescSetLayouts()
 {
   VkDescriptorSetLayoutBinding perPassBinding = cassidy::init::descriptorSetLayoutBinding(0, 
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr);
-  VkDescriptorSetLayoutBinding perObjectBinding = cassidy::init::descriptorSetLayoutBinding(0, 
+  VkDescriptorSetLayoutBinding perObjectBufferBinding = cassidy::init::descriptorSetLayoutBinding(0, 
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr);
+  VkDescriptorSetLayoutBinding perObjectTextureBinding = cassidy::init::descriptorSetLayoutBinding(1,
+    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr);
 
   VkDescriptorSetLayoutCreateInfo perPassInfo = cassidy::init::descriptorSetLayoutCreateInfo(1, &perPassBinding);
-  VkDescriptorSetLayoutCreateInfo perObjectInfo = cassidy::init::descriptorSetLayoutCreateInfo(1, &perObjectBinding);
+
+  VkDescriptorSetLayoutBinding perObjectBindings[] = { perObjectBufferBinding, perObjectTextureBinding };
+  VkDescriptorSetLayoutCreateInfo perObjectInfo = cassidy::init::descriptorSetLayoutCreateInfo(2, perObjectBindings);
 
   vkCreateDescriptorSetLayout(m_device, &perPassInfo, nullptr, &m_perPassSetLayout);
   vkCreateDescriptorSetLayout(m_device, &perObjectInfo, nullptr, &m_perObjectSetLayout);
@@ -573,10 +609,11 @@ void cassidy::Renderer::initDescSetLayouts()
 
 void cassidy::Renderer::initDescriptorPool()
 {
-  const uint32_t NUM_SIZES = 2;
+  const uint32_t NUM_SIZES = 3;
   VkDescriptorPoolSize poolSizes[NUM_SIZES] = {
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,  static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
+    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
   };
 
   VkDescriptorPoolCreateInfo info = cassidy::init::descriptorPoolCreateInfo(NUM_SIZES, poolSizes,
@@ -639,7 +676,7 @@ void cassidy::Renderer::initImGui()
     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
     { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-    { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } 
+    { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
   };
 
   VkDescriptorPoolCreateInfo poolInfo = cassidy::init::descriptorPoolCreateInfo(NUM_SIZES, poolSizes, 1000);
@@ -670,10 +707,35 @@ void cassidy::Renderer::initImGui()
     ImGui_ImplVulkan_CreateFontsTexture(cmd);
   });
 
+  // Create sampler used for swapchain image in viewport:
+  //m_imguiViewportSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties,
+  //  VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, VK_FALSE);
+  //
+  //// Create descriptor sets used in displaying swapchain image in viewport:
+  //for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
+  //{
+  //  m_imguiViewportSets[i] = ImGui_ImplVulkan_AddTexture(m_imguiViewportSampler, m_swapchain.imageViews[i], 
+  //    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  //}
+
+  // Solution for full ImGui setup w/ viewport: https://github.com/ocornut/imgui/issues/5110
+  // TODO: Follow same steps here!!
+  /*
+    - Create image and image view for viewport.
+    - Create viewport-specific renderpass, command pool, framebuffer and commandbuffer.
+    - Record drawing commands as usual, but into viewport-specific command buffer.
+    - Complete ImGui rendering commands, submit to queue and present.
+  */
+
   ImGui_ImplVulkan_DestroyFontUploadObjects();
 
   m_deletionQueue.addFunction([=]() {
     vkDestroyDescriptorPool(m_device, imGuiPool, nullptr);
+    vkDestroySampler(m_device, m_imguiViewportSampler, nullptr);
+   
+    //for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
+    //  ImGui_ImplVulkan_RemoveTexture(m_imguiViewportSets[i]);
+
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();

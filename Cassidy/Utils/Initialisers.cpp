@@ -679,7 +679,7 @@ VkWriteDescriptorSet cassidy::init::writeDescriptorSet(VkDescriptorSet dstSet, u
   return write;
 }
 
-VkWriteDescriptorSet cassidy::init::writeDescriptorSet(VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElement, VkDescriptorType descriptorType, uint32_t numDescriptors, const VkDescriptorImageInfo* imageInfo)
+VkWriteDescriptorSet cassidy::init::writeDescriptorSet(VkDescriptorSet dstSet, uint32_t dstBinding, VkDescriptorType descriptorType, uint32_t numDescriptors, const VkDescriptorImageInfo* imageInfo)
 {
   VkWriteDescriptorSet write = {};
   write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

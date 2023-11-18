@@ -323,7 +323,6 @@ namespace cassidy::init
   VkWriteDescriptorSet writeDescriptorSet(
     VkDescriptorSet dstSet,
     uint32_t dstBinding,
-    uint32_t dstArrayElement,
     VkDescriptorType descriptorType,
     uint32_t numDescriptors,
     const VkDescriptorImageInfo* imageInfo

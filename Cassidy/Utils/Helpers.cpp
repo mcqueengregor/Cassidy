@@ -203,3 +203,37 @@ size_t cassidy::helper::padUniformBufferSize(size_t originalSize, const VkPhysic
   return alignedSize;
 }
 
+VkSampler cassidy::helper::createTextureSampler(const VkDevice& device, const VkPhysicalDeviceProperties& physicalDeviceProperties, VkFilter filter, VkSamplerAddressMode wrapMode, uint8_t numMips, bool useAniso)
+{
+  VkSamplerCreateInfo samplerInfo = {};
+  samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  samplerInfo.magFilter = filter;
+  samplerInfo.minFilter = filter;
+  samplerInfo.addressModeU = wrapMode;
+  samplerInfo.addressModeV = wrapMode;
+  samplerInfo.addressModeW = wrapMode;
+
+  samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  samplerInfo.minLod = 0.0f;
+  samplerInfo.maxLod = static_cast<float>(numMips);
+  samplerInfo.mipLodBias = 0.0f;
+
+  samplerInfo.anisotropyEnable = useAniso ? VK_TRUE : VK_FALSE;
+
+  samplerInfo.maxAnisotropy = physicalDeviceProperties.limits.maxSamplerAnisotropy;
+
+  samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+  samplerInfo.unnormalizedCoordinates = VK_FALSE;
+  samplerInfo.compareEnable = VK_FALSE;
+  samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
+  VkSampler newSampler;
+
+  const VkResult result = vkCreateSampler(device, &samplerInfo, nullptr, &newSampler);
+
+  if (result != VK_SUCCESS)
+    throw std::runtime_error("ERROR: Failed to create sampler!");
+
+  return newSampler;
+}
+

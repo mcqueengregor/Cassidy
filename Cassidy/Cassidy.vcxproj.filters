@@ -11,6 +11,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Vendor">
+      <UniqueIdentifier>{16716bfd-f2eb-4bea-bdea-4af4211fb664}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Vendor\ImGui">
+      <UniqueIdentifier>{0a517d50-c235-47b2-bb85-a5411c6f8ed3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\Engine.cpp">
@@ -40,17 +46,36 @@
     <ClCompile Include="Core\InputHandler.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Utils\GlobalTimer.cpp" />
     <ClCompile Include="Core\Mesh.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui.cpp" />
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_impl_sdl2.cpp" />
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_demo.cpp" />
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_draw.cpp" />
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_tables.cpp" />
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_demo.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_draw.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_impl_sdl2.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_impl_vulkan.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_tables.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_widgets.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\GlobalTimer.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Texture.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Engine.h">
@@ -83,19 +108,42 @@
     <ClInclude Include="Utils\KeyCode.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Utils\GlobalTimer.h" />
-    <ClInclude Include="Utils\MouseCode.h" />
     <ClInclude Include="Core\Mesh.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imgui.h" />
-    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_impl_sdl2.h" />
-    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_impl_vulkan.h" />
-    <ClInclude Include="Vendor\imgui-docking\imgui\imconfig.h" />
-    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_internal.h" />
-    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_truetype.h" />
-    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_textedit.h" />
-    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_rectpack.h" />
+    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_textedit.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui\imconfig.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui\imgui.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_impl_sdl2.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_impl_vulkan.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_internal.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_rectpack.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_truetype.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\GlobalTimer.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\MouseCode.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Texture.h">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Shaders\helloTriangle.frag">

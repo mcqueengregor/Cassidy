@@ -116,7 +116,7 @@ void cassidy::Mesh::processMesh(const aiMesh* mesh)
       vertex.position = position;
     }
 
-    if (mesh->HasTextureCoords(1))
+    if (mesh->HasTextureCoords(0))
     {
       glm::vec2 uv;
 

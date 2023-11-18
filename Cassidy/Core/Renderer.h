@@ -3,6 +3,7 @@
 #include "Utils/Types.h"
 #include "Core/Pipeline.h"
 #include <Core/Mesh.h>
+#include <Core/Texture.h>
 
 // Forward declarations:
 struct SDL_Window;
@@ -48,7 +49,6 @@ namespace cassidy
 
     void rebuildSwapchain();
     void immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
-
 
     // Constant/static members and methods: ----------------------------------------------------------------------
     static inline std::vector<const char*> VALIDATION_LAYERS = {
@@ -102,7 +102,7 @@ namespace cassidy
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }
 
-    Engine* m_engineRef;
+    cassidy::Engine* m_engineRef;
 
     // Essential objects:
     Swapchain m_swapchain;
@@ -122,13 +122,20 @@ namespace cassidy
     // Meshes:
     Mesh m_triangleMesh;
     Mesh m_backpackMesh;
+    Texture m_backpackAlbedo;
     UploadContext m_uploadContext;
+
+    // Samplers:
+    VkSampler m_linearSampler;
+    VkSampler m_imguiViewportSampler;
 
     // Descriptor objects:
     VkDescriptorPool m_descriptorPool;
 
     VkDescriptorSetLayout m_perPassSetLayout;
     VkDescriptorSetLayout m_perObjectSetLayout; // (Dynamic)
+
+    VkDescriptorSet m_imguiViewportSets[FRAMES_IN_FLIGHT];  // Used to display the renderer viewport via an ImGui image.
 
     // Command objects:
     VkCommandPool m_graphicsCommandPool;
@@ -154,6 +161,5 @@ namespace cassidy
       {{-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
       {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
     };
-    AllocatedBuffer m_triangleVertexBuffer;
   };
 }

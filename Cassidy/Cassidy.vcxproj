@@ -154,6 +154,7 @@
     <ClCompile Include="Core\Renderer.cpp" />
     <ClCompile Include="Core\EventHandler.cpp" />
     <ClCompile Include="Core\InputHandler.cpp" />
+    <ClCompile Include="Core\Texture.cpp" />
     <ClCompile Include="Utils\GlobalTimer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Utils\Helpers.cpp" />
@@ -174,6 +175,7 @@
     <ClInclude Include="Core\Renderer.h" />
     <ClInclude Include="Core\EventHandler.h" />
     <ClInclude Include="Core\InputHandler.h" />
+    <ClInclude Include="Core\Texture.h" />
     <ClInclude Include="Utils\GlobalTimer.h" />
     <ClInclude Include="Utils\Helpers.h" />
     <ClInclude Include="Utils\Initialisers.h" />
