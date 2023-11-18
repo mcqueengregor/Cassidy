@@ -31,6 +31,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initPipelines();
   initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
   initVertexBuffers();
+  initIndexBuffers();
   initImGui();
 
   m_currentFrameIndex = 0;
@@ -130,10 +131,7 @@ void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
-    VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(cmd, 0, 1, &m_backpackMesh.getBuffer()->buffer, &offset);
-
-    vkCmdDraw(cmd, m_backpackMesh.getNumVertices(), 1, 0, 0);
+    m_backpackMesh.draw(cmd);
   }
 
   recordGuiCommands();
@@ -538,7 +536,7 @@ void cassidy::Renderer::initMeshes()
 {
   m_triangleMesh.setVertices(triangleVertices);
 
-  m_backpackMesh.loadMesh("../Meshes/Backpack/backpack.obj");
+  m_backpackMesh.loadModel("../Meshes/Backpack/backpack.obj");
   m_backpackAlbedo.load("../Meshes/Backpack/diffuse.jpg", m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
     VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
@@ -628,8 +626,8 @@ void cassidy::Renderer::initDescriptorPool()
 
 void cassidy::Renderer::initVertexBuffers()
 {
-  m_triangleMesh.allocateVertexBuffer(m_uploadContext.uploadCommandBuffer, m_allocator, this);
-  m_backpackMesh.allocateVertexBuffer(m_uploadContext.uploadCommandBuffer, m_allocator, this);
+  m_triangleMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
+  m_backpackMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
 
   m_deletionQueue.addFunction([=]() {
     m_triangleMesh.release(m_allocator);
@@ -637,6 +635,11 @@ void cassidy::Renderer::initVertexBuffers()
   });
 
   std::cout << "Created vertex buffers!\n" << std::endl;
+}
+
+void cassidy::Renderer::initIndexBuffers()
+{
+  m_backpackMesh.allocateIndexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
 }
 
 void cassidy::Renderer::initUniformBuffers()

@@ -95,6 +95,7 @@ namespace cassidy
     void initDescriptorPool();
     
     void initVertexBuffers();
+    void initIndexBuffers();
     void initUniformBuffers();
 
     void initImGui();
@@ -120,8 +121,8 @@ namespace cassidy
     AllocatedBuffer m_perObjectUniformBufferDynamic;
 
     // Meshes:
-    Mesh m_triangleMesh;
-    Mesh m_backpackMesh;
+    Model m_triangleMesh;
+    Model m_backpackMesh;
     Texture m_backpackAlbedo;
     UploadContext m_uploadContext;
 

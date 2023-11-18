@@ -7,12 +7,27 @@
 
 #include <iostream>
 
-void cassidy::Mesh::release(VmaAllocator allocator)
+void cassidy::Model::draw(VkCommandBuffer cmd)
 {
-  vmaDestroyBuffer(allocator, m_vertexBuffer.buffer, m_vertexBuffer.allocation);
+  for (const auto& mesh : m_meshes)
+  {
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(cmd, 0, 1, &mesh.getVertexBuffer()->buffer, &offset);
+    vkCmdBindIndexBuffer(cmd, mesh.getIndexBuffer()->buffer, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(cmd, static_cast<uint32_t>(mesh.getNumIndices()), 1, 0, 0, 0);
+  }
 }
 
-void cassidy::Mesh::loadMesh(const std::string& filepath)
+void cassidy::Model::release(VmaAllocator allocator)
+{
+  for (const auto& mesh : m_meshes)
+  {
+    mesh.release(allocator);
+  }
+}
+
+void cassidy::Model::loadModel(const std::string& filepath)
 {
   Assimp::Importer importer;
 
@@ -32,65 +47,126 @@ void cassidy::Mesh::loadMesh(const std::string& filepath)
   std::cout << "Successfully loaded mesh " << filepath << "!" << std::endl;
 }
 
-void cassidy::Mesh::setVertices(const std::vector<Vertex>& vertices)
+// Used for single-mesh models which have their vertices directly set by an array.
+void cassidy::Model::setVertices(const std::vector<Vertex>& vertices)
 {
-  m_vertices.assign(vertices.begin(), vertices.end());
+  if (m_meshes.empty())
+  {
+    m_meshes.emplace_back(Mesh());
+    m_meshes[0].setVertices(vertices);
+  }
 }
 
-void cassidy::Mesh::allocateVertexBuffer(VkCommandBuffer uploadCmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)
+void cassidy::Model::allocateVertexBuffers(VkCommandBuffer uploadCmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)
 {
-  // Build CPU-side staging buffer:
-  VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(m_vertices.size() * sizeof(Vertex),
-    VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-  VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
-    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+  for (auto& mesh : m_meshes)
+  {
+    // Build CPU-side staging buffer:
+    VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(mesh.getNumVertices() * sizeof(Vertex),
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
+      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
-  AllocatedBuffer stagingBuffer;
+    AllocatedBuffer stagingBuffer;
 
-  vmaCreateBuffer(allocator, &stagingBufferInfo, &bufferAllocInfo,
-    &stagingBuffer.buffer,
-    &stagingBuffer.allocation,
-    nullptr);
+    vmaCreateBuffer(allocator, &stagingBufferInfo, &bufferAllocInfo,
+      &stagingBuffer.buffer,
+      &stagingBuffer.allocation,
+      nullptr);
 
-  // Write vertex data to newly-allocated buffer:
-  void* data;
-  vmaMapMemory(allocator, stagingBuffer.allocation, &data);
-  memcpy(data, m_vertices.data(), m_vertices.size() * sizeof(Vertex));
-  vmaUnmapMemory(allocator, stagingBuffer.allocation);
+    // Write vertex data to newly-allocated buffer:
+    void* data;
+    vmaMapMemory(allocator, stagingBuffer.allocation, &data);
+    memcpy(data, mesh.getVertices(), mesh.getNumVertices() * sizeof(Vertex));
+    vmaUnmapMemory(allocator, stagingBuffer.allocation);
 
-  VkBufferCreateInfo vertexBufferInfo = cassidy::init::bufferCreateInfo(m_vertices.size() * sizeof(Vertex),
-    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    VkBufferCreateInfo vertexBufferInfo = cassidy::init::bufferCreateInfo(mesh.getNumVertices() * sizeof(Vertex),
+      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-  bufferAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+    bufferAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-  AllocatedBuffer newBuffer;
+    AllocatedBuffer newBuffer;
 
-  vmaCreateBuffer(allocator, &vertexBufferInfo, &bufferAllocInfo,
-    &newBuffer.buffer,
-    &newBuffer.allocation,
-    nullptr);
+    vmaCreateBuffer(allocator, &vertexBufferInfo, &bufferAllocInfo,
+      &newBuffer.buffer,
+      &newBuffer.allocation,
+      nullptr);
 
-  // Execute copy command for CPU-side staging buffer -> GPU-side vertex buffer:
-  rendererRef->immediateSubmit([=](VkCommandBuffer cmd) {
-    VkBufferCopy copy = {};
-    copy.dstOffset = 0;
-    copy.srcOffset = 0;
-    copy.size = m_vertices.size() * sizeof(Vertex);
-    vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newBuffer.buffer, 1, &copy);
-  });
+    // Execute copy command for CPU-side staging buffer -> GPU-side vertex buffer:
+    rendererRef->immediateSubmit([=](VkCommandBuffer cmd) {
+      VkBufferCopy copy = {};
+      copy.dstOffset = 0;
+      copy.srcOffset = 0;
+      copy.size = mesh.getNumVertices() * sizeof(Vertex);
+      vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newBuffer.buffer, 1, &copy);
+    });
 
-  vmaDestroyBuffer(allocator, stagingBuffer.buffer, stagingBuffer.allocation);
+    vmaDestroyBuffer(allocator, stagingBuffer.buffer, stagingBuffer.allocation);
 
-  m_vertexBuffer = newBuffer;
+    mesh.setVertexBuffer(newBuffer);
+  }
 }
 
-void cassidy::Mesh::processSceneNode(aiNode* node, const aiScene* scene)
+void cassidy::Model::allocateIndexBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)
 {
+  for (auto& mesh : m_meshes)
+  {
+    // Build CPU-side staging buffer:
+    VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(mesh.getNumIndices() * sizeof(uint32_t),
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
+      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+    AllocatedBuffer stagingBuffer;
+
+    vmaCreateBuffer(allocator, &stagingBufferInfo, &bufferAllocInfo,
+      &stagingBuffer.buffer,
+      &stagingBuffer.allocation,
+      nullptr);
+
+    // Write index data to newly-allocated buffer:
+    void* data;
+    vmaMapMemory(allocator, stagingBuffer.allocation, &data);
+    memcpy(data, mesh.getIndices(), mesh.getNumIndices() * sizeof(uint32_t));
+    vmaUnmapMemory(allocator, stagingBuffer.allocation);
+
+    VkBufferCreateInfo indexBufferInfo = cassidy::init::bufferCreateInfo(mesh.getNumIndices() * sizeof(uint32_t),
+      VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+
+    bufferAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+
+    AllocatedBuffer newBuffer;
+
+    vmaCreateBuffer(allocator, &indexBufferInfo, &bufferAllocInfo,
+      &newBuffer.buffer,
+      &newBuffer.allocation,
+      nullptr);
+
+    // Execute copy command for CPU-side staging buffer -> GPU-side vertex buffer:
+    rendererRef->immediateSubmit([=](VkCommandBuffer cmd) {
+      VkBufferCopy copy = {};
+      copy.dstOffset = 0;
+      copy.srcOffset = 0;
+      copy.size = mesh.getNumIndices() * sizeof(uint32_t);
+      vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newBuffer.buffer, 1, &copy);
+    });
+
+    vmaDestroyBuffer(allocator, stagingBuffer.buffer, stagingBuffer.allocation);
+
+    mesh.setIndexBuffer(newBuffer);
+  }
+}
+
+void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene)
+{
+  m_meshes.reserve(node->mNumMeshes);
+
   // Iterate over all meshes, merge into common vertex buffer:
   for (uint32_t i = 0; i < node->mNumMeshes; ++i)
   {
     const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-    processMesh(mesh);
+    m_meshes.emplace_back(Mesh());
+    m_meshes[m_meshes.size() - 1].processMesh(mesh);
   }
 
   // Recursively iterate over child nodes and their meshes:
@@ -105,6 +181,8 @@ void cassidy::Mesh::processMesh(const aiMesh* mesh)
   Vertex vertex;
 
   // Store the vertex data in the current mesh, add to merged vertex buffer:
+  m_vertices.reserve(mesh->mNumVertices);
+
   for (uint32_t i = 0; i < mesh->mNumVertices; ++i)
   {
     {
@@ -137,4 +215,27 @@ void cassidy::Mesh::processMesh(const aiMesh* mesh)
 
     m_vertices.emplace_back(vertex);
   }
+
+  // Retrieve index data from mesh faces:
+  m_indices.reserve(mesh->mNumFaces);
+
+  for (uint32_t i = 0; i < mesh->mNumFaces; ++i)
+  {
+    const aiFace face = mesh->mFaces[i];
+    for (uint32_t j = 0; j < face.mNumIndices; ++j)
+    {
+      m_indices.push_back(face.mIndices[j]);
+    }
+  }
+}
+
+void cassidy::Mesh::release(VmaAllocator allocator) const
+{
+  vmaDestroyBuffer(allocator, m_vertexBuffer.buffer, m_vertexBuffer.allocation);
+  vmaDestroyBuffer(allocator, m_indexBuffer.buffer, m_indexBuffer.allocation);
+}
+
+void cassidy::Mesh::setVertices(const std::vector<Vertex>& vertices)
+{
+  m_vertices.assign(vertices.begin(), vertices.end());
 }
