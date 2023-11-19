@@ -42,6 +42,55 @@ void cassidy::Model::loadModel(const std::string& filepath)
     return;
   }
 
+  std::cout << "Found " << scene->mNumMaterials << " materials on model!" << std::endl;
+  
+  // TODO: Make fixes for texture self-discovery with notes from https://scylardor.fr/2021/05/21/coercing-assimp-into-reading-obj-pbr-materials/
+  for (uint32_t i = 0; i < scene->mNumMaterials; ++i)
+  {
+    std::cout << "\nMaterial: " << scene->mMaterials[i]->GetName().C_Str() << std::endl;
+    for (uint8_t j = aiTextureType_DIFFUSE; j < aiTextureType_UNKNOWN; ++j)
+    {
+      const aiTextureType type = static_cast<aiTextureType>(j);
+      const char* matType = "";
+      aiString texFilename;
+      switch (type)
+      {
+      case aiTextureType_DIFFUSE:
+        matType = "Diffuse";
+        break;
+      case aiTextureType_SPECULAR:
+        matType = "Specular";
+        break;
+      case aiTextureType_AMBIENT:
+        matType = "Ambient";
+        break;
+      case aiTextureType_EMISSIVE:
+        matType = "Emissive";
+        break;
+      case aiTextureType_HEIGHT:
+        matType = "Height";
+        break;
+      case aiTextureType_NORMALS:
+        matType = "Normal";
+        break;
+      case aiTextureType_DISPLACEMENT:
+        matType = "Displacement";
+        break;
+      case aiTextureType_METALNESS:
+        matType = "Metallic";
+        break;
+      default:
+        continue;
+      }
+
+      if (scene->mMaterials[i]->GetTexture(type, 0, &texFilename) == aiReturn::aiReturn_SUCCESS)
+      {
+        const char* texName = texFilename.C_Str();
+        std::cout << matType << ": " << texName << std::endl;
+      }
+    }
+  }
+
   processSceneNode(scene->mRootNode, scene);
 
   std::cout << "Successfully loaded mesh " << filepath << "!" << std::endl;
