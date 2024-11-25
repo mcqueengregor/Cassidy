@@ -3,7 +3,7 @@
 
 int main(int argc, char* argv[])
 {
-  cassidy::Engine engine;
+  cassidy::Engine engine(glm::uvec2(1280, 720));
 
   engine.init();
 

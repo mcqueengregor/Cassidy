@@ -1,6 +1,6 @@
 #include "InputHandler.h"
 
-#include <imgui/imgui_impl_sdl2.h>
+#include <Vendor/imgui-docking/imgui_impl_sdl2.h>
 
 void InputHandler::initImpl()
 {

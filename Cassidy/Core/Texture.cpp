@@ -4,7 +4,7 @@
 #include <Core/Renderer.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#include <Vendor/stb/stb_image.h>
 
 #include <iostream>
 
