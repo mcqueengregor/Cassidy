@@ -1,6 +1,8 @@
 #include "Mesh.h"
 #include <Utils/Initialisers.h>
 #include <Core/Renderer.h>
+#include <Core/TextureLibrary.h>
+#include <Core/MaterialLibrary.h>
 #include <Vendor/Assimp-5.3.1/assimp/Importer.hpp>
 #include <Vendor/Assimp-5.3.1/assimp/scene.h>
 #include <Vendor/Assimp-5.3.1/assimp/postprocess.h>
@@ -19,22 +21,23 @@ void cassidy::Model::draw(VkCommandBuffer cmd)
   }
 }
 
-void cassidy::Model::release(VmaAllocator allocator)
+void cassidy::Model::release(VkDevice device, VmaAllocator allocator)
 {
   for (const auto& mesh : m_meshes)
   {
-    mesh.release(allocator);
+    mesh.release(device, allocator);
   }
 }
 
-void cassidy::Model::loadModel(const std::string& filepath)
+void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps)
 {
   Assimp::Importer importer;
 
   const aiScene* scene = importer.ReadFile(filepath,
     aiProcess_Triangulate |
     aiProcess_CalcTangentSpace |
-    aiProcess_GenSmoothNormals);
+    aiProcess_GenSmoothNormals |
+    additionalSteps);
 
   if (!scene)
   {
@@ -42,58 +45,101 @@ void cassidy::Model::loadModel(const std::string& filepath)
     return;
   }
 
+  std::string directory = filepath.substr(0, filepath.find_last_of('/') + 1);
+
   std::cout << "Found " << scene->mNumMaterials << " materials on model!" << std::endl;
   
+  processSceneNode(scene->mRootNode, scene);
+
+  std::cout << "Successfully loaded mesh " << filepath << "!" << std::endl;
+
   // TODO: Make fixes for texture self-discovery with notes from https://scylardor.fr/2021/05/21/coercing-assimp-into-reading-obj-pbr-materials/
   for (uint32_t i = 0; i < scene->mNumMaterials; ++i)
   {
     std::cout << "\nMaterial: " << scene->mMaterials[i]->GetName().C_Str() << std::endl;
+
+    MaterialLibrary::buildMaterial;
+
     for (uint8_t j = aiTextureType_DIFFUSE; j < aiTextureType_UNKNOWN; ++j)
     {
       const aiTextureType type = static_cast<aiTextureType>(j);
+      VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
       const char* matType = "";
       aiString texFilename;
+
+      // Update image format based on texture map type:
       switch (type)
       {
       case aiTextureType_DIFFUSE:
-        matType = "Diffuse";
+        matType = "\tDiffuse";
         break;
       case aiTextureType_SPECULAR:
-        matType = "Specular";
+        matType = "\tSpecular";
+        format = VK_FORMAT_R8_UNORM;
         break;
       case aiTextureType_AMBIENT:
-        matType = "Ambient";
+        matType = "\tAmbient";
+        format = VK_FORMAT_R8_UNORM;
         break;
       case aiTextureType_EMISSIVE:
-        matType = "Emissive";
+        matType = "\tEmissive";
         break;
       case aiTextureType_HEIGHT:
-        matType = "Height";
+        matType = "\tHeight";
+        format = VK_FORMAT_R8_UNORM;
         break;
       case aiTextureType_NORMALS:
-        matType = "Normal";
+        matType = "\tNormal";
+        format = VK_FORMAT_R8G8B8A8_UNORM;
         break;
       case aiTextureType_DISPLACEMENT:
-        matType = "Displacement";
+        matType = "\tDisplacement";
+        format = VK_FORMAT_R8_UNORM;
         break;
       case aiTextureType_METALNESS:
-        matType = "Metallic";
+        matType = "\tMetallic";
+        format = VK_FORMAT_R8_UNORM;
+        break;
+      case aiTextureType_AMBIENT_OCCLUSION:
+        matType = "\tAO";
+        format = VK_FORMAT_R8_UNORM;
+        break;
+      case aiTextureType_LIGHTMAP:
+        matType = "\tAO (lightmap)";
+        format = VK_FORMAT_R8_UNORM;
+        break;
+      case aiTextureType_BASE_COLOR:
+        matType = "\tBase color";
+        break;
+      case aiTextureType_DIFFUSE_ROUGHNESS:
+        matType = "\tDiffuse-roughness";
+        format = VK_FORMAT_R8G8_UNORM;
         break;
       default:
+        // Skip unneeded texture.
         continue;
       }
 
       if (scene->mMaterials[i]->GetTexture(type, 0, &texFilename) == aiReturn::aiReturn_SUCCESS)
       {
         const char* texName = texFilename.C_Str();
-        std::cout << matType << ": " << texName << std::endl;
+        std::cout << matType << ": " << texName;
+
+        cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(directory + texName, allocator, rendererRef, format, VK_FALSE);
+
+        if (!loadedTexture)
+        {
+          std::cout << "\t(ERROR: could not load texture!)";
+        }
+        else if (m_textures.find(type) == m_textures.end())
+        {
+          m_textures[type] = loadedTexture;
+        }
+
+        std::cout << std::endl;
       }
     }
   }
-
-  processSceneNode(scene->mRootNode, scene);
-
-  std::cout << "Successfully loaded mesh " << filepath << "!" << std::endl;
 }
 
 // Used for single-mesh models which have their vertices directly set by an array.
@@ -278,7 +324,7 @@ void cassidy::Mesh::processMesh(const aiMesh* mesh)
   }
 }
 
-void cassidy::Mesh::release(VmaAllocator allocator) const
+void cassidy::Mesh::release(VkDevice device, VmaAllocator allocator) const
 {
   vmaDestroyBuffer(allocator, m_vertexBuffer.buffer, m_vertexBuffer.allocation);
   vmaDestroyBuffer(allocator, m_indexBuffer.buffer, m_indexBuffer.allocation);

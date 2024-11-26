@@ -6,7 +6,7 @@ cassidy::Camera::Camera() :
   m_position(glm::vec3(0.0f, 0.0f, 3.0f)),
   m_eulerAngles(glm::vec3(0.0f, -90.0f, 0.0f)),
   m_fovDegrees(70.0f),
-  m_clipPlaneValues(glm::vec2(0.1f, 300.0f)),
+  m_clipPlaneValues(glm::vec2(0.01f, 300.0f)),
   m_rotateSensitivity(15.0f),
   m_moveSpeed(1.0f)
 {

@@ -1,20 +1,26 @@
 #pragma once
 
 #include <Utils/Types.h>
+#include <unordered_map>
 
 // Forward declarations:
 struct aiNode;
 struct aiScene;
 struct aiMesh;
+struct aiMaterial;
+enum aiTextureType;
+enum aiPostProcessSteps;
 
 namespace cassidy
 {
   class Renderer;
+  class Texture;
+  class Material;
 
   class Mesh
   {
   public:
-    void release(VmaAllocator allocator) const;
+    void release(VkDevice device, VmaAllocator allocator) const;
 
     void processMesh(const aiMesh* mesh);
     void setVertices(const std::vector<Vertex>& vertices);
@@ -35,6 +41,8 @@ namespace cassidy
     std::vector<uint32_t> m_indices;
     AllocatedBuffer m_vertexBuffer;
     AllocatedBuffer m_indexBuffer;
+
+    cassidy::Material* m_material;
   };
 
   class Model
@@ -42,9 +50,9 @@ namespace cassidy
   public:
     void draw(VkCommandBuffer cmd);
 
-    void release(VmaAllocator allocator);
+    void release(VkDevice device, VmaAllocator allocator);
 
-    void loadModel(const std::string& filepath);
+    void loadModel(const std::string& filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps = (aiPostProcessSteps)0);
     void setVertices(const std::vector<Vertex>& vertices);
 
     void allocateVertexBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef);

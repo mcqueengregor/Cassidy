@@ -40,6 +40,7 @@ public:
 
   static inline void hideCursor() { InputHandler::get().hideCursorImpl(); }
   static inline void showCursor() { InputHandler::get().showCursorImpl(); }
+  static inline void centreCursor(int32_t windowWidth, int32_t windowHeight) { InputHandler::get().centreCursorImpl(windowWidth, windowHeight); }
 
   /*
     Input states:
@@ -64,6 +65,9 @@ public:
 
   static inline int32_t getCursorOffsetX() { return InputHandler::get().getCursorOffsetXImpl(); }
   static inline int32_t getCursorOffsetY() { return InputHandler::get().getCursorOffsetYImpl(); }
+
+  static inline int32_t getCursorLoggedPositionX() { return InputHandler::get().getCursorLoggedPositionXImpl(); }
+  static inline int32_t getCursorLoggedPositionY() { return InputHandler::get().getCursorLoggedPositionYImpl(); }
 
 private:
   InputHandler() {}
@@ -92,6 +96,7 @@ private:
 
   void hideCursorImpl();
   void showCursorImpl();
+  void centreCursorImpl(int32_t windowWidth, int32_t windowHeight);
 
   bool isKeyPressedImpl(KeyCode keyCode);
   bool isKeyHeldImpl(KeyCode keyCode);
@@ -108,6 +113,9 @@ private:
 
   int32_t getCursorOffsetXImpl();
   int32_t getCursorOffsetYImpl();
+
+  int32_t getCursorLoggedPositionXImpl();
+  int32_t getCursorLoggedPositionYImpl();
 
   // Keyboard states:
   static const uint16_t KEYBOARD_SIZE = SDL_TRANSFORM_KEYCODE_TO_NEW_RANGE(SDLK_SLEEP);

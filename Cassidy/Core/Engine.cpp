@@ -117,8 +117,7 @@ void cassidy::Engine::processInput()
     m_camera.increaseYaw(static_cast<float>(InputHandler::getCursorOffsetX()));
     m_camera.increasePitch(static_cast<float>(InputHandler::getCursorOffsetY()));
 
-    SDL_WarpMouseInWindow(NULL, 
-      static_cast<int>(m_windowDimensions.x / 2.0f), static_cast<int>(m_windowDimensions.y / 2.0f));
+    InputHandler::centreCursor(m_windowDimensions.x, m_windowDimensions.y);
   }
 
   // WASD horizontal camera movement controls:

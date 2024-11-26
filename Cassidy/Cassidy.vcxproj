@@ -148,6 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Core\Camera.cpp" />
+    <ClCompile Include="Core\DescriptorBuilder.cpp" />
     <ClCompile Include="Core\Engine.cpp" />
     <ClCompile Include="Core\Mesh.cpp" />
     <ClCompile Include="Core\Pipeline.cpp" />
@@ -155,6 +156,9 @@
     <ClCompile Include="Core\EventHandler.cpp" />
     <ClCompile Include="Core\InputHandler.cpp" />
     <ClCompile Include="Core\Texture.cpp" />
+    <ClCompile Include="Core\Material.cpp" />
+    <ClCompile Include="Core\TextureLibrary.cpp" />
+    <ClCompile Include="MaterialLibrary.cpp" />
     <ClCompile Include="Utils\GlobalTimer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Utils\Helpers.cpp" />
@@ -169,6 +173,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Camera.h" />
+    <ClInclude Include="Core\DescriptorBuilder.h" />
     <ClInclude Include="Core\Engine.h" />
     <ClInclude Include="Core\Mesh.h" />
     <ClInclude Include="Core\Pipeline.h" />
@@ -176,6 +181,9 @@
     <ClInclude Include="Core\EventHandler.h" />
     <ClInclude Include="Core\InputHandler.h" />
     <ClInclude Include="Core\Texture.h" />
+    <ClInclude Include="Core\Material.h" />
+    <ClInclude Include="Core\TextureLibrary.h" />
+    <ClInclude Include="MaterialLibrary.h" />
     <ClInclude Include="Utils\GlobalTimer.h" />
     <ClInclude Include="Utils\Helpers.h" />
     <ClInclude Include="Utils\Initialisers.h" />

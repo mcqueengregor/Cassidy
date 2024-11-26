@@ -130,6 +130,16 @@ void InputHandler::showCursorImpl()
   SDL_ShowCursor(SDL_ENABLE);
 }
 
+void InputHandler::centreCursorImpl(int32_t windowWidth, int32_t windowHeight)
+{
+  if (m_mouseState.mouseRelativePositionX != windowWidth / 2.0f
+    && m_mouseState.mouseRelativePositionY != windowHeight / 2.0f)
+  {
+    SDL_WarpMouseInWindow(NULL,
+      static_cast<int>(windowWidth / 2.0f), static_cast<int>(windowHeight / 2.0f));
+  }
+}
+
 bool InputHandler::isKeyPressedImpl(KeyCode keyCode)
 {
   return m_keyboardStates[static_cast<uint16_t>(keyCode)].keyboardDown;
@@ -189,4 +199,14 @@ int32_t InputHandler::getCursorOffsetYImpl()
 {
   // Inverted since y-coords of cursor relative to window range from top to bottom:
   return -m_mouseState.mouseRelativeMotionY;
+}
+
+int32_t InputHandler::getCursorLoggedPositionXImpl()
+{
+    return m_mouseState.loggedMouseRelativePositionX;
+}
+
+int32_t InputHandler::getCursorLoggedPositionYImpl()
+{
+  return m_mouseState.loggedMouseRelativePositionY;
 }

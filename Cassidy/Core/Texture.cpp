@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-bool cassidy::Texture::load(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, 
+cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, 
   VkFormat format, VkBool32 shouldGenMipmaps)
 {
   int texWidth, texHeight, numChannels;
@@ -16,8 +16,7 @@ bool cassidy::Texture::load(std::string filepath, VmaAllocator allocator, cassid
 
   if (!data)
   {
-    std::cout << "ERROR: Failed to load texture (" << filepath << ")!" << std::endl;
-    return false;
+    return nullptr;
   }
 
   VkDeviceSize textureSize = texWidth * texHeight * STBI_rgb_alpha;
@@ -64,19 +63,19 @@ bool cassidy::Texture::load(std::string filepath, VmaAllocator allocator, cassid
     copyBufferToImage(cmd, stagingBuffer.buffer, texWidth, texHeight);
 
     if (shouldGenMipmaps == VK_TRUE)
-      generateMipmaps(cmd, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
+      generateMipmaps(cmd, format, texWidth, texHeight, mipLevels);
     else
       transitionImageLayout(cmd, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
   });
 
-  VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_image.image, VK_FORMAT_R8G8B8A8_SRGB,
+  VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_image.image, format,
     VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
   vkCreateImageView(rendererRef->getLogicalDevice(), &viewInfo, nullptr, &m_imageView);
 
   vmaDestroyBuffer(allocator, stagingBuffer.buffer, stagingBuffer.allocation);
 
-  return true;
+  return this;
 }
 
 void cassidy::Texture::release(VkDevice device, VmaAllocator allocator)

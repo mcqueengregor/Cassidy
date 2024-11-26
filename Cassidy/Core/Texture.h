@@ -9,7 +9,7 @@ namespace cassidy
   class Texture
   {
   public:
-    bool load(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef,
+    cassidy::Texture* load(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef,
       VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
     void release(VkDevice device, VmaAllocator allocator);
 

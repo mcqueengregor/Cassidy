@@ -120,7 +120,13 @@ struct DefaultPushConstants
   glm::mat4 viewProj;
 };
 
-// Layout of per-pass data accessible to shaders via uniform buffer:
+// Layout of per-frame data accessible to shaders via uniform buffer:
+struct PerFrameData
+{
+  glm::vec3 directionalLightDir;
+};
+
+// As above, but bound per-pass:
 struct PerPassData
 {
   glm::mat4 view;
@@ -137,6 +143,8 @@ struct PerObjectData
 
 struct FrameData
 {
+  VkDescriptorSet perFrameSet;
+
   AllocatedBuffer perPassUniformBuffer;
   VkDescriptorSet perPassSet;
 
