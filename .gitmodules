@@ -1,0 +1,3 @@
+[submodule "Cassidy/Vendor/SDL"]
+	path = Cassidy/Vendor/SDL
+	url = https://github.com/libsdl-org/SDL/
