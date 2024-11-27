@@ -536,7 +536,7 @@ void cassidy::Renderer::initMeshes()
 {
   m_triangleMesh.setVertices(triangleVertices);
 
-  m_backpackMesh.loadModel("Backpack/backpack.obj");
+  m_backpackMesh.loadModel("Backpack/backpack.obj", m_allocator, this);
   m_backpackAlbedo.load(MESH_ABS_FILEPATH + std::string("Backpack/diffuse.jpg"), m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
     VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
@@ -630,8 +630,8 @@ void cassidy::Renderer::initVertexBuffers()
   m_backpackMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
 
   m_deletionQueue.addFunction([=]() {
-    m_triangleMesh.release(m_allocator);
-    m_backpackMesh.release(m_allocator);
+    m_triangleMesh.release(m_device, m_allocator);
+    m_backpackMesh.release(m_device, m_allocator);
   });
 
   std::cout << "Created vertex buffers!\n" << std::endl;
