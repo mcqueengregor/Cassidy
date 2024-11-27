@@ -49,27 +49,6 @@
     <ClCompile Include="Core\Mesh.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui.cpp">
-      <Filter>Vendor\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_demo.cpp">
-      <Filter>Vendor\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_draw.cpp">
-      <Filter>Vendor\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_impl_sdl2.cpp">
-      <Filter>Vendor\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_impl_vulkan.cpp">
-      <Filter>Vendor\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_tables.cpp">
-      <Filter>Vendor\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Vendor\imgui-docking\imgui\imgui_widgets.cpp">
-      <Filter>Vendor\ImGui</Filter>
-    </ClCompile>
     <ClCompile Include="Utils\GlobalTimer.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -87,6 +66,26 @@
     </ClCompile>
     <ClCompile Include="Core\DescriptorBuilder.cpp">
       <Filter>Core</Filter>
+    <ClCompile Include="Vendor\imgui-docking\imgui.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui_demo.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui_draw.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui_impl_sdl2.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui_impl_vulkan.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui_tables.cpp">
+      <Filter>Vendor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Vendor\imgui-docking\imgui_widgets.cpp">
+      <Filter>Vendor\ImGui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -123,30 +122,6 @@
     <ClInclude Include="Core\Mesh.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_textedit.h">
-      <Filter>Vendor\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imconfig.h">
-      <Filter>Vendor\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imgui.h">
-      <Filter>Vendor\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_impl_sdl2.h">
-      <Filter>Vendor\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_impl_vulkan.h">
-      <Filter>Vendor\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imgui_internal.h">
-      <Filter>Vendor\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_rectpack.h">
-      <Filter>Vendor\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Vendor\imgui-docking\imgui\imstb_truetype.h">
-      <Filter>Vendor\ImGui</Filter>
-    </ClInclude>
     <ClInclude Include="Utils\GlobalTimer.h">
       <Filter>Core</Filter>
     </ClInclude>
@@ -167,6 +142,29 @@
     </ClInclude>
     <ClInclude Include="Core\DescriptorBuilder.h">
       <Filter>Core</Filter>
+    <ClInclude Include="Vendor\imgui-docking\imconfig.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui_impl_sdl2.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui_impl_vulkan.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imgui_internal.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imstb_rectpack.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imstb_textedit.h">
+      <Filter>Vendor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendor\imgui-docking\imstb_truetype.h">
+      <Filter>Vendor\ImGui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

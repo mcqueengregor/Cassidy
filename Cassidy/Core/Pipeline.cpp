@@ -42,10 +42,12 @@ cassidy::Pipeline& cassidy::Pipeline::addDescriptorSetLayout(VkDescriptorSetLayo
   return *this;
 }
 
+// Build graphics pipeline with vertex and fragment shaders (in SPIR-V format) contained in the "Shaders" folder.
+// SHADER_ABS_FILEPATH contains the absolute filepath of the "Shaders" folder, both filepath arguments should be relative to said folder!
 void cassidy::Pipeline::buildGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath)
 {
-  SpirvShaderCode vertexCode = loadSpirv(vertexFilepath);
-  SpirvShaderCode fragmentCode = loadSpirv(fragmentFilepath);
+  SpirvShaderCode vertexCode = loadSpirv(SHADER_ABS_FILEPATH + vertexFilepath);
+  SpirvShaderCode fragmentCode = loadSpirv(SHADER_ABS_FILEPATH + fragmentFilepath);
 
   // If either shader couldn't be loaded, early-out (structs automatically delete heap-allocated binaries):
   if (!vertexCode.codeBuffer || !fragmentCode.codeBuffer)

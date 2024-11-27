@@ -1,7 +1,5 @@
 #include "Renderer.h"
 #include "Core/Engine.h"
-#include <Core/TextureLibrary.h>
-#include <Core/MaterialLibrary.h>
 #include "Utils/Helpers.h"
 #include "Utils/Initialisers.h"
 
@@ -11,9 +9,9 @@
 #define VMA_IMPLEMENTATION
 #include "Vendor/vma/vk_mem_alloc.h"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_sdl2.h>
-#include <imgui/imgui_impl_vulkan.h>
+#include <Vendor/imgui-docking/imgui.h>
+#include <Vendor/imgui-docking/imgui_impl_sdl2.h>
+#include <Vendor/imgui-docking/imgui_impl_vulkan.h>
 
 #include <set>
 #include <iostream>
@@ -71,8 +69,6 @@ void cassidy::Renderer::release()
   // Wait on all fences to prevent in-use resources from being destroyed:
   vkWaitForFences(m_device, m_inFlightFences.size(), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
 
-  MaterialLibrary::releaseAll(m_device, m_allocator);
-  TextureLibrary::releaseAll(m_device, m_allocator);
   m_deletionQueue.execute();
   std::cout << "Renderer shut down!\n" << std::endl;
 }
@@ -251,6 +247,8 @@ void cassidy::Renderer::recordGuiCommands()
 {
   ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
   {
+    ImGui::ShowDemoWindow();
+
     ImGui::Begin("Cassidy main");
     {
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -270,11 +268,6 @@ void cassidy::Renderer::recordGuiCommands()
         break;
       }
       ImGui::Text(cursorStateText);
-
-      if (InputHandler::isMouseButtonHeld(MouseCode::MOUSECODE_RIGHT))
-      {
-        ImGui::Text("(%i, %i)", InputHandler::getCursorLoggedPositionX(), InputHandler::getCursorLoggedPositionY());
-      }
 
       const ImVec2& size = ImGui::GetWindowContentRegionMax();
       ImGui::Text("Window dim: (%f, %f)", size.x, size.y);
@@ -441,7 +434,7 @@ void cassidy::Renderer::initPipelines()
     .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
     .addDescriptorSetLayout(m_perPassSetLayout)
     .addDescriptorSetLayout(m_perObjectSetLayout)
-    .buildGraphicsPipeline("../Shaders/helloTriangleVert.spv", "../Shaders/helloTriangleFrag.spv");
+    .buildGraphicsPipeline("helloTriangleVert.spv", "helloTriangleFrag.spv");
 
   m_deletionQueue.addFunction([=]() {
     m_helloTrianglePipeline.release();
@@ -543,8 +536,8 @@ void cassidy::Renderer::initMeshes()
 {
   m_triangleMesh.setVertices(triangleVertices);
 
-  m_backpackMesh.loadModel("../Meshes/Backpack/backpack.obj", m_allocator, this);
-  m_backpackAlbedo.load("../Meshes/Backpack/diffuse.jpg", m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
+  m_backpackMesh.loadModel("Backpack/backpack.obj");
+  m_backpackAlbedo.load(MESH_ABS_FILEPATH + std::string("Backpack/diffuse.jpg"), m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
     VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
 
@@ -637,8 +630,8 @@ void cassidy::Renderer::initVertexBuffers()
   m_backpackMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
 
   m_deletionQueue.addFunction([=]() {
-    m_triangleMesh.release(m_device, m_allocator);
-    m_backpackMesh.release(m_device, m_allocator);
+    m_triangleMesh.release(m_allocator);
+    m_backpackMesh.release(m_allocator);
   });
 
   std::cout << "Created vertex buffers!\n" << std::endl;

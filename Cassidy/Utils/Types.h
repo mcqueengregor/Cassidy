@@ -5,14 +5,15 @@
 #include <array>
 #include <functional>
 #include <optional>
+#include <string>
 
 #include "Vendor/vma/vk_mem_alloc.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/gtx/transform.hpp>
+#include <Vendor/glm/vec4.hpp>
+#include <Vendor/glm/mat4x4.hpp>
+#include <Vendor/glm/gtx/transform.hpp>
 
 // Deletion queue concept from https://vkguide.dev/docs/chapter-2/cleanup/:
 struct DeletionQueue
