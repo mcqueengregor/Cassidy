@@ -1,9 +1,9 @@
 #include "Mesh.h"
 #include <Utils/Initialisers.h>
 #include <Core/Renderer.h>
-#include <Vendor/assimp/Importer.hpp>
-#include <Vendor/assimp/scene.h>
-#include <Vendor/assimp/postprocess.h>
+#include <Vendor/assimp/include/assimp/Importer.hpp>
+#include <Vendor/assimp/include/assimp/scene.h>
+#include <Vendor/assimp/include/assimp/postprocess.h>
 
 #include <iostream>
 

@@ -1,4 +1,4 @@
-## Build third-party libraries first:
+## Build and create targets for third-party libraries first:
 add_subdirectory(Vendor)
 
 add_executable(Cassidy
@@ -25,17 +25,19 @@ add_executable(Cassidy
 	target_include_directories(Cassidy PUBLIC
 		${CMAKE_CURRENT_SOURCE_DIR}
 		${CMAKE_CURRENT_SOURCE_DIR}/Vendor	## Included to satisfy Assimp's #include <assimp/[file]> structure
+		${CMAKE_CURRENT_SOURCE_DIR}/Vendor/SDL/include	## Included because SDL2 adds include to bin/Vendor for some reason.
 		)
 	target_link_libraries(Cassidy 
 		glm
 		vma
 		stb_image
-		assimp::assimp
+		assimp
 		imgui
 		)
+		
 	target_link_libraries(Cassidy
-		##Vulkan::Vulkan	## VkGuide includes this link but CMake throws an error on this project?
-		sdl2
+		##Vulkan::Vulkan	## VkGuide includes this link but on this project CMake throws an error?
+		SDL2
 		)
 
 add_library(CassidyUtils STATIC
@@ -50,7 +52,10 @@ add_library(CassidyUtils STATIC
 	Utils/Types.h
 	)
 	
-	target_include_directories(CassidyUtils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+	target_include_directories(CassidyUtils PUBLIC 
+		${CMAKE_CURRENT_SOURCE_DIR}
+		${CMAKE_CURRENT_SOURCE_DIR}/Vendor/SDL/include	## Included because SDL2 adds include to bin/Vendor for some reason.
+		)
 	target_link_libraries(CassidyUtils 
 		glm 
 		vma 
@@ -60,7 +65,20 @@ add_library(CassidyUtils STATIC
 		)
 	target_link_libraries(CassidyUtils
 		##Vulkan::Vulkan
-		sdl2
+		SDL2
 		)
-	
+
+## Don't forget to give engine core access to utils functions:
+target_link_libraries(Cassidy CassidyUtils)
+
+## Copy SDL2.dll file to the correct build folder (workaround for removing incorrect "SDL2d.dll" dependency):
+## https://github.com/libsdl-org/SDL/issues/6399
+if (WIN32)
+    add_custom_command(
+        TARGET Cassidy POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:SDL2::SDL2>" "$<TARGET_FILE_DIR:Cassidy>"
+        VERBATIM
+    )
+endif()
+
 ##set_target_properties(CassidyUtils PROPERTIES FOLDER "Utils")
