@@ -1,3 +1,6 @@
 [submodule "Cassidy/Vendor/SDL"]
 	path = Cassidy/Vendor/SDL
 	url = https://github.com/libsdl-org/SDL/
+[submodule "assimp-5.3.1"]
+	path = Cassidy/Vendor/assimp
+	url = https://github.com/assimp/assimp
