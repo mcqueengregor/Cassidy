@@ -71,16 +71,23 @@ add_library(CassidyUtils STATIC
 ## Don't forget to give engine core access to utils functions:
 target_link_libraries(Cassidy CassidyUtils)
 
-## Copy SDL2.dll file to the correct build folder (workaround for removing incorrect "SDL2d.dll" dependency):
+## Automatically copy shared library files to executable directory:
 ## https://github.com/libsdl-org/SDL/issues/6399
 if (WIN32)
     add_custom_command(
         TARGET Cassidy POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different 
-		"$<TARGET_FILE:SDL2::SDL2>" 
-		"$<TARGET_FILE_DIR:Cassidy>"
+		"$<TARGET_FILE:SDL2::SDL2>" 	## Copy target file of SDL2...
+		"$<TARGET_FILE_DIR:Cassidy>"	## ...and paste into built executable dir.
         VERBATIM
-    )
+		)
+	add_custom_command(
+		TARGET Cassidy POST_BUILD
+		COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+		"$<TARGET_FILE:assimp>"
+		"$<TARGET_FILE_DIR:Cassidy>"
+		VERBATIM
+		)
 endif()
 
 ##set_target_properties(CassidyUtils PROPERTIES FOLDER "Utils")

@@ -27,6 +27,8 @@ void cassidy::Model::release(VmaAllocator allocator)
   }
 }
 
+// Load model data using ASSIMP from a file contained in the "Meshes" folder.
+// MESH_ABS_FILEPATH contains the absolute filepath of the "Meshes" folder, both filepath arguments should be relative to said folder!
 void cassidy::Model::loadModel(const std::string& filepath)
 {
   Assimp::Importer importer;
