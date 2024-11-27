@@ -434,7 +434,7 @@ void cassidy::Renderer::initPipelines()
     .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
     .addDescriptorSetLayout(m_perPassSetLayout)
     .addDescriptorSetLayout(m_perObjectSetLayout)
-    .buildGraphicsPipeline("../Shaders/helloTriangleVert.spv", "../Shaders/helloTriangleFrag.spv");
+    .buildGraphicsPipeline("helloTriangleVert.spv", "helloTriangleFrag.spv");
 
   m_deletionQueue.addFunction([=]() {
     m_helloTrianglePipeline.release();
@@ -536,8 +536,8 @@ void cassidy::Renderer::initMeshes()
 {
   m_triangleMesh.setVertices(triangleVertices);
 
-  m_backpackMesh.loadModel("../Meshes/Backpack/backpack.obj");
-  m_backpackAlbedo.load("../Meshes/Backpack/diffuse.jpg", m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
+  m_backpackMesh.loadModel("Backpack/backpack.obj");
+  m_backpackAlbedo.load(MESH_ABS_FILEPATH + std::string("Backpack/diffuse.jpg"), m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
     VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
 

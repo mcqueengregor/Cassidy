@@ -31,7 +31,7 @@ void cassidy::Model::loadModel(const std::string& filepath)
 {
   Assimp::Importer importer;
 
-  const aiScene* scene = importer.ReadFile(filepath,
+  const aiScene* scene = importer.ReadFile(MESH_ABS_FILEPATH + filepath,
     aiProcess_Triangulate |
     aiProcess_CalcTangentSpace |
     aiProcess_GenSmoothNormals);

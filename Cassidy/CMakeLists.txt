@@ -76,7 +76,9 @@ target_link_libraries(Cassidy CassidyUtils)
 if (WIN32)
     add_custom_command(
         TARGET Cassidy POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:SDL2::SDL2>" "$<TARGET_FILE_DIR:Cassidy>"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different 
+		"$<TARGET_FILE:SDL2::SDL2>" 
+		"$<TARGET_FILE_DIR:Cassidy>"
         VERBATIM
     )
 endif()

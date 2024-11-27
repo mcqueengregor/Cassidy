@@ -44,8 +44,8 @@ cassidy::Pipeline& cassidy::Pipeline::addDescriptorSetLayout(VkDescriptorSetLayo
 
 void cassidy::Pipeline::buildGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath)
 {
-  SpirvShaderCode vertexCode = loadSpirv(vertexFilepath);
-  SpirvShaderCode fragmentCode = loadSpirv(fragmentFilepath);
+  SpirvShaderCode vertexCode = loadSpirv(SHADER_ABS_FILEPATH + vertexFilepath);
+  SpirvShaderCode fragmentCode = loadSpirv(SHADER_ABS_FILEPATH + fragmentFilepath);
 
   // If either shader couldn't be loaded, early-out (structs automatically delete heap-allocated binaries):
   if (!vertexCode.codeBuffer || !fragmentCode.codeBuffer)
