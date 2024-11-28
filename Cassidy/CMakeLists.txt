@@ -7,18 +7,32 @@ add_executable(Cassidy
 	Core/Camera.cpp
 	Core/Engine.h
 	Core/Engine.cpp
+
 	Core/EventHandler.h
 	Core/EventHandler.cpp
 	Core/InputHandler.h
 	Core/InputHandler.cpp
+
 	Core/Mesh.h
 	Core/Mesh.cpp
+
+	Core/Material.h
+	Core/Material.cpp
+	Core/MaterialLibrary.h
+	Core/MaterialLibrary.cpp
+
+	Core/Texture.h
+	Core/Texture.cpp
+	Core/TextureLibrary.h
+	Core/TextureLibrary.cpp
+
+	Core/DescriptorBuilder.h
+	Core/DescriptorBuilder.cpp
+
 	Core/Pipeline.h
 	Core/Pipeline.cpp
 	Core/Renderer.h
 	Core/Renderer.cpp
-	Core/Texture.h
-	Core/Texture.cpp
 	)
 	
 	## Setup includes to source dir (engine utils and third-party libraries):
