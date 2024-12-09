@@ -21,8 +21,8 @@ void cassidy::DescriptorBuilder::releaseAllImpl(VkDevice device, VmaAllocator al
 
 void cassidy::DescriptorAllocator::resetAllPools()
 {
-  for (const auto& pool : m_usedDescriptorPools)
-    vkResetDescriptorPool(, pool, )
+  //for (const auto& pool : m_usedDescriptorPools)
+  //  vkResetDescriptorPool(, pool, )
 }
 
 VkBool32 cassidy::DescriptorAllocator::allocate(VkDescriptorSet* allocatedSet, VkDescriptorSetLayout layout)

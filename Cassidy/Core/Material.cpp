@@ -2,7 +2,7 @@
 
 void cassidy::Material::release(VkDevice device, VmaAllocator allocator)
 {
-  for (auto [key, val] : m_textures)
+  for (auto [key, val] : m_info.pbrTextures)
   {
     val->release(device, allocator);
   }

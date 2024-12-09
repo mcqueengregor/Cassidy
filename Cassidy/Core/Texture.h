@@ -6,6 +6,17 @@ namespace cassidy
 {
   class Renderer;
 
+  enum class TextureType : uint8_t
+  {
+    DIFFUSE = 0,
+    NORMAL = 1,
+    METALLIC = 2,
+    ROUGHNESS = 3,
+    AO = 4,
+    EMISSIVE = 5,
+    SPECULAR = 6,
+  };
+
   class Texture
   {
   public:

@@ -16,5 +16,5 @@ cassidy::Material* MaterialLibrary::buildMaterialImpl(const std::string& materia
     - Get descriptor layout from descriptor builder layout cache
     - Descriptor builder creates descriptor set using available descriptor pool, descriptor layout and material info
   */
-
+  return newMat;
 }
