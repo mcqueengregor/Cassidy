@@ -34,7 +34,7 @@ namespace cassidy
 
     void attachTexture(cassidy::Texture* texture, cassidy::TextureType type)
     {
-      if (pbrTextures.find(type) != pbrTextures.end())
+      if (pbrTextures.find(type) == pbrTextures.end())
       {
         pbrTextures[type] = texture;
       }

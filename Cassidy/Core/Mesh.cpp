@@ -33,7 +33,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
 {
   Assimp::Importer importer;
 
-  const aiScene* scene = importer.ReadFile(filepath,
+  const aiScene* scene = importer.ReadFile(MESH_ABS_FILEPATH + filepath,
     aiProcess_Triangulate |
     aiProcess_CalcTangentSpace |
     aiProcess_GenSmoothNormals |
@@ -57,6 +57,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
   for (uint32_t i = 0; i < scene->mNumMaterials; ++i)
   {
     const aiMaterial* currentMat = scene->mMaterials[i];
+    std::string debugName = directory + currentMat->GetName().C_Str();
     std::cout << "\nMaterial: " << currentMat->GetName().C_Str() << std::endl;
 
     MaterialInfo matInfo;
@@ -136,7 +137,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
         const char* texName = texFilename.C_Str();
         std::cout << texType << ": " << texName;
 
-        cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(directory + texName, allocator, rendererRef, format, VK_FALSE);
+        cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + directory + texName, allocator, rendererRef, format, VK_FALSE);
 
         if (!loadedTexture)
         {
@@ -149,10 +150,11 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
           matInfo.attachTexture(loadedTexture, engineTexType);
         }
 
-        MaterialLibrary::buildMaterial(currentMat->GetName().C_Str(), matInfo);
         std::cout << std::endl;
       }
     }
+    matInfo.debugName = debugName;
+    MaterialLibrary::buildMaterial(currentMat->GetName().C_Str(), matInfo);
   }
 }
 
