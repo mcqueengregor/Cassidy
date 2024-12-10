@@ -18,3 +18,8 @@ cassidy::Material& cassidy::Material::setPipeline(Pipeline* pipeline)
   m_pipeline = pipeline;
   return *this;
 }
+
+bool cassidy::MaterialInfo::operator==(const MaterialInfo& other) const
+{
+    return false;
+}

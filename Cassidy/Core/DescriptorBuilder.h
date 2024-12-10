@@ -33,7 +33,7 @@ namespace cassidy
     void releaseAllImpl(VkDevice device, VmaAllocator allocator);
   };
 
-  // Container class for caching and reusing commonly-used descriptor set layouts:
+  // Container class for caching descriptor set layouts to prevent duplicates:
   class DecriptorLayoutCache
   {
   public:
@@ -85,7 +85,7 @@ namespace cassidy
     std::unordered_map<DescriptorLayoutInfo, VkDescriptorSetLayout, DescriptorLayoutHash> m_layoutCache;
   };
   
-  // 
+  // Manages descriptor pools and allocates new ones when needed:
   class DescriptorAllocator
   {
   public:

@@ -16,6 +16,8 @@ namespace cassidy
     std::string debugName;
     PBRTextures pbrTextures;
 
+    bool operator==(const MaterialInfo& other) const;
+
     // Source: https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/material_system.cpp
     size_t hash() const
     {
@@ -24,7 +26,7 @@ namespace cassidy
       for (auto& [key, val] : pbrTextures)
       {
         size_t textureHash =
-          (std::hash<size_t>()((size_t)val->getImage() << 3) && (std::hash<size_t>()((size_t)val->getImageView())));
+          (std::hash<size_t>()((size_t)val->getImage() << 3) & (std::hash<size_t>()((size_t)val->getImageView())));
         result ^= std::hash<size_t>()(textureHash);
       }
       return result;

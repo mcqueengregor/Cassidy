@@ -23,5 +23,5 @@ private:
   cassidy::Material* buildMaterialImpl(const std::string& materialName, const cassidy::MaterialInfo& materialInfo);
 
   // TODO: Change string key value to texture hash (SHA-1?)
-  std::unordered_map<std::string, cassidy::Material, cassidy::MaterialInfoHash> m_materialCache;
+  std::unordered_map<std::string, cassidy::Material> m_materialCache;
 };
