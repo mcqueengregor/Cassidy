@@ -11,6 +11,8 @@ struct SDL_Window;
 namespace cassidy
 {
   class Engine;
+  class DescriptorAllocator;
+  class DescriptorLayoutCache;
 
   struct Swapchain
   {
@@ -82,6 +84,7 @@ namespace cassidy
     void initLogicalDevice();
     void initSwapchain();
 
+    void initDefaultRenderPass();
     void initPipelines();
     void initSwapchainFramebuffers();
     void initCommandPool();
@@ -112,8 +115,9 @@ namespace cassidy
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
 
-    // Pipelines:
+    // Pipelines and renderpasses:
     Pipeline m_helloTrianglePipeline;
+    VkRenderPass m_backBufferRenderPass;
 
     // Rendering data:
     DefaultPushConstants m_matrixPushConstants;

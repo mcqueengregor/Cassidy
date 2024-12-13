@@ -16,8 +16,6 @@ cassidy::Pipeline& cassidy::Pipeline::init(cassidy::Renderer* renderer)
 {
   m_rendererRef = renderer;
 
-  initRenderPass();
-
   return *this;
 }
 
@@ -25,7 +23,6 @@ void cassidy::Pipeline::release()
 {
   vkDestroyPipeline(m_rendererRef->getLogicalDevice(), m_graphicsPipeline, nullptr);
   vkDestroyPipelineLayout(m_rendererRef->getLogicalDevice(), m_pipelineLayout, nullptr);
-  vkDestroyRenderPass(m_rendererRef->getLogicalDevice(), m_renderPass, nullptr);
 }
 
 cassidy::Pipeline& cassidy::Pipeline::addPushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size)
@@ -38,6 +35,13 @@ cassidy::Pipeline& cassidy::Pipeline::addPushConstantRange(VkShaderStageFlags st
 cassidy::Pipeline& cassidy::Pipeline::addDescriptorSetLayout(VkDescriptorSetLayout setLayout)
 {
   m_descSetLayouts.push_back(setLayout);
+
+  return *this;
+}
+
+cassidy::Pipeline& cassidy::Pipeline::setRenderPass(VkRenderPass renderPass)
+{
+  m_renderPass = renderPass;
 
   return *this;
 }

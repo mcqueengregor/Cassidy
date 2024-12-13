@@ -20,6 +20,7 @@ namespace cassidy
     // Pipeline layout dependencies binding:
     Pipeline& addPushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
     Pipeline& addDescriptorSetLayout(VkDescriptorSetLayout setLayout);
+    Pipeline& setRenderPass(VkRenderPass renderPass);
 
     void buildGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath);
 

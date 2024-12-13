@@ -1,5 +1,7 @@
 #include "Renderer.h"
 #include "Core/Engine.h"
+#include "Core/TextureLibrary.h"
+#include "Core/DescriptorBuilder.h"
 #include "Utils/Helpers.h"
 #include "Utils/Initialisers.h"
 
@@ -28,6 +30,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initSyncObjects();
   initMeshes();
   initDescriptorSets();
+  initDefaultRenderPass();
   initPipelines();
   initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
   initVertexBuffers();
@@ -109,7 +112,7 @@ void cassidy::Renderer::recordCommandBuffers(uint32_t imageIndex)
   clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
-  VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_helloTrianglePipeline.getRenderPass(),
+  VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_backBufferRenderPass,
     m_swapchain.framebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
 
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -428,9 +431,50 @@ void cassidy::Renderer::initSwapchain()
   std::cout << "Created swapchain!\n" << std::endl;
 }
 
+void cassidy::Renderer::initDefaultRenderPass()
+{
+  VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(m_swapchain.imageFormat,
+    VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+  VkFormat depthFormatCandidates[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+  const VkFormat depthFormat = cassidy::helper::findSupportedFormat(m_physicalDevice, 3, depthFormatCandidates,
+    VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+  VkAttachmentDescription depthAttachment = cassidy::init::attachmentDescription(depthFormat,
+    VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+  VkAttachmentReference colourAttachmentRef = cassidy::init::attachmentReference(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+  VkAttachmentReference depthAttachmentRef = cassidy::init::attachmentReference(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+  VkSubpassDescription subpass = cassidy::init::subpassDescription(VK_PIPELINE_BIND_POINT_GRAPHICS, 1,
+    &colourAttachmentRef, &depthAttachmentRef);
+
+  VkSubpassDependency dependency = cassidy::init::subpassDependency(VK_SUBPASS_EXTERNAL, 0,
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+    VK_ACCESS_NONE,
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+
+  VkAttachmentDescription attachments[] = { colourAttachment, depthAttachment };
+
+  VkRenderPassCreateInfo renderPassInfo = cassidy::init::renderPassCreateInfo(2, attachments,
+    1, &subpass, 1, &dependency);
+
+  vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_backBufferRenderPass);
+
+  m_deletionQueue.addFunction([=]() {
+    vkDestroyRenderPass(m_device, m_backBufferRenderPass, nullptr);
+    });
+
+  std::cout << "Created back buffer render pass!" << std::endl;
+}
+
 void cassidy::Renderer::initPipelines()
 {
   m_helloTrianglePipeline.init(this)
+    .setRenderPass(m_backBufferRenderPass)
     .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
     .addDescriptorSetLayout(m_perPassSetLayout)
     .addDescriptorSetLayout(m_perObjectSetLayout)
@@ -449,7 +493,7 @@ void cassidy::Renderer::initSwapchainFramebuffers()
   {
     VkImageView attachments[] = { m_swapchain.imageViews[i], m_swapchain.depthView };
 
-    VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_helloTrianglePipeline.getRenderPass(),
+    VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_backBufferRenderPass,
       2, attachments, m_swapchain.extent);
 
     vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapchain.framebuffers[i]);
@@ -543,6 +587,7 @@ void cassidy::Renderer::initMeshes()
 
   m_deletionQueue.addFunction([=]() {
     m_backpackAlbedo.release(m_device, m_allocator);
+    TextureLibrary::releaseAll(m_device, m_allocator);
     vkDestroySampler(m_device, m_linearSampler, nullptr);
   });
 }
@@ -704,7 +749,7 @@ void cassidy::Renderer::initImGui()
   initInfo.ImageCount = m_swapchain.images.size();
   initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-  ImGui_ImplVulkan_Init(&initInfo, m_helloTrianglePipeline.getRenderPass());
+  ImGui_ImplVulkan_Init(&initInfo, m_backBufferRenderPass);
 
   immediateSubmit([&](VkCommandBuffer cmd) {
     ImGui_ImplVulkan_CreateFontsTexture(cmd);
