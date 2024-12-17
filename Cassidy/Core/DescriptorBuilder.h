@@ -2,39 +2,38 @@
 
 #include <Utils/Types.h>
 
-// Source: https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/vk_descriptors.h
+// Source:  https://vkguide.dev/docs/extra-chapter/abstracting_descriptors/
+// .h:      https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/vk_descriptors.h
+// .cpp:    https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/vk_descriptors.cpp
 namespace cassidy
 {
+  class DescriptorLayoutCache;
+  class DescriptorAllocator;
+
   // Descriptor builder pattern class.
   // Concerned with caching common descriptor set layouts and managing descriptor pools,
   // creating descriptor sets used for materials and other rendering/compute data.
   class DescriptorBuilder
   {
   public:
-
-    DescriptorBuilder(const DescriptorBuilder&) = delete;
-
-    static DescriptorBuilder& get()
-    {
-      static DescriptorBuilder s_descriptorBuilder;
-      return s_descriptorBuilder;
-    }
-
-    static inline void releaseAll(VkDevice device, VmaAllocator allocator) {
-      DescriptorBuilder::get().releaseAllImpl(device, allocator);
-    }
+    static DescriptorBuilder begin(DescriptorLayoutCache* layoutCache, DescriptorAllocator* allocator);
 
     DescriptorBuilder& bindBuffer(uint32_t bindingIndex, VkDescriptorBufferInfo* bufferInfo, VkDescriptorType type, VkShaderStageFlags stageFlags);
     DescriptorBuilder& bindImage(uint32_t bindingIndex, VkDescriptorImageInfo* imageInfo, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
-  private:
-    DescriptorBuilder() {}
+    bool build(VkDescriptorSet& set, VkDescriptorSetLayout& layout);
+    bool build(VkDescriptorSet& set);
 
-    void releaseAllImpl(VkDevice device, VmaAllocator allocator);
+  private:
+    std::vector<VkWriteDescriptorSet>         m_writes;
+    std::vector<VkDescriptorSetLayoutBinding> m_bindings;
+
+    DescriptorLayoutCache*  m_cache;
+    DescriptorAllocator*    m_allocator;
   };
 
   // Container class for caching descriptor set layouts to prevent duplicates:
-  class DecriptorLayoutCache
+  class DescriptorLayoutCache
   {
   public:
 
@@ -48,10 +47,10 @@ namespace cassidy
         
         for (uint16_t i = 0; i < bindings.size(); ++i)
         {
-          if (other.bindings[i].binding != bindings[i].binding)                 return false;
-          if (other.bindings[i].descriptorType != bindings[i].descriptorType)   return false;
+          if (other.bindings[i].binding         != bindings[i].binding)         return false;
+          if (other.bindings[i].descriptorType  != bindings[i].descriptorType)  return false;
           if (other.bindings[i].descriptorCount != bindings[i].descriptorCount) return false;
-          if (other.bindings[i].stageFlags != bindings[i].stageFlags)           return false;
+          if (other.bindings[i].stageFlags      != bindings[i].stageFlags)      return false;
         }
         return true;
       }
@@ -109,13 +108,21 @@ namespace cassidy
       };
     };
 
+    void      init(VkDevice device) { m_deviceRef = device; }
     void      resetAllPools();
-    VkBool32  allocate(VkDescriptorSet* allocatedSet, VkDescriptorSetLayout layout);
+    VkBool32  allocate(VkDescriptorSet* set, VkDescriptorSetLayout layout);
     void      release();
+
+    VkDevice getDeviceRef() { return m_deviceRef; }
 
   private:
     VkDescriptorPool grabPool();
-    VkDescriptorPool createPool();
+    VkDescriptorPool createPool(uint32_t count, VkDescriptorPoolCreateFlags flags);;
+
+    VkDevice m_deviceRef;
+
+    VkDescriptorPool m_currentPool;
+    PoolSizes m_poolSizes;
 
     std::vector<VkDescriptorPool> m_usedDescriptorPools;
     std::vector<VkDescriptorPool> m_freeDescriptorPools;

@@ -4,6 +4,7 @@
 #include "Core/Pipeline.h"
 #include <Core/Mesh.h>
 #include <Core/Texture.h>
+#include <Core/DescriptorBuilder.h>
 
 // Forward declarations:
 struct SDL_Window;
@@ -11,8 +12,6 @@ struct SDL_Window;
 namespace cassidy
 {
   class Engine;
-  class DescriptorAllocator;
-  class DescriptorLayoutCache;
 
   struct Swapchain
   {
