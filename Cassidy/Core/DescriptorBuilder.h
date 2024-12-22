@@ -16,7 +16,7 @@ namespace cassidy
   class DescriptorBuilder
   {
   public:
-    static DescriptorBuilder begin(DescriptorLayoutCache* layoutCache, DescriptorAllocator* allocator);
+    static DescriptorBuilder begin(DescriptorAllocator* allocator, DescriptorLayoutCache* layoutCache);
 
     DescriptorBuilder& bindBuffer(uint32_t bindingIndex, VkDescriptorBufferInfo* bufferInfo, VkDescriptorType type, VkShaderStageFlags stageFlags);
     DescriptorBuilder& bindImage(uint32_t bindingIndex, VkDescriptorImageInfo* imageInfo, VkDescriptorType type, VkShaderStageFlags stageFlags);
@@ -28,14 +28,18 @@ namespace cassidy
     std::vector<VkWriteDescriptorSet>         m_writes;
     std::vector<VkDescriptorSetLayoutBinding> m_bindings;
 
-    DescriptorLayoutCache*  m_cache;
     DescriptorAllocator*    m_allocator;
+    DescriptorLayoutCache*  m_cache;
   };
 
   // Container class for caching descriptor set layouts to prevent duplicates:
   class DescriptorLayoutCache
   {
   public:
+    void init(VkDevice device) { m_deviceRef = device; }
+    void release();
+
+    VkDescriptorSetLayout createDescLayout(VkDescriptorSetLayoutCreateInfo* layoutCreateInfo);
 
     struct DescriptorLayoutInfo
     {
@@ -71,8 +75,6 @@ namespace cassidy
       }
     };
 
-  private:
-
     struct DescriptorLayoutHash
     {
       std::size_t operator()(const DescriptorLayoutInfo& k) const
@@ -82,6 +84,7 @@ namespace cassidy
     };
 
     std::unordered_map<DescriptorLayoutInfo, VkDescriptorSetLayout, DescriptorLayoutHash> m_layoutCache;
+    VkDevice m_deviceRef;
   };
   
   // Manages descriptor pools and allocates new ones when needed:
@@ -121,7 +124,7 @@ namespace cassidy
 
     VkDevice m_deviceRef;
 
-    VkDescriptorPool m_currentPool;
+    VkDescriptorPool m_currentPool = VK_NULL_HANDLE;
     PoolSizes m_poolSizes;
 
     std::vector<VkDescriptorPool> m_usedDescriptorPools;

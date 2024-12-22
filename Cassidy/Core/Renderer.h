@@ -93,8 +93,6 @@ namespace cassidy
     void initMeshes();
 
     void initDescriptorSets();
-    void initDescSetLayouts();
-    void initDescriptorPool();
     
     void initVertexBuffers();
     void initIndexBuffers();
@@ -134,12 +132,13 @@ namespace cassidy
     VkSampler m_imguiViewportSampler;
 
     // Descriptor objects:
-    VkDescriptorPool m_descriptorPool;
-
     VkDescriptorSetLayout m_perPassSetLayout;
     VkDescriptorSetLayout m_perObjectSetLayout; // (Dynamic)
 
     VkDescriptorSet m_imguiViewportSets[FRAMES_IN_FLIGHT];  // Used to display the renderer viewport via an ImGui image.
+
+    cassidy::DescriptorAllocator m_descAllocator;
+    cassidy::DescriptorLayoutCache m_descLayoutCache;
 
     // Command objects:
     VkCommandPool m_graphicsCommandPool;

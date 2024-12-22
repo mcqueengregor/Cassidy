@@ -2,7 +2,10 @@
 
 #include <Utils/Initialisers.h>
 
-cassidy::DescriptorBuilder cassidy::DescriptorBuilder::begin(DescriptorLayoutCache* layoutCache, DescriptorAllocator* allocator)
+#include <algorithm>
+#include <iostream>
+
+cassidy::DescriptorBuilder cassidy::DescriptorBuilder::begin(DescriptorAllocator* allocator, DescriptorLayoutCache* layoutCache)
 {
   DescriptorBuilder builder;
 
@@ -43,7 +46,9 @@ bool cassidy::DescriptorBuilder::build(VkDescriptorSet& set, VkDescriptorSetLayo
   VkDescriptorSetLayoutCreateInfo info = cassidy::init::descriptorSetLayoutCreateInfo(
     static_cast<uint32_t>(m_bindings.size()), m_bindings.data());
 
-  if (m_allocator->allocate(&set, layout) != VK_SUCCESS)
+  layout = m_cache->createDescLayout(&info);
+
+  if (m_allocator->allocate(&set, layout) != VK_TRUE)
     return false;
 
   for (VkWriteDescriptorSet& w : m_writes)
@@ -146,5 +151,53 @@ VkDescriptorPool cassidy::DescriptorAllocator::createPool(uint32_t count, VkDesc
   VkDescriptorPool newPool;
   vkCreateDescriptorPool(m_deviceRef, &poolInfo, nullptr, &newPool);
 
+  std::cout << "Descriptor allocator created a new descriptor pool!" << std::endl;
+
   return newPool;
+}
+
+void cassidy::DescriptorLayoutCache::release()
+{
+  for (auto pair : m_layoutCache)
+    vkDestroyDescriptorSetLayout(m_deviceRef, pair.second, nullptr);
+}
+
+VkDescriptorSetLayout cassidy::DescriptorLayoutCache::createDescLayout(VkDescriptorSetLayoutCreateInfo* layoutCreateInfo)
+{
+  DescriptorLayoutInfo layoutInfo;
+  layoutInfo.bindings.reserve(layoutCreateInfo->bindingCount);
+
+  bool isSorted = true;
+  int lastBinding = -1;
+
+  // Copy create info struct into bindings vector:
+  for (int i = 0; i < layoutCreateInfo->bindingCount; ++i)
+  {
+    layoutInfo.bindings.push_back(layoutCreateInfo->pBindings[i]);
+
+    // Keep track of whether bindings are in ascending order or not:
+    if (layoutCreateInfo->pBindings[i].binding > lastBinding)
+      lastBinding = layoutCreateInfo->pBindings[i].binding;
+    else
+      isSorted = false;
+  }
+
+  // Sort bindings if they aren't already in order:
+  if (!isSorted)
+    std::sort(layoutInfo.bindings.begin(), layoutInfo.bindings.end(),
+      [](VkDescriptorSetLayoutBinding& a, VkDescriptorSetLayoutBinding& b) {
+        return a.binding < b.binding;
+      });
+
+  // Retrieve already-existing layout from cache, if it exists, otherwise create a new layout:
+  if (m_layoutCache.find(layoutInfo) != m_layoutCache.end())
+    return m_layoutCache[layoutInfo];
+
+  VkDescriptorSetLayout newLayout;
+  vkCreateDescriptorSetLayout(m_deviceRef, layoutCreateInfo, nullptr, &newLayout);
+
+  std::cout << "Descriptor layout cache added new layout!" << std::endl;
+
+  m_layoutCache[layoutInfo] = newLayout;
+  return newLayout;
 }

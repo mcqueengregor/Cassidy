@@ -594,79 +594,34 @@ void cassidy::Renderer::initMeshes()
 
 void cassidy::Renderer::initDescriptorSets()
 {
-  initDescriptorPool();
-  initDescSetLayouts();
+  m_descAllocator.init(m_device);
+  m_descLayoutCache.init(m_device);
+
   initUniformBuffers();
 
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
-    VkDescriptorSetAllocateInfo perPassAllocInfo = cassidy::init::descriptorSetAllocateInfo(m_descriptorPool, 1,
-      &m_perPassSetLayout);
-    VkDescriptorSetAllocateInfo perObjectAllocInfo = cassidy::init::descriptorSetAllocateInfo(m_descriptorPool, 1,
-      &m_perObjectSetLayout);
-
-    vkAllocateDescriptorSets(m_device, &perPassAllocInfo, &m_frameData[i].perPassSet);
-    vkAllocateDescriptorSets(m_device, &perObjectAllocInfo, &m_frameData[i].perObjectSet);
-
-    VkDescriptorBufferInfo passBufferInfo = cassidy::init::descriptorBufferInfo(
+    VkDescriptorBufferInfo perPassBufferInfo = cassidy::init::descriptorBufferInfo(
       m_frameData[i].perPassUniformBuffer.buffer, 0, sizeof(PerPassData));
-    VkDescriptorBufferInfo objectBufferInfo = cassidy::init::descriptorBufferInfo(
+    VkDescriptorBufferInfo perObjectBufferInfo = cassidy::init::descriptorBufferInfo(
       m_perObjectUniformBufferDynamic.buffer, 0, sizeof(PerObjectData));
-    VkDescriptorImageInfo objectTextureInfo = cassidy::init::descriptorImageInfo(
+    VkDescriptorImageInfo perObjectImageInfo = cassidy::init::descriptorImageInfo(
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackAlbedo.getImageView(), m_linearSampler);
 
-    VkWriteDescriptorSet passWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perPassSet, 0,
-      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, &passBufferInfo);
-    VkWriteDescriptorSet objectBufferWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perObjectSet, 0,
-      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, &objectBufferInfo);
-    VkWriteDescriptorSet objectTextureWrite = cassidy::init::writeDescriptorSet(m_frameData[i].perObjectSet, 1,
-      VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &objectTextureInfo);
+    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
+      .bindBuffer(0, &perPassBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+      .build(m_frameData[i].perPassSet, m_perPassSetLayout);
 
-    VkWriteDescriptorSet writes[] = { passWrite, objectBufferWrite, objectTextureWrite };
-    vkUpdateDescriptorSets(m_device, 3, writes, 0, nullptr);
+    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
+      .bindBuffer(0, &perObjectBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
+      .bindImage(1, &perObjectImageInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+      .build(m_frameData[i].perObjectSet, m_perObjectSetLayout);
   }
-}
-
-void cassidy::Renderer::initDescSetLayouts()
-{
-  VkDescriptorSetLayoutBinding perPassBinding = cassidy::init::descriptorSetLayoutBinding(0, 
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr);
-  VkDescriptorSetLayoutBinding perObjectBufferBinding = cassidy::init::descriptorSetLayoutBinding(0, 
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr);
-  VkDescriptorSetLayoutBinding perObjectTextureBinding = cassidy::init::descriptorSetLayoutBinding(1,
-    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr);
-
-  VkDescriptorSetLayoutCreateInfo perPassInfo = cassidy::init::descriptorSetLayoutCreateInfo(1, &perPassBinding);
-
-  VkDescriptorSetLayoutBinding perObjectBindings[] = { perObjectBufferBinding, perObjectTextureBinding };
-  VkDescriptorSetLayoutCreateInfo perObjectInfo = cassidy::init::descriptorSetLayoutCreateInfo(2, perObjectBindings);
-
-  vkCreateDescriptorSetLayout(m_device, &perPassInfo, nullptr, &m_perPassSetLayout);
-  vkCreateDescriptorSetLayout(m_device, &perObjectInfo, nullptr, &m_perObjectSetLayout);
 
   m_deletionQueue.addFunction([=]() {
-    vkDestroyDescriptorSetLayout(m_device, m_perPassSetLayout, nullptr);
-    vkDestroyDescriptorSetLayout(m_device, m_perObjectSetLayout, nullptr);
-  });
-}
-
-void cassidy::Renderer::initDescriptorPool()
-{
-  const uint32_t NUM_SIZES = 3;
-  VkDescriptorPoolSize poolSizes[NUM_SIZES] = {
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,  static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  static_cast<uint32_t>(FRAMES_IN_FLIGHT) },
-  };
-
-  VkDescriptorPoolCreateInfo info = cassidy::init::descriptorPoolCreateInfo(NUM_SIZES, poolSizes,
-    static_cast<uint32_t>(FRAMES_IN_FLIGHT) * NUM_SIZES);
-
-  vkCreateDescriptorPool(m_device, &info, nullptr, &m_descriptorPool);
-
-  m_deletionQueue.addFunction([=]() {
-    vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
-  });
+    m_descLayoutCache.release();
+    m_descAllocator.release();
+    });
 }
 
 void cassidy::Renderer::initVertexBuffers()
