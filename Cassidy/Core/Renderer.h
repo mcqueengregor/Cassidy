@@ -99,6 +99,11 @@ namespace cassidy
     void initUniformBuffers();
 
     void initImGui();
+    void initViewportImages();
+    void initViewportRenderPass();
+    void initViewportCommandPool();
+    void initViewportCommandBuffers();
+    void initViewportFramebuffers();
 
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }
@@ -129,7 +134,7 @@ namespace cassidy
 
     // Samplers:
     VkSampler m_linearSampler;
-    VkSampler m_imguiViewportSampler;
+    VkSampler m_viewportSampler;
 
     // Descriptor objects:
     VkDescriptorSetLayout m_perPassSetLayout;
@@ -151,6 +156,16 @@ namespace cassidy
 
     // Memory allocator and allocated objects:
     VmaAllocator m_allocator;
+
+    // ImGui rendering objects:
+    std::vector<AllocatedImage> m_viewportImages;
+    std::vector<VkImageView> m_viewportImageViews;
+    VkRenderPass m_viewportRenderPass;
+    VkPipeline m_viewportPipeline;
+    VkCommandPool m_viewportCommandPool;
+    std::vector<VkFramebuffer> m_viewportFramebuffers;
+    std::vector<VkCommandBuffer> m_viewportCommandBuffers;
+    std::vector<VkDescriptorSet> m_viewportDescSets;
 
     // Misc.:
     DeletionQueue m_deletionQueue;

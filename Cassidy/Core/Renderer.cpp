@@ -280,11 +280,12 @@ void cassidy::Renderer::recordGuiCommands()
     // TODO: Once textures are implemented, add an ImGui viewport sampler, create
     // ImGui descriptor set for swapchain image and display in viewport widget.
     // (https://github.com/ocornut/imgui/wiki/image-loading-and-displaying-examples#example-for-vulkan-users)
-    //ImGui::Begin("Viewport");
-    //{
-    //  ImGui::Image()
-    //}
-    //ImGui::End();
+    ImGui::Begin("Viewport");
+    {
+      ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+      ImGui::Image(m_viewportDescSets[m_currentFrameIndex], ImVec2{ viewportSize.x, viewportSize.y });
+    }
+    ImGui::End();
   }
 
   ImGui::Begin("Test window");
@@ -692,6 +693,11 @@ void cassidy::Renderer::initImGui()
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // Handle cursor show/hide functionality ourselves.
 
+  initViewportRenderPass();
+  initViewportCommandPool();
+  initViewportCommandBuffers();
+  initViewportFramebuffers();
+
   ImGui_ImplSDL2_InitForVulkan(m_engineRef->getWindow());
 
   ImGui_ImplVulkan_InitInfo initInfo = {};
@@ -711,33 +717,32 @@ void cassidy::Renderer::initImGui()
   });
 
   // Create sampler used for swapchain image in viewport:
-  //m_imguiViewportSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties,
-  //  VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, VK_FALSE);
-  //
-  //// Create descriptor sets used in displaying swapchain image in viewport:
-  //for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
-  //{
-  //  m_imguiViewportSets[i] = ImGui_ImplVulkan_AddTexture(m_imguiViewportSampler, m_swapchain.imageViews[i], 
-  //    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  //}
+  m_viewportSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties,
+    VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, VK_FALSE);
 
   // Solution for full ImGui setup w/ viewport: https://github.com/ocornut/imgui/issues/5110
-  // TODO: Follow same steps here!!
-  /*
-    - Create image and image view for viewport.
-    - Create viewport-specific renderpass, command pool, framebuffer and commandbuffer.
-    - Record drawing commands as usual, but into viewport-specific command buffer.
-    - Complete ImGui rendering commands, submit to queue and present.
-  */
 
   ImGui_ImplVulkan_DestroyFontUploadObjects();
 
+  m_viewportDescSets.resize(m_swapchain.imageViews.size());
+  for (uint32_t i = 0; i < m_viewportImageViews.size(); ++i)
+  {
+    m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
+      m_viewportImageViews[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  }
+
   m_deletionQueue.addFunction([=]() {
-    vkDestroyDescriptorPool(m_device, imGuiPool, nullptr);
-    vkDestroySampler(m_device, m_imguiViewportSampler, nullptr);
+    for (auto fb : m_viewportFramebuffers)
+      vkDestroyFramebuffer(m_device, fb, nullptr);
    
-    //for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
-    //  ImGui_ImplVulkan_RemoveTexture(m_imguiViewportSets[i]);
+    vkDestroyCommandPool(m_device, m_viewportCommandPool, nullptr);
+    vkDestroyRenderPass(m_device, m_viewportRenderPass, nullptr);
+
+    for (uint8_t i = 0; i < m_viewportDescSets.size(); ++i)
+      ImGui_ImplVulkan_RemoveTexture(m_viewportDescSets[i]);
+
+    vkDestroyDescriptorPool(m_device, imGuiPool, nullptr);
+    vkDestroySampler(m_device, m_viewportSampler, nullptr);
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
@@ -745,6 +750,71 @@ void cassidy::Renderer::initImGui()
   });
 
   std::cout << "ImGui initialised!\n" << std::endl;
+}
+
+void cassidy::Renderer::initViewportImages()
+{
+
+}
+
+void cassidy::Renderer::initViewportRenderPass()
+{
+  VkAttachmentDescription attachDesc = cassidy::init::attachmentDescription(
+    m_swapchain.imageFormat, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_LOAD,
+    VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+  VkAttachmentReference colourRef = cassidy::init::attachmentReference(0, 
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+  VkSubpassDescription subpass = cassidy::init::subpassDescription(
+    VK_PIPELINE_BIND_POINT_GRAPHICS, 1, &colourRef, nullptr);
+
+  VkSubpassDependency dependency = cassidy::init::subpassDependency(VK_SUBPASS_EXTERNAL, 0,
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, static_cast<VkAccessFlagBits>(0),
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
+  VkRenderPassCreateInfo info = cassidy::init::renderPassCreateInfo(1, &attachDesc,
+    1, &subpass, 1, &dependency);
+
+  vkCreateRenderPass(m_device, &info, nullptr, &m_viewportRenderPass);
+
+  std::cout << "Created viewport render pass!" << std::endl;
+}
+
+void cassidy::Renderer::initViewportCommandPool()
+{
+  QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
+
+  VkCommandPoolCreateInfo info = cassidy::init::commandPoolCreateInfo(
+    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, indices.graphicsFamily.value());
+  
+  vkCreateCommandPool(m_device, &info, nullptr, &m_viewportCommandPool);
+}
+
+void cassidy::Renderer::initViewportCommandBuffers()
+{
+  m_viewportCommandBuffers.resize(m_swapchain.imageViews.size());
+
+  VkCommandBufferAllocateInfo allocInfo = cassidy::init::commandBufferAllocInfo(
+    m_viewportCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 
+    static_cast<uint32_t>(m_viewportCommandBuffers.size()));
+
+  vkAllocateCommandBuffers(m_device, &allocInfo, m_viewportCommandBuffers.data());
+}
+
+void cassidy::Renderer::initViewportFramebuffers()
+{
+  m_viewportFramebuffers.resize(m_swapchain.imageViews.size());
+
+  for (uint32_t i = 0; i < m_swapchain.imageViews.size(); ++i)
+  {
+    VkImageView* attachmentPtr = &m_swapchain.imageViews[i];
+    VkFramebufferCreateInfo info = cassidy::init::framebufferCreateInfo(m_viewportRenderPass,
+      1, attachmentPtr, m_swapchain.extent);
+
+    vkCreateFramebuffer(m_device, &info, nullptr, &m_viewportFramebuffers[i]);
+  }
 }
 
 void cassidy::Renderer::rebuildSwapchain()
