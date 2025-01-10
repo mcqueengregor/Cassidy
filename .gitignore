@@ -33,7 +33,10 @@ bld/
 [Ll]ogs/
 
 # Always add changes to "Meshes" folder (i.e. don't ignore .obj mesh files)
-!Meshes/
+!Meshes/*
+
+# Ignore ImGui.ini
+Cassidy/imgui.ini
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
