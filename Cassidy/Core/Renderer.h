@@ -67,12 +67,14 @@ namespace cassidy
 
     // Getters/setters: ------------------------------------------------------------------------------------------
     inline VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; }
-    inline VkDevice getLogicalDevice() { return m_device; }
-    inline Swapchain getSwapchain() { return m_swapchain; }
+    inline VkDevice         getLogicalDevice()  { return m_device; }
+    inline Swapchain        getSwapchain()      { return m_swapchain; }
+    inline UploadContext&   getUploadContext()  { return m_uploadContext; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
-    void recordCommandBuffers(uint32_t imageIndex);
+    void recordDrawCommands(uint32_t imageIndex);
+    void recordViewportCommands(uint32_t imageIndex);
     void recordGuiCommands();
     void submitCommandBuffers(uint32_t imageIndex);
     
@@ -160,6 +162,7 @@ namespace cassidy
     // ImGui rendering objects:
     std::vector<AllocatedImage> m_viewportImages;
     std::vector<VkImageView> m_viewportImageViews;
+    Pipeline m_viewportPipeline;
     VkRenderPass m_viewportRenderPass;
     VkCommandPool m_viewportCommandPool;
     std::vector<VkFramebuffer> m_viewportFramebuffers;

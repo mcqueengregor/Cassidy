@@ -1,6 +1,7 @@
 #include "Core/Texture.h"
 
 #include <Utils/Initialisers.h>
+#include <Utils/Helpers.h>
 #include <Core/Renderer.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -56,18 +57,26 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   vmaCreateImage(allocator, &imageInfo, &imageAllocInfo, &m_image.image, &m_image.allocation, nullptr);
 
-  rendererRef->immediateSubmit([=](VkCommandBuffer cmd)
+  cassidy::helper::immediateSubmit(rendererRef->getLogicalDevice(),
+    rendererRef->getUploadContext(), [=](VkCommandBuffer cmd)
   {
-    transitionImageLayout(cmd, format, VK_IMAGE_LAYOUT_UNDEFINED, 
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+    cassidy::helper::transitionImageLayout(cmd, m_image.image, format, 
+      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+      0, VK_ACCESS_TRANSFER_WRITE_BIT,
+      VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+      mipLevels);
+
     copyBufferToImage(cmd, stagingBuffer.buffer, texWidth, texHeight);
 
     if (shouldGenMipmaps == VK_TRUE)
       generateMipmaps(cmd, format, texWidth, texHeight, mipLevels);
     else
-      transitionImageLayout(cmd, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
-  });
+      cassidy::helper::transitionImageLayout(cmd, m_image.image, format,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        mipLevels);
+    });
 
   VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_image.image, format,
     VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);

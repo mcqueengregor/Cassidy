@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utils/Types.h"
+#include <functional>
 
 // Forward declarations:
 struct SDL_Window;
@@ -24,4 +25,11 @@ namespace cassidy::helper
   size_t padUniformBufferSize(size_t originalSize, const VkPhysicalDeviceProperties& gpuProperties);
 
   VkSampler createTextureSampler(const VkDevice& device, const VkPhysicalDeviceProperties& physicalDeviceProperties, VkFilter filter, VkSamplerAddressMode wrapMode, uint8_t numMips, bool useAniso);
+
+  void immediateSubmit(VkDevice device, UploadContext& uploadContext, std::function<void(VkCommandBuffer cmd)>&& function);
+  void transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
+    VkImageLayout oldLayout, VkImageLayout newLayout,
+    VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, 
+    VkPipelineStageFlags srcStageFlags, VkPipelineStageFlags dstStageFlags,
+    uint8_t mipLevels);
 }

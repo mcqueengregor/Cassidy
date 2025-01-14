@@ -157,4 +157,5 @@ struct UploadContext
   VkCommandPool uploadCommandPool;
   VkCommandBuffer uploadCommandBuffer;
   VkFence uploadFence;
+  VkQueue graphicsQueueRef;
 };

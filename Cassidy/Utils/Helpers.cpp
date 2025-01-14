@@ -1,4 +1,5 @@
 #include "Helpers.h"
+#include "Initialisers.h"
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
@@ -237,3 +238,53 @@ VkSampler cassidy::helper::createTextureSampler(const VkDevice& device, const Vk
   return newSampler;
 }
 
+void cassidy::helper::immediateSubmit(VkDevice device, UploadContext& uploadContext, std::function<void(VkCommandBuffer cmd)>&& function)
+{
+  VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_LEVEL_PRIMARY, nullptr);
+
+  vkBeginCommandBuffer(uploadContext.uploadCommandBuffer, &beginInfo);
+  {
+    function(uploadContext.uploadCommandBuffer);
+  }
+  vkEndCommandBuffer(uploadContext.uploadCommandBuffer);
+
+  VkSubmitInfo submitInfo = cassidy::init::submitInfo(0, nullptr, 0, 0, nullptr, 1, &uploadContext.uploadCommandBuffer);
+  vkQueueSubmit(uploadContext.graphicsQueueRef, 1, &submitInfo, uploadContext.uploadFence);
+
+  vkWaitForFences(device, 1, &uploadContext.uploadFence, VK_TRUE, UINT64_MAX);
+  vkResetFences(device, 1, &uploadContext.uploadFence);
+
+  vkResetCommandPool(device, uploadContext.uploadCommandPool, 0);
+}
+
+void cassidy::helper::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format, 
+  VkImageLayout oldLayout, VkImageLayout newLayout,
+  VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
+  VkPipelineStageFlags srcStageFlags, VkPipelineStageFlags dstStageFlags, 
+  uint8_t mipLevels)
+{
+  VkImageSubresourceRange range = {};
+  range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  range.baseMipLevel = 0;
+  range.levelCount = mipLevels;
+  range.baseArrayLayer = 0;
+  range.layerCount = 1;
+
+  VkImageMemoryBarrier barrier = {};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = oldLayout;
+  barrier.newLayout = newLayout;
+  barrier.srcAccessMask = srcAccessMask;
+  barrier.dstAccessMask = dstAccessMask;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image;
+  barrier.subresourceRange = range;
+
+  vkCmdPipelineBarrier(cmd,
+    srcStageFlags, dstStageFlags,
+    0,
+    0, nullptr,
+    0, nullptr,
+    1, &barrier);
+}
