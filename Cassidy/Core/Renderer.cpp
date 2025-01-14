@@ -280,14 +280,14 @@ void cassidy::Renderer::recordGuiCommands()
     // TODO: Once textures are implemented, add an ImGui viewport sampler, create
     // ImGui descriptor set for swapchain image and display in viewport widget.
     // (https://github.com/ocornut/imgui/wiki/image-loading-and-displaying-examples#example-for-vulkan-users)
-    ImGui::Begin("Viewport");
+    if (ImGui::Begin("Viewport"))
     {
       ImVec2 viewportSize = ImGui::GetContentRegionAvail();
       ImGui::Image(m_viewportDescSets[m_currentFrameIndex], ImVec2{ viewportSize.x, viewportSize.y });
     }
     ImGui::End();
   }
-
+  
   ImGui::Begin("Test window");
   {
     const ImVec2& size = ImGui::GetWindowContentRegionMax();
@@ -683,7 +683,9 @@ void cassidy::Renderer::initImGui()
     { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
   };
 
-  VkDescriptorPoolCreateInfo poolInfo = cassidy::init::descriptorPoolCreateInfo(NUM_SIZES, poolSizes, 1000);
+  VkDescriptorPoolCreateInfo poolInfo = cassidy::init::descriptorPoolCreateInfo(
+    NUM_SIZES, poolSizes, 1000 * NUM_SIZES);
+  poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
   VkDescriptorPool imGuiPool;
   vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &imGuiPool);
@@ -693,6 +695,7 @@ void cassidy::Renderer::initImGui()
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // Handle cursor show/hide functionality ourselves.
 
+  initViewportImages();
   initViewportRenderPass();
   initViewportCommandPool();
   initViewportCommandBuffers();
@@ -735,11 +738,15 @@ void cassidy::Renderer::initImGui()
     for (auto fb : m_viewportFramebuffers)
       vkDestroyFramebuffer(m_device, fb, nullptr);
    
+    for (uint32_t i = 0; i < m_viewportImages.size(); ++i)
+    {
+      vmaDestroyImage(m_allocator, m_viewportImages[i].image, 
+        m_viewportImages[i].allocation);
+      vkDestroyImageView(m_device, m_viewportImageViews[i], nullptr);
+    }
+
     vkDestroyCommandPool(m_device, m_viewportCommandPool, nullptr);
     vkDestroyRenderPass(m_device, m_viewportRenderPass, nullptr);
-
-    for (uint8_t i = 0; i < m_viewportDescSets.size(); ++i)
-      ImGui_ImplVulkan_RemoveTexture(m_viewportDescSets[i]);
 
     vkDestroyDescriptorPool(m_device, imGuiPool, nullptr);
     vkDestroySampler(m_device, m_viewportSampler, nullptr);
@@ -754,7 +761,57 @@ void cassidy::Renderer::initImGui()
 
 void cassidy::Renderer::initViewportImages()
 {
+  m_viewportImages.resize(m_swapchain.images.size());
+  m_viewportImageViews.resize(m_viewportImages.size());
 
+  for (size_t i = 0; i < m_viewportImages.size(); ++i)
+  {
+    VkExtent3D imageExtent = {
+      m_swapchain.extent.width,
+      m_swapchain.extent.height,
+      1,
+    };
+
+    VkImageCreateInfo imageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D,
+      imageExtent, 1, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_TILING_LINEAR,
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    VmaAllocationCreateInfo allocInfo = cassidy::init::vmaAllocationCreateInfo(
+      VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+
+    vmaCreateImage(m_allocator, &imageInfo, &allocInfo, &m_viewportImages[i].image,
+      &m_viewportImages[i].allocation, nullptr);
+
+    // Transition viewport image layout to IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+    immediateSubmit([=](VkCommandBuffer cmd) {
+      VkImageMemoryBarrier imageMemoryBarrier = {};
+      imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+      imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+      imageMemoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+      imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+      imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      imageMemoryBarrier.image = m_viewportImages[i].image;
+      imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+      vkCmdPipelineBarrier(
+        cmd,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        0, nullptr,
+        0, nullptr,
+        1, &imageMemoryBarrier);
+      });
+
+    VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_viewportImages[i].image,
+      VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    vkCreateImageView(m_device, &viewInfo, nullptr, &m_viewportImageViews[i]);
+  }
+
+  // (Deletion of viewport resources is handled in ImGui deletion queue function)
 }
 
 void cassidy::Renderer::initViewportRenderPass()
@@ -809,9 +866,8 @@ void cassidy::Renderer::initViewportFramebuffers()
 
   for (uint32_t i = 0; i < m_swapchain.imageViews.size(); ++i)
   {
-    VkImageView* attachmentPtr = &m_swapchain.imageViews[i];
     VkFramebufferCreateInfo info = cassidy::init::framebufferCreateInfo(m_viewportRenderPass,
-      1, attachmentPtr, m_swapchain.extent);
+      1, &m_swapchain.imageViews[i], m_swapchain.extent);
 
     vkCreateFramebuffer(m_device, &info, nullptr, &m_viewportFramebuffers[i]);
   }
@@ -829,4 +885,5 @@ void cassidy::Renderer::rebuildSwapchain()
   m_swapchain.release(m_device, m_allocator);
   initSwapchain();
   initSwapchainFramebuffers();
+  initViewportFramebuffers();
 }

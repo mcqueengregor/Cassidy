@@ -161,7 +161,6 @@ namespace cassidy
     std::vector<AllocatedImage> m_viewportImages;
     std::vector<VkImageView> m_viewportImageViews;
     VkRenderPass m_viewportRenderPass;
-    VkPipeline m_viewportPipeline;
     VkCommandPool m_viewportCommandPool;
     std::vector<VkFramebuffer> m_viewportFramebuffers;
     std::vector<VkCommandBuffer> m_viewportCommandBuffers;
