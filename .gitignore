@@ -402,4 +402,3 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
-/Cassidy/Core/Renderer.cpp

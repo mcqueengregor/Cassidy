@@ -159,9 +159,11 @@ namespace cassidy
     // Memory allocator and allocated objects:
     VmaAllocator m_allocator;
 
-    // ImGui rendering objects:
+    // Viewport rendering objects:
     std::vector<AllocatedImage> m_viewportImages;
     std::vector<VkImageView> m_viewportImageViews;
+    AllocatedImage m_viewportDepthImage;
+    VkImageView m_viewportDepthView;
     Pipeline m_viewportPipeline;
     VkRenderPass m_viewportRenderPass;
     VkCommandPool m_viewportCommandPool;
