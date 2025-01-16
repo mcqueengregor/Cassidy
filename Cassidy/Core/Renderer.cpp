@@ -43,7 +43,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
 
 void cassidy::Renderer::draw()
 {
-  VkResult result = vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex], VK_TRUE, UINT64_MAX);
+  const VkResult waitResult = vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex], VK_TRUE, UINT64_MAX);
 
   uint32_t swapchainImageIndex;
   {
@@ -57,12 +57,12 @@ void cassidy::Renderer::draw()
     }
   }
 
-  vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex]);
+  const VkResult resetResult = vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex]);
 
   const FrameData& currentFrameData = getCurrentFrameData();
 
   updateBuffers(currentFrameData);
-  recordViewportCommands(swapchainImageIndex);
+  //recordViewportCommands(swapchainImageIndex);
   recordGuiCommands();
   recordDrawCommands(swapchainImageIndex);
   submitCommandBuffers(swapchainImageIndex);
@@ -72,8 +72,8 @@ void cassidy::Renderer::draw()
 
 void cassidy::Renderer::release()
 {
-  // Wait on all fences to prevent in-use resources from being destroyed:
-  vkWaitForFences(m_device, m_inFlightFences.size(), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
+  // Wait on device idle to prevent in-use resources from being destroyed:
+  vkDeviceWaitIdle(m_device);
 
   m_deletionQueue.execute();
   std::cout << "Renderer shut down!\n" << std::endl;
@@ -106,9 +106,9 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
 {
   const VkCommandBuffer& cmd = m_commandBuffers[m_currentFrameIndex];
 
-  vkResetCommandBuffer(cmd, 0);
+  const VkResult resetBufferResult = vkResetCommandBuffer(cmd, 0);
 
-  VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(0, nullptr);
+  VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
   vkBeginCommandBuffer(cmd, &beginInfo);
 
   VkClearValue clearValues[2];
@@ -140,19 +140,51 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
     m_backpackMesh.draw(cmd);
   }
 
+  VkImageMemoryBarrier viewportImageBarrier = {};
+  viewportImageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  viewportImageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  viewportImageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  viewportImageBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  viewportImageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  viewportImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  viewportImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  viewportImageBarrier.image = m_viewportImages[imageIndex].image;
+  viewportImageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+  /*
+    TODO: Implement method from Sascha Willems' offscreen rendering example? 
+    https://github.com/SaschaWillems/Vulkan/blob/master/examples/offscreen/offscreen.cpp
+  
+    Also this github issue which uses the C++ version of Vulkan:
+    https://github.com/ocornut/imgui/issues/6965
+
+    This stack overflow question as well:
+    https://stackoverflow.com/questions/44932933/vulkan-device-lost-after-submitting-single-time-commandbuffer
+
+    - Record both viewport and back buffer command recording into one command buffer rather than two
+    - 
+  */ 
+  // 
+  //vkCmdPipelineBarrier(cmd,
+  //  VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+  //  0,
+  //  0, nullptr,
+  //  0, nullptr,
+  //  1, &viewportImageBarrier);
+
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
   vkCmdEndRenderPass(cmd);
-  vkEndCommandBuffer(cmd);
+  const VkResult endBufferResult = vkEndCommandBuffer(cmd);
 }
 
 void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
 {
-  const VkCommandBuffer& cmd = m_viewportCommandBuffers[m_currentFrameIndex];
+  const VkCommandBuffer& cmd = m_commandBuffers[m_currentFrameIndex];
 
-  vkResetCommandBuffer(cmd, 0);
+  const VkResult resetBufferResult = vkResetCommandBuffer(cmd, 0);
 
-  VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(0, nullptr);
+  VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
   vkBeginCommandBuffer(cmd, &beginInfo);
 
   VkClearValue clearValues[2];
@@ -185,7 +217,7 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
   }
 
   vkCmdEndRenderPass(cmd);
-  vkEndCommandBuffer(cmd);
+  const VkResult endBufferResult = vkEndCommandBuffer(cmd);
 }
 
 void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
@@ -197,9 +229,9 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
   };
 
   VkSubmitInfo submitInfo = cassidy::init::submitInfo(1, &m_imageAvailableSemaphores[m_currentFrameIndex], waitStages, 
-    1, &m_renderFinishedSemaphores[m_currentFrameIndex], 2, submitBuffers);
+    1, &m_renderFinishedSemaphores[m_currentFrameIndex], 1, submitBuffers);
 
-  vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrameIndex]);
+  const VkResult submitResult = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrameIndex]);
 
   VkPresentInfoKHR presentInfo = cassidy::init::presentInfo(1, &m_renderFinishedSemaphores[m_currentFrameIndex],
     1, &m_swapchain.swapchain, &imageIndex);
@@ -592,8 +624,8 @@ void cassidy::Renderer::initCommandBuffers()
   m_commandBuffers.resize(FRAMES_IN_FLIGHT);
 
   // Allocate command buffers for graphics commands:
-  VkCommandBufferAllocateInfo graphicsAllocInfo = cassidy::init::commandBufferAllocInfo(m_graphicsCommandPool,
-    VK_COMMAND_BUFFER_LEVEL_PRIMARY, FRAMES_IN_FLIGHT);
+  VkCommandBufferAllocateInfo graphicsAllocInfo = cassidy::init::commandBufferAllocInfo(
+    m_graphicsCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, FRAMES_IN_FLIGHT);
 
   vkAllocateCommandBuffers(m_device, &graphicsAllocInfo, m_commandBuffers.data());
   std::cout << "Allocated " << std::to_string(FRAMES_IN_FLIGHT) << " graphics command buffers!\n";
@@ -806,6 +838,10 @@ void cassidy::Renderer::initImGui()
       vkDestroyImageView(m_device, m_viewportImageViews[i], nullptr);
     }
 
+    vmaDestroyImage(m_allocator, m_viewportDepthImage.image,
+      m_viewportDepthImage.allocation);
+    vkDestroyImageView(m_device, m_viewportDepthView, nullptr);
+
     vkDestroyCommandPool(m_device, m_viewportCommandPool, nullptr);
     vkDestroyRenderPass(m_device, m_viewportRenderPass, nullptr);
 
@@ -847,17 +883,18 @@ void cassidy::Renderer::initViewportImages()
     // Transition viewport image layout to IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
     cassidy::helper::immediateSubmit(m_device, m_uploadContext,
       [=](VkCommandBuffer cmd) {
-        cassidy::helper::transitionImageLayout(m_uploadContext.uploadCommandBuffer, m_viewportImages[i].image,  format,
-          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-          VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_READ_BIT,
-          VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-          1);
-      });
+      cassidy::helper::transitionImageLayout(m_uploadContext.uploadCommandBuffer, m_viewportImages[i].image, format,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_READ_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        1);
+    });
 
     VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_viewportImages[i].image,
       format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
     vkCreateImageView(m_device, &viewInfo, nullptr, &m_viewportImageViews[i]);
+  }
 
     // Create swapchain depth image and image view:
     VkFormat depthFormats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
@@ -877,7 +914,6 @@ void cassidy::Renderer::initViewportImages()
       VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
     vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_viewportDepthView);
-  }
 
   // (Deletion of viewport resources is handled in ImGui deletion queue function)
 }
@@ -934,11 +970,10 @@ void cassidy::Renderer::initViewportCommandPool()
 
 void cassidy::Renderer::initViewportCommandBuffers()
 {
-  m_viewportCommandBuffers.resize(m_swapchain.imageViews.size());
+  m_viewportCommandBuffers.resize(FRAMES_IN_FLIGHT);
 
   VkCommandBufferAllocateInfo allocInfo = cassidy::init::commandBufferAllocInfo(
-    m_viewportCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 
-    static_cast<uint32_t>(m_viewportCommandBuffers.size()));
+    m_viewportCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, FRAMES_IN_FLIGHT);
 
   vkAllocateCommandBuffers(m_device, &allocInfo, m_viewportCommandBuffers.data());
 }
