@@ -67,9 +67,9 @@ namespace cassidy
 
     // Getters/setters: ------------------------------------------------------------------------------------------
     inline VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; }
-    inline VkDevice         getLogicalDevice()  { return m_device; }
-    inline Swapchain        getSwapchain()      { return m_swapchain; }
-    inline UploadContext&   getUploadContext()  { return m_uploadContext; }
+    inline VkDevice         getLogicalDevice() { return m_device; }
+    inline Swapchain        getSwapchain() { return m_swapchain; }
+    inline UploadContext& getUploadContext() { return m_uploadContext; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
@@ -77,7 +77,7 @@ namespace cassidy
     void recordViewportCommands(uint32_t imageIndex);
     void recordGuiCommands();
     void submitCommandBuffers(uint32_t imageIndex);
-    
+
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
     AllocatedBuffer allocateBuffer(uint32_t allocSize, VkBufferUsageFlags usageFlags, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlagBits allocFlags);
 
@@ -91,11 +91,11 @@ namespace cassidy
     void initCommandPool();
     void initCommandBuffers();
     void initSyncObjects();
-    
+
     void initMeshes();
 
     void initDescriptorSets();
-    
+
     void initVertexBuffers();
     void initIndexBuffers();
     void initUniformBuffers();
@@ -182,6 +182,11 @@ namespace cassidy
       {{ 0.0f,  0.5f, 0.0f},  {0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
       {{-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
       {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
+    };
+
+    const std::vector<uint32_t> triangleIndices =
+    {
+      0, 1, 2,
     };
   };
 }

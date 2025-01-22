@@ -24,6 +24,7 @@ namespace cassidy
 
     void processMesh(const aiMesh* mesh);
     void setVertices(const std::vector<Vertex>& vertices);
+    void setIndices(const std::vector<uint32_t>& indices);
 
     // Getters/setters: ------------------------------------------------------------------------------------------
     inline uint32_t getNumVertices() const    { return static_cast<uint32_t>(m_vertices.size()); }
@@ -54,6 +55,7 @@ namespace cassidy
 
     void loadModel(const std::string& filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps = (aiPostProcessSteps)0);
     void setVertices(const std::vector<Vertex>& vertices);
+    void setIndices(const std::vector<uint32_t>& indices);
 
     void allocateVertexBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef);
     void allocateIndexBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef);

@@ -2,6 +2,18 @@
 
 #include "Utils/Types.h"
 #include <functional>
+#include <iostream>
+
+#define VK_CHECK(x)													                    \
+do																	                            \
+{																	                              \
+	VkResult err = x;										                      		\
+	if (err)														                          \
+	{																                              \
+		std::cout << "DETECTED VULKAN ERROR: " << err << std::endl;	\
+		abort();													                          \
+	}																                              \
+} while (0)															                        \
 
 // Forward declarations:
 struct SDL_Window;

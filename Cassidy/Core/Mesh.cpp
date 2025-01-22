@@ -164,8 +164,17 @@ void cassidy::Model::setVertices(const std::vector<Vertex>& vertices)
   if (m_meshes.empty())
   {
     m_meshes.emplace_back(Mesh());
-    m_meshes[0].setVertices(vertices);
   }
+  m_meshes[0].setVertices(vertices);
+}
+
+void cassidy::Model::setIndices(const std::vector<uint32_t>& indices)
+{
+  if (m_meshes.empty())
+  {
+    m_meshes.emplace_back(Mesh());
+  }
+  m_meshes[0].setIndices(indices);
 }
 
 void cassidy::Model::allocateVertexBuffers(VkCommandBuffer uploadCmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)
@@ -349,4 +358,9 @@ void cassidy::Mesh::release(VkDevice device, VmaAllocator allocator) const
 void cassidy::Mesh::setVertices(const std::vector<Vertex>& vertices)
 {
   m_vertices.assign(vertices.begin(), vertices.end());
+}
+
+void cassidy::Mesh::setIndices(const std::vector<uint32_t>& indices)
+{
+  m_indices.assign(indices.begin(), indices.end());
 }
