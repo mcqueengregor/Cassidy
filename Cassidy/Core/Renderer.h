@@ -60,6 +60,10 @@ namespace cassidy
       VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
 
+    static inline std::vector<const char*> INSTANCE_EXTENSIONS = {
+      VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+    };
+
     static inline std::vector<VkDynamicState> DYNAMIC_STATES = {
       VK_DYNAMIC_STATE_VIEWPORT,
       VK_DYNAMIC_STATE_SCISSOR,

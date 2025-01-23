@@ -111,6 +111,29 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
   VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
   vkBeginCommandBuffer(cmd, &beginInfo);
 
+  // Potential sources for understanding pipeline barriers and render passes/subpasses better:
+  // https://www.reddit.com/r/vulkan/comments/co7wla/confused_about_pipeline_stages_and_synchronization/?rdt=46443
+  // https://stackoverflow.com/questions/58562267/vkcmdpipelinebarrier-clarification-on-renderpass-synchronization-scopes
+  // https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VkSubpassDependency
+
+  VkImageMemoryBarrier imageBarrier = {
+  .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+  .oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+  .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+  .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+  .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+  .image = m_viewportImages[imageIndex].image,
+  .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+  };
+
+  vkCmdPipelineBarrier(cmd,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+    0,
+    0, nullptr,
+    0, nullptr,
+    1, &imageBarrier);
+
   VkClearValue clearValues[2];
   clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
@@ -210,7 +233,7 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
   VkSubmitInfo submitInfo = cassidy::init::submitInfo(1, &m_imageAvailableSemaphores[m_currentFrameIndex], waitStages, 
     1, &m_renderFinishedSemaphores[m_currentFrameIndex], 2, submitBuffers);
 
-  vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrameIndex]);
+  const VkResult submitResult = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrameIndex]);
 
   VkPresentInfoKHR presentInfo = cassidy::init::presentInfo(1, &m_renderFinishedSemaphores[m_currentFrameIndex],
     1, &m_swapchain.swapchain, &imageIndex);
@@ -383,7 +406,8 @@ void cassidy::Renderer::initLogicalDevice()
     &deviceFeatures, DEVICE_EXTENSIONS.size(), DEVICE_EXTENSIONS.data(), VALIDATION_LAYERS.size(),
     VALIDATION_LAYERS.data());
 
-  VK_CHECK(vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device));
+  const VkResult deviceCreateResult = vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device);
+  VK_CHECK(deviceCreateResult);
 
   vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
   vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &m_presentQueue);
@@ -857,7 +881,8 @@ void cassidy::Renderer::initViewportImages()
     // Transition viewport image layout to IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
     cassidy::helper::immediateSubmit(m_device, m_uploadContext,
       [=](VkCommandBuffer cmd) {
-      cassidy::helper::transitionImageLayout(m_uploadContext.uploadCommandBuffer, m_viewportImages[i].image, format,
+      cassidy::helper::transitionImageLayout(m_uploadContext.uploadCommandBuffer, 
+        m_viewportImages[i].image, format,
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_READ_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,

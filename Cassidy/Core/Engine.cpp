@@ -29,6 +29,7 @@ void cassidy::Engine::init()
 
   initInstance();
   initSurface();
+  initDebugMessenger();
 
   m_camera.init(this);
   m_renderer.init(this);
@@ -197,8 +198,10 @@ void cassidy::Engine::initInstance()
     return;
   }
 
-  const char** extensionNames = new const char* [sizeof(char*) * numRequiredExtensions];
-  if (SDL_Vulkan_GetInstanceExtensions(m_window, &numRequiredExtensions, extensionNames) == SDL_TRUE)
+  std::vector<const char*> extensionNames;
+  extensionNames.resize(numRequiredExtensions + cassidy::Renderer::INSTANCE_EXTENSIONS.size());
+
+  if (SDL_Vulkan_GetInstanceExtensions(m_window, &numRequiredExtensions, extensionNames.data()) == SDL_TRUE)
   {
     std::cout << numRequiredExtensions << " required extensions for SDL: " << std::endl;
     for (uint8_t i = 0; i < numRequiredExtensions; ++i)
@@ -206,6 +209,17 @@ void cassidy::Engine::initInstance()
       std::cout << extensionNames[i] << std::endl;
     }
     std::cout << std::endl;
+
+    std::cout << cassidy::Renderer::INSTANCE_EXTENSIONS.size() << " required extensions for engine instance:" << std::endl;
+    for (size_t i = 0; i < cassidy::Renderer::INSTANCE_EXTENSIONS.size(); ++i)
+    {
+      std::cout << cassidy::Renderer::INSTANCE_EXTENSIONS[i] << std::endl;
+    }
+    std::cout << std::endl;
+
+    memcpy(extensionNames.data() + numRequiredExtensions,
+      cassidy::Renderer::INSTANCE_EXTENSIONS.data(),
+      cassidy::Renderer::INSTANCE_EXTENSIONS.size() * sizeof(char*));
   }
   else
   {
@@ -223,11 +237,10 @@ void cassidy::Engine::initInstance()
 
   const auto& validationLayers = cassidy::Renderer::VALIDATION_LAYERS;
 
-  VkInstanceCreateInfo instanceCreateInfo = cassidy::init::instanceCreateInfo(&appInfo, numRequiredExtensions,
-    extensionNames, validationLayers.size(), validationLayers.data(), &debugMessengerInfo);
+  VkInstanceCreateInfo instanceCreateInfo = cassidy::init::instanceCreateInfo(&appInfo, extensionNames.size(),
+    extensionNames.data(), validationLayers.size(), validationLayers.data(), &debugMessengerInfo);
 
   const VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_instance);
-  delete[] extensionNames;
 
   if (result == VK_SUCCESS)
     std::cout << "Successfully created Vulkan instance!\n" << std::endl;
@@ -249,4 +262,34 @@ void cassidy::Engine::initSurface()
   m_deletionQueue.addFunction([=]() {
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
   });
+}
+
+void cassidy::Engine::initDebugMessenger()
+{
+  VkDebugUtilsMessengerCreateInfoEXT debugInfo = {
+    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+    .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+                     | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+                     | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+    .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+                 | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+                 | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+    .pfnUserCallback = debugCallback,
+  };
+  VkResult debugUtilsResult = createDebugUtilsMessengerEXT(m_instance, &debugInfo, nullptr, &m_debugMessenger);
+
+  if (debugUtilsResult != VK_SUCCESS)
+  {
+    std::cout << "ERROR: Failed to create debug messenger!\n" << std::endl;
+    return;
+  }
+  std::cout << "Successfully created debug messenger!\n" << std::endl;
+
+  m_deletionQueue.addFunction([=]() {
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+      m_instance, "vkDestroyDebugUtilsMessengerEXT");
+
+    if (func)
+      func(m_instance, m_debugMessenger, nullptr);
+    });
 }

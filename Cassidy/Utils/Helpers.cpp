@@ -127,6 +127,15 @@ SwapchainSupportDetails cassidy::helper::querySwapchainSupport(VkPhysicalDevice 
   return details;
 }
 
+void cassidy::helper::queryAvailableExtensions(VkPhysicalDevice physicalDevice, const char* layerName, std::vector<VkExtensionProperties>& availableExtensions)
+{
+  uint32_t numAvailableExtensions;
+  vkEnumerateDeviceExtensionProperties(physicalDevice, layerName, &numAvailableExtensions, nullptr);
+
+  availableExtensions.resize(numAvailableExtensions);
+  vkEnumerateDeviceExtensionProperties(physicalDevice, layerName, &numAvailableExtensions, availableExtensions.data());
+}
+
 bool cassidy::helper::isSwapchainPresentModeSupported(uint32_t numAvailableModes, VkPresentModeKHR* availableModes, VkPresentModeKHR desiredMode)
 {
   for (uint32_t i = 0; i < numAvailableModes; ++i)
