@@ -1,7 +1,7 @@
 #include "Renderer.h"
 #include "Core/Engine.h"
 #include "Core/TextureLibrary.h"
-#include "Core/DescriptorBuilder.h"
+#include "Utils/DescriptorBuilder.h"
 #include "Utils/Helpers.h"
 #include "Utils/Initialisers.h"
 
@@ -179,7 +179,7 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
   vkCmdEndRenderPass(cmd);
   VK_CHECK(vkEndCommandBuffer(cmd));
 }
-
+ 
 void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
 {
   const VkCommandBuffer& cmd = m_viewportCommandBuffers[m_currentFrameIndex];
@@ -941,7 +941,7 @@ void cassidy::Renderer::initViewportRenderPass()
   VkSubpassDescription subpass = cassidy::init::subpassDescription(
     VK_PIPELINE_BIND_POINT_GRAPHICS, 1, &colourRef, &depthRef);
 
-  VkSubpassDependency dependency = cassidy::init::subpassDependency(VK_SUBPASS_EXTERNAL, 0,
+  VkSubpassDependency dependency = cassidy::init::subpassDependency(0, VK_SUBPASS_EXTERNAL,
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 
     VK_ACCESS_NONE,
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 

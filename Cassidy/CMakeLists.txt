@@ -26,9 +26,6 @@ add_executable(Cassidy
 	Core/TextureLibrary.h
 	Core/TextureLibrary.cpp
 
-	Core/DescriptorBuilder.h
-	Core/DescriptorBuilder.cpp
-
 	Core/Pipeline.h
 	Core/Pipeline.cpp
 	Core/Renderer.h
@@ -64,6 +61,9 @@ add_library(CassidyUtils STATIC
 	Utils/Keycode.h
 	Utils/MouseCode.h
 	Utils/Types.h
+
+	Utils/DescriptorBuilder.h
+	Utils/DescriptorBuilder.cpp
 	)
 	
 	target_include_directories(CassidyUtils PUBLIC 

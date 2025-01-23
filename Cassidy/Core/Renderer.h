@@ -4,7 +4,7 @@
 #include "Core/Pipeline.h"
 #include <Core/Mesh.h>
 #include <Core/Texture.h>
-#include <Core/DescriptorBuilder.h>
+#include <Utils/DescriptorBuilder.h>
 
 // Forward declarations:
 struct SDL_Window;
