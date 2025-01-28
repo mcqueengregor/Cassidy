@@ -111,29 +111,6 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
   VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
   vkBeginCommandBuffer(cmd, &beginInfo);
 
-  // Potential sources for understanding pipeline barriers and render passes/subpasses better:
-  // https://www.reddit.com/r/vulkan/comments/co7wla/confused_about_pipeline_stages_and_synchronization/?rdt=46443
-  // https://stackoverflow.com/questions/58562267/vkcmdpipelinebarrier-clarification-on-renderpass-synchronization-scopes
-  // https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VkSubpassDependency
-
-  VkImageMemoryBarrier imageBarrier = {
-  .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-  .oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-  .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-  .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-  .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-  .image = m_viewportImages[imageIndex].image,
-  .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-  };
-
-  vkCmdPipelineBarrier(cmd,
-    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-    0,
-    0, nullptr,
-    0, nullptr,
-    1, &imageBarrier);
-
   VkClearValue clearValues[2];
   clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
@@ -160,7 +137,7 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
-    m_backpackMesh.draw(cmd);
+    m_triangleMesh.draw(cmd);
   }
 
   /*
@@ -174,7 +151,7 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
     https://stackoverflow.com/questions/44932933/vulkan-device-lost-after-submitting-single-time-commandbuffer
   */ 
 
-  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+  //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
   vkCmdEndRenderPass(cmd);
   VK_CHECK(vkEndCommandBuffer(cmd));
@@ -215,7 +192,7 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
-    //m_backpackMesh.draw(cmd);
+    //m_triangleMesh.draw(cmd);
   }
 
   vkCmdEndRenderPass(cmd);
@@ -233,7 +210,7 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
   VkSubmitInfo submitInfo = cassidy::init::submitInfo(1, &m_imageAvailableSemaphores[m_currentFrameIndex], waitStages, 
     1, &m_renderFinishedSemaphores[m_currentFrameIndex], 2, submitBuffers);
 
-  const VkResult submitResult = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrameIndex]);
+  VK_CHECK(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrameIndex]));
 
   VkPresentInfoKHR presentInfo = cassidy::init::presentInfo(1, &m_renderFinishedSemaphores[m_currentFrameIndex],
     1, &m_swapchain.swapchain, &imageIndex);
@@ -532,17 +509,32 @@ void cassidy::Renderer::initDefaultRenderPass()
 
   VkSubpassDescription subpass = cassidy::init::subpassDescription(VK_PIPELINE_BIND_POINT_GRAPHICS, 1,
     &colourAttachmentRef, &depthAttachmentRef);
-
-  VkSubpassDependency dependency = cassidy::init::subpassDependency(VK_SUBPASS_EXTERNAL, 0,
-    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-    VK_ACCESS_NONE,
-    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+ 
+  VkSubpassDependency dependencies[] = {
+    {
+      .srcSubpass = VK_SUBPASS_EXTERNAL,
+      .dstSubpass = 0,
+      .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+      .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+      .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+    },
+    {
+      .srcSubpass = 0,
+      .dstSubpass = VK_SUBPASS_EXTERNAL,
+      .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+      .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+      .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+    }
+  };
 
   VkAttachmentDescription attachments[] = { colourAttachment, depthAttachment };
 
   VkRenderPassCreateInfo renderPassInfo = cassidy::init::renderPassCreateInfo(2, attachments,
-    1, &subpass, 1, &dependency);
+    1, &subpass, 2, dependencies);
 
   VK_CHECK(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_backBufferRenderPass));
 
@@ -861,7 +853,7 @@ void cassidy::Renderer::initViewportImages()
 
   for (size_t i = 0; i < m_viewportImages.size(); ++i)
   {
-    const VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+    const VkFormat format = m_swapchain.imageFormat;
     const VkExtent3D imageExtent = {
       m_swapchain.extent.width,
       m_swapchain.extent.height,
@@ -881,13 +873,13 @@ void cassidy::Renderer::initViewportImages()
     // Transition viewport image layout to IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
     cassidy::helper::immediateSubmit(m_device, m_uploadContext,
       [=](VkCommandBuffer cmd) {
-      cassidy::helper::transitionImageLayout(m_uploadContext.uploadCommandBuffer, 
-        m_viewportImages[i].image, format,
-        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_READ_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        1);
-    });
+        cassidy::helper::transitionImageLayout(m_uploadContext.uploadCommandBuffer,
+          m_viewportImages[i].image, format,
+          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+          VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_READ_BIT,
+          VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+          1);
+      });
 
     VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_viewportImages[i].image,
       format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
@@ -895,24 +887,24 @@ void cassidy::Renderer::initViewportImages()
     VK_CHECK(vkCreateImageView(m_device, &viewInfo, nullptr, &m_viewportImageViews[i]));
   }
 
-    // Create swapchain depth image and image view:
-    VkFormat depthFormats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-    const VkFormat& depthFormat = cassidy::helper::findSupportedFormat(m_physicalDevice, 3, depthFormats,
-      VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+  // Create swapchain depth image and image view:
+  VkFormat depthFormats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+  const VkFormat& depthFormat = cassidy::helper::findSupportedFormat(m_physicalDevice, 3, depthFormats,
+    VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
-    VkImageCreateInfo depthImageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D, { m_swapchain.extent.width, m_swapchain.extent.height, 1 },
-      1, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+  VkImageCreateInfo depthImageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D, { m_swapchain.extent.width, m_swapchain.extent.height, 1 },
+    1, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
-    VmaAllocationCreateInfo vmaAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-      VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+  VmaAllocationCreateInfo vmaAllocInfo = cassidy::init::vmaAllocationCreateInfo(
+    VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
-    vmaCreateImage(m_allocator, &depthImageInfo, &vmaAllocInfo,
-      &m_viewportDepthImage.image, &m_viewportDepthImage.allocation, nullptr);
+  vmaCreateImage(m_allocator, &depthImageInfo, &vmaAllocInfo,
+    &m_viewportDepthImage.image, &m_viewportDepthImage.allocation, nullptr);
 
-    VkImageViewCreateInfo depthViewInfo = cassidy::init::imageViewCreateInfo(m_viewportDepthImage.image, depthFormat,
-      VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+  VkImageViewCreateInfo depthViewInfo = cassidy::init::imageViewCreateInfo(m_viewportDepthImage.image, depthFormat,
+    VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-    VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_viewportDepthView));
+  VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_viewportDepthView));
 
   // (Deletion of viewport resources is handled in ImGui deletion queue function)
 }
@@ -920,7 +912,7 @@ void cassidy::Renderer::initViewportImages()
 void cassidy::Renderer::initViewportRenderPass()
 {
   VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(
-    VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+    m_swapchain.imageFormat, VK_SAMPLE_COUNT_1_BIT,
     VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -941,16 +933,31 @@ void cassidy::Renderer::initViewportRenderPass()
   VkSubpassDescription subpass = cassidy::init::subpassDescription(
     VK_PIPELINE_BIND_POINT_GRAPHICS, 1, &colourRef, &depthRef);
 
-  VkSubpassDependency dependency = cassidy::init::subpassDependency(0, VK_SUBPASS_EXTERNAL,
-    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 
-    VK_ACCESS_NONE,
-    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 
-    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+  VkSubpassDependency dependencies[] = {
+    {
+      .srcSubpass = VK_SUBPASS_EXTERNAL,
+      .dstSubpass = 0,
+      .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+      .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+      .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+    },
+    {
+      .srcSubpass = 0,
+      .dstSubpass = VK_SUBPASS_EXTERNAL,
+      .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+      .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+      .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+    },
+  };
 
   VkAttachmentDescription attachments[] = { colourAttachment, depthAttachment };
 
   VkRenderPassCreateInfo info = cassidy::init::renderPassCreateInfo(2, attachments,
-    1, &subpass, 1, &dependency);
+    1, &subpass, 2, dependencies);
 
   VK_CHECK(vkCreateRenderPass(m_device, &info, nullptr, &m_viewportRenderPass));
 

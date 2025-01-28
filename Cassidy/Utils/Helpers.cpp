@@ -95,6 +95,9 @@ QueueFamilyIndices cassidy::helper::findQueueFamilies(VkPhysicalDevice device, V
     if (presentSupport)
       indices.presentFamily = i;
 
+    if (indices.isComplete())
+      break;
+
     ++i;
   }
 

@@ -164,16 +164,18 @@ namespace cassidy
     VmaAllocator m_allocator;
 
     // Viewport rendering objects:
-    std::vector<AllocatedImage> m_viewportImages;
-    std::vector<VkImageView> m_viewportImageViews;
-    AllocatedImage m_viewportDepthImage;
-    VkImageView m_viewportDepthView;
-    Pipeline m_viewportPipeline;
-    VkRenderPass m_viewportRenderPass;
-    VkCommandPool m_viewportCommandPool;
-    std::vector<VkFramebuffer> m_viewportFramebuffers;
-    std::vector<VkCommandBuffer> m_viewportCommandBuffers;
-    std::vector<VkDescriptorSet> m_viewportDescSets;
+    std::vector<AllocatedImage>   m_viewportImages;
+    std::vector<VkImageView>      m_viewportImageViews;
+    AllocatedImage                m_viewportDepthImage;
+    VkImageView                   m_viewportDepthView;
+    Pipeline                      m_viewportPipeline;
+    VkRenderPass                  m_viewportRenderPass;
+    VkCommandPool                 m_viewportCommandPool;
+    std::vector<VkFramebuffer>    m_viewportFramebuffers;
+    std::vector<VkCommandBuffer>  m_viewportCommandBuffers;
+    std::vector<VkDescriptorSet>  m_viewportDescSets;
+
+    VkRenderPass                  m_imguiRenderPass;
 
     // Misc.:
     DeletionQueue m_deletionQueue;

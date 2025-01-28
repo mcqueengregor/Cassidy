@@ -8,7 +8,7 @@
 do																	                            \
 {																	                              \
 	VkResult err = x;										                      		\
-	if (err)														                          \
+	if (err < 0)  /* (Validation ERROR codes are < 0) */          \
 	{																                              \
 		std::cout << "DETECTED VULKAN ERROR: " << err << std::endl;	\
 		abort();													                          \
