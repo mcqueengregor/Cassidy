@@ -359,13 +359,28 @@ void cassidy::Renderer::recordGuiCommands()
     }
     ImGui::End();
 
-    // TODO: Once textures are implemented, add an ImGui viewport sampler, create
-    // ImGui descriptor set for swapchain image and display in viewport widget.
-    // (https://github.com/ocornut/imgui/wiki/image-loading-and-displaying-examples#example-for-vulkan-users)
     if (ImGui::Begin("Viewport"))
     {
       ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-      ImGui::Image(m_viewportDescSets[m_currentFrameIndex], ImVec2{ viewportSize.x, viewportSize.y });
+      ImVec2 newViewportSize = viewportSize;
+
+      float viewportAspect = viewportSize.y / viewportSize.x;
+      float swapchainAspect = static_cast<float>(m_swapchain.extent.height) / static_cast<float>(m_swapchain.extent.width);
+
+      // Force viewport aspect ratio to be equal to swapchain extent's aspect ratio:
+      if (viewportAspect > swapchainAspect)
+      {
+        newViewportSize.y = std::floor(viewportSize.x * swapchainAspect);
+      }
+
+      viewportAspect = viewportSize.x / viewportSize.y;
+      swapchainAspect = static_cast<float>(m_swapchain.extent.width) / static_cast<float>(m_swapchain.extent.height);
+
+      if (viewportAspect > swapchainAspect)
+      {
+        newViewportSize.x = std::floor(viewportSize.y * swapchainAspect);
+      }
+      ImGui::Image(m_viewportDescSets[m_currentFrameIndex], newViewportSize);
     }
     ImGui::End();
   }
@@ -898,7 +913,7 @@ void cassidy::Renderer::initViewportImages()
       .mipLevels = 1,
       .arrayLayers = 1,
       .samples = VK_SAMPLE_COUNT_1_BIT,
-      .tiling = VK_IMAGE_TILING_OPTIMAL,  // Setting this to TILING_LINEAR makes queueSubmit return DEVICE_LOST!!!!!!!!
+      .tiling = VK_IMAGE_TILING_OPTIMAL,
       .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
