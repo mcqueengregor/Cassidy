@@ -115,6 +115,27 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
   clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
+  VkImageMemoryBarrier barrier = {
+  .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+  .pNext = nullptr,
+  .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+  .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+  .oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+  .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+  .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+  .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+  .image = m_viewportImages[imageIndex].image,
+  .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+  };
+
+  vkCmdPipelineBarrier(cmd,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    0,
+    0, nullptr,
+    0, nullptr,
+    1, &barrier);
+
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_backBufferRenderPass,
     m_swapchain.framebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
 
@@ -137,7 +158,7 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
-    m_triangleMesh.draw(cmd);
+    m_backpackMesh.draw(cmd);
   }
 
   /*
@@ -151,7 +172,7 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
     https://stackoverflow.com/questions/44932933/vulkan-device-lost-after-submitting-single-time-commandbuffer
   */ 
 
-  //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
   vkCmdEndRenderPass(cmd);
   VK_CHECK(vkEndCommandBuffer(cmd));
@@ -192,7 +213,7 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
-    //m_triangleMesh.draw(cmd);
+    m_backpackMesh.draw(cmd);
   }
 
   vkCmdEndRenderPass(cmd);
@@ -533,8 +554,16 @@ void cassidy::Renderer::initDefaultRenderPass()
 
   VkAttachmentDescription attachments[] = { colourAttachment, depthAttachment };
 
-  VkRenderPassCreateInfo renderPassInfo = cassidy::init::renderPassCreateInfo(2, attachments,
-    1, &subpass, 2, dependencies);
+  VkRenderPassCreateInfo renderPassInfo = {
+    .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+    .pNext = nullptr,
+    .attachmentCount = 2,
+    .pAttachments = attachments,
+    .subpassCount = 1,
+    .pSubpasses = &subpass,
+    .dependencyCount = 2,
+    .pDependencies = dependencies,
+  };
 
   VK_CHECK(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_backBufferRenderPass));
 
@@ -860,9 +889,20 @@ void cassidy::Renderer::initViewportImages()
       1,
     };
 
-    VkImageCreateInfo imageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D,
-      imageExtent, 1, format, VK_IMAGE_TILING_LINEAR,
-      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+    VkImageCreateInfo imageInfo = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .pNext = nullptr,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = format,
+      .extent = imageExtent,
+      .mipLevels = 1,
+      .arrayLayers = 1,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .tiling = VK_IMAGE_TILING_OPTIMAL,
+      .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
 
     VmaAllocationCreateInfo allocInfo = cassidy::init::vmaAllocationCreateInfo(
       VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
@@ -881,8 +921,14 @@ void cassidy::Renderer::initViewportImages()
           1);
       });
 
-    VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_viewportImages[i].image,
-      format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    VkImageViewCreateInfo viewInfo = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+      .pNext = nullptr,
+      .image = m_viewportImages[i].image,
+      .viewType = VK_IMAGE_VIEW_TYPE_2D,
+      .format = format,
+      .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1, },
+    };
 
     VK_CHECK(vkCreateImageView(m_device, &viewInfo, nullptr, &m_viewportImageViews[i]));
   }
@@ -892,18 +938,36 @@ void cassidy::Renderer::initViewportImages()
   const VkFormat& depthFormat = cassidy::helper::findSupportedFormat(m_physicalDevice, 3, depthFormats,
     VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
-  VkImageCreateInfo depthImageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D, { m_swapchain.extent.width, m_swapchain.extent.height, 1 },
-    1, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
+  VkImageCreateInfo depthImageInfo = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+    .pNext = nullptr,
+    .imageType = VK_IMAGE_TYPE_2D,
+    .format = depthFormat,
+    .extent = { m_swapchain.extent.width, m_swapchain.extent.height, 1 },
+    .mipLevels = 1,
+    .arrayLayers = 1,
+    .samples = VK_SAMPLE_COUNT_1_BIT,
+    .tiling = VK_IMAGE_TILING_OPTIMAL,
+    .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+  };
+  
   VmaAllocationCreateInfo vmaAllocInfo = cassidy::init::vmaAllocationCreateInfo(
     VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
   vmaCreateImage(m_allocator, &depthImageInfo, &vmaAllocInfo,
     &m_viewportDepthImage.image, &m_viewportDepthImage.allocation, nullptr);
 
-  VkImageViewCreateInfo depthViewInfo = cassidy::init::imageViewCreateInfo(m_viewportDepthImage.image, depthFormat,
-    VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-
+  VkImageViewCreateInfo depthViewInfo = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+    .pNext = nullptr,
+    .image = m_viewportDepthImage.image,
+    .viewType = VK_IMAGE_VIEW_TYPE_2D,
+    .format = depthFormat,
+    .subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1, },
+  };
+  
   VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_viewportDepthView));
 
   // (Deletion of viewport resources is handled in ImGui deletion queue function)
@@ -911,19 +975,31 @@ void cassidy::Renderer::initViewportImages()
 
 void cassidy::Renderer::initViewportRenderPass()
 {
-  VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(
-    m_swapchain.imageFormat, VK_SAMPLE_COUNT_1_BIT,
-    VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  VkAttachmentDescription colourAttachment = {
+    .format = m_swapchain.imageFormat,
+    .samples = VK_SAMPLE_COUNT_1_BIT,
+    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+    .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+  };
 
   VkFormat depthFormatCandidates[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
   const VkFormat depthFormat = cassidy::helper::findSupportedFormat(m_physicalDevice, 3, depthFormatCandidates,
     VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
-  VkAttachmentDescription depthAttachment = cassidy::init::attachmentDescription(
-    depthFormat, VK_SAMPLE_COUNT_1_BIT, 
-    VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+  VkAttachmentDescription depthAttachment = {
+    .format = depthFormat,
+    .samples = VK_SAMPLE_COUNT_1_BIT,
+    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+    .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+  };
 
   VkAttachmentReference colourRef = cassidy::init::attachmentReference(0, 
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -956,10 +1032,18 @@ void cassidy::Renderer::initViewportRenderPass()
 
   VkAttachmentDescription attachments[] = { colourAttachment, depthAttachment };
 
-  VkRenderPassCreateInfo info = cassidy::init::renderPassCreateInfo(2, attachments,
-    1, &subpass, 2, dependencies);
+  VkRenderPassCreateInfo renderPassInfo = {
+    .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+    .pNext = nullptr,
+    .attachmentCount = 2,
+    .pAttachments = attachments,
+    .subpassCount = 1,
+    .pSubpasses = &subpass,
+    .dependencyCount = 2,
+    .pDependencies = dependencies,
+  };
 
-  VK_CHECK(vkCreateRenderPass(m_device, &info, nullptr, &m_viewportRenderPass));
+  VK_CHECK(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_viewportRenderPass));
 
   std::cout << "Created viewport render pass!" << std::endl;
 }
