@@ -898,7 +898,7 @@ void cassidy::Renderer::initViewportImages()
       .mipLevels = 1,
       .arrayLayers = 1,
       .samples = VK_SAMPLE_COUNT_1_BIT,
-      .tiling = VK_IMAGE_TILING_OPTIMAL,
+      .tiling = VK_IMAGE_TILING_OPTIMAL,  // Setting this to TILING_LINEAR makes queueSubmit return DEVICE_LOST!!!!!!!!
       .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
