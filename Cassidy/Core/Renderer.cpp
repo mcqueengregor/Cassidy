@@ -849,11 +849,6 @@ void cassidy::Renderer::initImGui()
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // Handle cursor show/hide functionality ourselves.
 
-  initViewportImages();
-  initViewportCommandPool();
-  initViewportCommandBuffers();
-  initViewportFramebuffers();
-
   ImGui_ImplSDL2_InitForVulkan(m_engineRef->getWindow());
 
   ImGui_ImplVulkan_InitInfo initInfo = {};
@@ -877,18 +872,16 @@ void cassidy::Renderer::initImGui()
   m_viewportSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties,
     VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, VK_FALSE);
 
+  initViewportCommandPool();
+  initViewportCommandBuffers();
+  initViewportImages();
+  initViewportFramebuffers();
+
   // Solution for full ImGui setup w/ viewport: https://github.com/ocornut/imgui/issues/5110
 
   ImGui_ImplVulkan_DestroyFontUploadObjects();
 
-  m_viewportDescSets.resize(m_swapchain.imageViews.size());
-  for (uint32_t i = 0; i < m_viewportImageViews.size(); ++i)
-  {
-    m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
-      m_viewportImageViews[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  }
-
-  m_deletionQueue.addFunction([=]() {
+  m_deletionQueue.addFunction([&, imGuiPool]() {
     for (auto fb : m_viewportFramebuffers)
       vkDestroyFramebuffer(m_device, fb, nullptr);
    
@@ -1011,6 +1004,13 @@ void cassidy::Renderer::initViewportImages()
   };
   
   VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_viewportDepthView));
+
+  m_viewportDescSets.resize(m_swapchain.imageViews.size());
+  for (uint32_t i = 0; i < m_viewportImageViews.size(); ++i)
+  {
+    m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
+      m_viewportImageViews[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  }
 
   // (Deletion of viewport resources is handled in ImGui deletion queue function)
 }
@@ -1138,7 +1138,22 @@ void cassidy::Renderer::rebuildSwapchain()
 
   vkWaitForFences(m_device, m_inFlightFences.size(), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
   m_swapchain.release(m_device, m_allocator);
+
+  // Release ImGui viewport resources:
+  for (const auto& f : m_viewportFramebuffers)
+    vkDestroyFramebuffer(m_device, f, nullptr);
+  for (const auto& i : m_viewportImages)
+    vmaDestroyImage(m_allocator, i.image, i.allocation);
+  vmaDestroyImage(m_allocator, m_viewportDepthImage.image, m_viewportDepthImage.allocation);
+  for (const auto& iv : m_viewportImageViews)
+    vkDestroyImageView(m_device, iv, nullptr);
+  vkDestroyImageView(m_device, m_viewportDepthView, nullptr);
+
+  for (size_t i = 0; i < m_viewportDescSets.size(); ++i)
+    ImGui_ImplVulkan_RemoveTexture(m_viewportDescSets[i]);
+
   initSwapchain();
   initSwapchainFramebuffers();
+  initViewportImages();
   initViewportFramebuffers();
 }
