@@ -76,5 +76,6 @@ namespace cassidy
     inline VkInstance getInstance()     { return m_instance; }
     inline VkSurfaceKHR getSurface()    { return m_surface; }
     inline cassidy::Camera& getCamera() { return m_camera; }
+    inline double getDeltaTimeSecs()    { return GlobalTimer::deltaTime(); }
   };
 }

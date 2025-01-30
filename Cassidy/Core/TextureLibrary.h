@@ -25,13 +25,23 @@ public:
   static inline cassidy::Texture* retrieveFallbackTexture(cassidy::TextureType type) {
     return TextureLibrary::get().retrieveFallbackTextureImpl(type);  
   }
+  
+  static inline size_t getNumLoadedTextures() {
+    return TextureLibrary::get().getNumLoadedTexturesImpl();
+  }
+
+  static inline const std::unordered_map<std::string, cassidy::Texture>& getTextureLibraryMap() {
+    return TextureLibrary::get().getTextureLibraryMapImpl();
+  }
 
 private:
   TextureLibrary() {}
 
   cassidy::Texture* loadTextureImpl(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
-  void releaseAllImpl(VkDevice device, VmaAllocator allocator);
+  void              releaseAllImpl(VkDevice device, VmaAllocator allocator);
   cassidy::Texture* retrieveFallbackTextureImpl(cassidy::TextureType type);
+  inline size_t     getNumLoadedTexturesImpl() { return m_loadedTextures.size(); }
+  inline const std::unordered_map<std::string, cassidy::Texture>& getTextureLibraryMapImpl() { return m_loadedTextures; }
 
   std::unordered_map<std::string, cassidy::Texture> m_loadedTextures;
 };

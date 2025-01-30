@@ -337,6 +337,26 @@ void cassidy::Renderer::recordGuiCommands()
     ImGui::Begin("Cassidy main");
     {
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+      ImGui::Text("Engine stats:");
+      {
+        ImGui::Text("Frametime: %fms", m_engineRef->getDeltaTimeSecs() * 1000);
+
+        std::string texLibraryHeaderText = "Texture library size: " + std::to_string(TextureLibrary::getNumLoadedTextures());
+
+        if (ImGui::TreeNode(texLibraryHeaderText.c_str()))
+        {
+          const auto& textureLibrary = TextureLibrary::getTextureLibraryMap();
+          for (const auto& texture : textureLibrary)
+          {
+            std::string_view textureFilename = texture.first;
+            size_t lastBackSlash = textureFilename.find_last_of('/');
+            ++lastBackSlash;  // Advance one character forward to isolate the filename.
+            std::string_view textureFilenameSub = textureFilename.substr(lastBackSlash, textureFilename.size() - lastBackSlash);
+            ImGui::Text(textureFilenameSub.data());
+          }
+          ImGui::TreePop();
+        }
+      }
       ImGui::Text("SDL relative motion: (%i, %i)", InputHandler::getCursorOffsetX(), InputHandler::getCursorOffsetY());
 
       const char* cursorStateText = "";
@@ -380,6 +400,8 @@ void cassidy::Renderer::recordGuiCommands()
       {
         newViewportSize.x = std::floor(viewportSize.y * swapchainAspect);
       }
+
+      // Centre viewport image in window:
       ImVec2 cursorPos = ImGui::GetCursorPos();
       cursorPos.x += (viewportSize.x - newViewportSize.x) * 0.5f;
       cursorPos.y += (viewportSize.y - newViewportSize.y) * 0.5f;
