@@ -380,6 +380,11 @@ void cassidy::Renderer::recordGuiCommands()
       {
         newViewportSize.x = std::floor(viewportSize.y * swapchainAspect);
       }
+      ImVec2 cursorPos = ImGui::GetCursorPos();
+      cursorPos.x += (viewportSize.x - newViewportSize.x) * 0.5f;
+      cursorPos.y += (viewportSize.y - newViewportSize.y) * 0.5f;
+
+      ImGui::SetCursorPos(cursorPos);
       ImGui::Image(m_viewportDescSets[m_currentFrameIndex], newViewportSize);
     }
     ImGui::End();
