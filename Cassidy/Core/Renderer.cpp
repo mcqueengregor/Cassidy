@@ -115,27 +115,6 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
   clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
-  //VkImageMemoryBarrier barrier = {
-  //.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-  //.pNext = nullptr,
-  //.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-  //.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-  //.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-  //.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-  //.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-  //.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-  //.image = m_viewportImages[imageIndex].image,
-  //.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-  //};
-
-  //vkCmdPipelineBarrier(cmd,
-  //  VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-  //  VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-  //  0,
-  //  0, nullptr,
-  //  0, nullptr,
-  //  1, &barrier);
-
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_backBufferRenderPass,
     m_swapchain.framebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
 
@@ -207,6 +186,9 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
     const uint32_t dynamicUniformOffset = m_currentFrameIndex * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData), m_physicalDeviceProperties);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
+
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
+      2, 1, &getCurrentFrameData().m_backpackMaterialSet, 0, nullptr);
 
     vkCmdPushConstants(cmd, m_helloTrianglePipeline.getLayout(), VK_SHADER_STAGE_FRAGMENT_BIT,
       sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants), &m_phongLightingPushConstants);
@@ -728,7 +710,7 @@ void cassidy::Renderer::initMeshes()
 
   m_backpackMesh.loadModel("Backpack/backpack.obj", m_allocator, this);
   m_backpackAlbedo.load(MESH_ABS_FILEPATH   + std::string("Backpack/diffuse.jpg"),  m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
-  m_backpackSpecular.load(MESH_ABS_FILEPATH + std::string("Backpack/specular.jpg"), m_allocator, this, VK_FORMAT_R8_UNORM, VK_FALSE);
+  m_backpackSpecular.load(MESH_ABS_FILEPATH + std::string("Backpack/specular.jpg"), m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_FALSE);
   m_backpackNormal.load(MESH_ABS_FILEPATH   + std::string("Backpack/normal.png"),   m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_FALSE);
 
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
