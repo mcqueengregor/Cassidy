@@ -176,7 +176,7 @@ VkDescriptorSetLayout cassidy::DescriptorLayoutCache::createDescLayout(VkDescrip
     layoutInfo.bindings.push_back(layoutCreateInfo->pBindings[i]);
 
     // Keep track of whether bindings are in ascending order or not:
-    if (layoutCreateInfo->pBindings[i].binding > lastBinding)
+    if (static_cast<int>(layoutCreateInfo->pBindings[i].binding) > lastBinding)
       lastBinding = layoutCreateInfo->pBindings[i].binding;
     else
       isSorted = false;

@@ -115,26 +115,26 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
   clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
-  VkImageMemoryBarrier barrier = {
-  .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-  .pNext = nullptr,
-  .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-  .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-  .oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-  .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-  .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-  .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-  .image = m_viewportImages[imageIndex].image,
-  .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-  };
+  //VkImageMemoryBarrier barrier = {
+  //.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+  //.pNext = nullptr,
+  //.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+  //.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+  //.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+  //.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+  //.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+  //.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+  //.image = m_viewportImages[imageIndex].image,
+  //.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+  //};
 
-  vkCmdPipelineBarrier(cmd,
-    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-    0,
-    0, nullptr,
-    0, nullptr,
-    1, &barrier);
+  //vkCmdPipelineBarrier(cmd,
+  //  VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+  //  VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+  //  0,
+  //  0, nullptr,
+  //  0, nullptr,
+  //  1, &barrier);
 
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_backBufferRenderPass,
     m_swapchain.framebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
@@ -158,19 +158,14 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
+      2, 1, &getCurrentFrameData().m_backpackMaterialSet, 0, nullptr);
+
+    vkCmdPushConstants(cmd, m_helloTrianglePipeline.getLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 
+      sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants), &m_phongLightingPushConstants);
+
     m_backpackMesh.draw(cmd);
   }
-
-  /*
-    TODO: Implement method from Sascha Willems' offscreen rendering example? 
-    https://github.com/SaschaWillems/Vulkan/blob/master/examples/offscreen/offscreen.cpp
-  
-    Also this github issue which uses the C++ version of Vulkan:
-    https://github.com/ocornut/imgui/issues/6965
-
-    This stack overflow question as well:
-    https://stackoverflow.com/questions/44932933/vulkan-device-lost-after-submitting-single-time-commandbuffer
-  */ 
 
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
@@ -213,6 +208,9 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
+    vkCmdPushConstants(cmd, m_helloTrianglePipeline.getLayout(), VK_SHADER_STAGE_FRAGMENT_BIT,
+      sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants), &m_phongLightingPushConstants);
+    
     m_backpackMesh.draw(cmd);
   }
 
@@ -357,25 +355,15 @@ void cassidy::Renderer::recordGuiCommands()
           ImGui::TreePop();
         }
       }
-      ImGui::Text("SDL relative motion: (%i, %i)", InputHandler::getCursorOffsetX(), InputHandler::getCursorOffsetY());
 
-      const char* cursorStateText = "";
-      switch (SDL_ShowCursor(SDL_QUERY))
-      {
-      case SDL_ENABLE:
-        cursorStateText = "Showing cursor!";
-        break;
-      case SDL_DISABLE:
-        cursorStateText = "Hiding cursor!";
-        break;
-      default:
-        cursorStateText = "wtf";
-        break;
-      }
-      ImGui::Text(cursorStateText);
+      const char* const textures[] = {
+        "Diffuse",
+        "Specular",
+        "Normal"
+      };
 
-      const ImVec2& size = ImGui::GetWindowContentRegionMax();
-      ImGui::Text("Window dim: (%f, %f)", size.x, size.y);
+      ImGui::ListBox("Textures", (int*)(&m_phongLightingPushConstants.texToDisplay), textures, 3);
+      ImGui::Text("Current index: %u", m_phongLightingPushConstants.texToDisplay);
     }
     ImGui::End();
 
@@ -621,16 +609,20 @@ void cassidy::Renderer::initPipelines()
   m_helloTrianglePipeline.init(this)
     .setRenderPass(m_backBufferRenderPass)
     .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
+    .addPushConstantRange(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants))
     .addDescriptorSetLayout(m_perPassSetLayout)
     .addDescriptorSetLayout(m_perObjectSetLayout)
-    .buildGraphicsPipeline("helloTriangleVert.spv", "helloTriangleFrag.spv");
+    .addDescriptorSetLayout(m_perMaterialSetLayout)
+    .buildGraphicsPipeline("helloTriangleVert.spv", "phongLightingFrag.spv");
 
   m_viewportPipeline.init(this)
     .setRenderPass(m_viewportRenderPass)
     .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
+    .addPushConstantRange(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants))
     .addDescriptorSetLayout(m_perPassSetLayout)
     .addDescriptorSetLayout(m_perObjectSetLayout)
-    .buildGraphicsPipeline("helloTriangleVert.spv", "helloTriangleFrag.spv");
+    .addDescriptorSetLayout(m_perMaterialSetLayout)
+    .buildGraphicsPipeline("helloTriangleVert.spv", "phongLightingFrag.spv");
 
   m_deletionQueue.addFunction([=]() {
     m_helloTrianglePipeline.release();
@@ -735,12 +727,18 @@ void cassidy::Renderer::initMeshes()
   m_triangleMesh.setIndices(triangleIndices);
 
   m_backpackMesh.loadModel("Backpack/backpack.obj", m_allocator, this);
-  m_backpackAlbedo.load(MESH_ABS_FILEPATH + std::string("Backpack/diffuse.jpg"), m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
+  m_backpackAlbedo.load(MESH_ABS_FILEPATH   + std::string("Backpack/diffuse.jpg"),  m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
+  m_backpackSpecular.load(MESH_ABS_FILEPATH + std::string("Backpack/specular.jpg"), m_allocator, this, VK_FORMAT_R8_UNORM, VK_FALSE);
+  m_backpackNormal.load(MESH_ABS_FILEPATH   + std::string("Backpack/normal.png"),   m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_FALSE);
+
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
     VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
 
   m_deletionQueue.addFunction([=]() {
     m_backpackAlbedo.release(m_device, m_allocator);
+    m_backpackSpecular.release(m_device, m_allocator);
+    m_backpackNormal.release(m_device, m_allocator);
+
     TextureLibrary::releaseAll(m_device, m_allocator);
     vkDestroySampler(m_device, m_linearSampler, nullptr);
   });
@@ -757,10 +755,18 @@ void cassidy::Renderer::initDescriptorSets()
   {
     VkDescriptorBufferInfo perPassBufferInfo = cassidy::init::descriptorBufferInfo(
       m_frameData[i].perPassUniformBuffer.buffer, 0, sizeof(PerPassData));
+
     VkDescriptorBufferInfo perObjectBufferInfo = cassidy::init::descriptorBufferInfo(
       m_perObjectUniformBufferDynamic.buffer, 0, sizeof(PerObjectData));
     VkDescriptorImageInfo perObjectImageInfo = cassidy::init::descriptorImageInfo(
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackAlbedo.getImageView(), m_linearSampler);
+
+    VkDescriptorImageInfo perMaterialAlbedoInfo = cassidy::init::descriptorImageInfo(
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackAlbedo.getImageView(), m_linearSampler);
+    VkDescriptorImageInfo perMaterialSpecularInfo = cassidy::init::descriptorImageInfo(
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackSpecular.getImageView(), m_linearSampler);
+    VkDescriptorImageInfo perMaterialNormalInfo = cassidy::init::descriptorImageInfo(
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackNormal.getImageView(), m_linearSampler);
 
     cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
       .bindBuffer(0, &perPassBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
@@ -770,6 +776,12 @@ void cassidy::Renderer::initDescriptorSets()
       .bindBuffer(0, &perObjectBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
       .bindImage(1, &perObjectImageInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
       .build(m_frameData[i].perObjectSet, m_perObjectSetLayout);
+
+    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
+      .bindImage(0, &perMaterialAlbedoInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+      .bindImage(1, &perMaterialSpecularInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+      .bindImage(2, &perMaterialNormalInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+      .build(m_frameData[i].m_backpackMaterialSet, m_perMaterialSetLayout);
   }
 
   m_deletionQueue.addFunction([=]() {

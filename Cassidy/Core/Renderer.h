@@ -129,6 +129,7 @@ namespace cassidy
 
     // Rendering data:
     DefaultPushConstants m_matrixPushConstants;
+    PhongLightingPushConstants m_phongLightingPushConstants;
     FrameData m_frameData[FRAMES_IN_FLIGHT];
     AllocatedBuffer m_perObjectUniformBufferDynamic;
 
@@ -136,6 +137,8 @@ namespace cassidy
     Model m_triangleMesh;
     Model m_backpackMesh;
     Texture m_backpackAlbedo;
+    Texture m_backpackSpecular;
+    Texture m_backpackNormal;
     UploadContext m_uploadContext;
 
     // Samplers:
@@ -145,6 +148,7 @@ namespace cassidy
     // Descriptor objects:
     VkDescriptorSetLayout m_perPassSetLayout;
     VkDescriptorSetLayout m_perObjectSetLayout; // (Dynamic)
+    VkDescriptorSetLayout m_perMaterialSetLayout;
 
     VkDescriptorSet m_imguiViewportSets[FRAMES_IN_FLIGHT];  // Used to display the renderer viewport via an ImGui image.
 

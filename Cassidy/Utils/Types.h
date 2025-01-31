@@ -142,6 +142,19 @@ struct PerObjectData
   glm::mat4 world;
 };
 
+struct DirectionalLight
+{
+  glm::vec4 direction;
+  glm::vec4 colour;
+};
+
+struct PhongLightingPushConstants
+{
+  glm::uint texToDisplay = 0;
+  glm::uint padding[3];
+  DirectionalLight dirLight;
+};
+
 struct FrameData
 {
   VkDescriptorSet perFrameSet;
@@ -150,6 +163,8 @@ struct FrameData
   VkDescriptorSet perPassSet;
 
   VkDescriptorSet perObjectSet;
+
+  VkDescriptorSet m_backpackMaterialSet;
 };
 
 struct UploadContext
