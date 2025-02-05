@@ -63,7 +63,7 @@ void cassidy::Renderer::draw()
 
   updateBuffers(currentFrameData);
   recordViewportCommands(swapchainImageIndex);
-  recordGuiCommands();
+  recordGuiCommands(swapchainImageIndex);
   recordDrawCommands(swapchainImageIndex);
   submitCommandBuffers(swapchainImageIndex);
 
@@ -204,8 +204,8 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
 {
   VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
   VkCommandBuffer submitBuffers[] = {
-    m_commandBuffers[m_currentFrameIndex],
     m_viewportCommandBuffers[m_currentFrameIndex],
+    m_commandBuffers[m_currentFrameIndex],
   };
 
   VkSubmitInfo submitInfo = cassidy::init::submitInfo(1, &m_imageAvailableSemaphores[m_currentFrameIndex], waitStages, 
@@ -308,7 +308,7 @@ void cassidy::Renderer::immediateSubmit(std::function<void(VkCommandBuffer cmd)>
   vkResetCommandPool(m_device, m_uploadContext.uploadCommandPool, 0);
 }
 
-void cassidy::Renderer::recordGuiCommands()
+void cassidy::Renderer::recordGuiCommands(uint32_t imageIndex)
 {
   ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
   {
@@ -377,7 +377,7 @@ void cassidy::Renderer::recordGuiCommands()
       cursorPos.y += (viewportSize.y - newViewportSize.y) * 0.5f;
 
       ImGui::SetCursorPos(cursorPos);
-      ImGui::Image(m_viewportDescSets[m_currentFrameIndex], newViewportSize);
+      ImGui::Image(m_viewportDescSets[imageIndex], newViewportSize);
     }
     ImGui::End();
   }

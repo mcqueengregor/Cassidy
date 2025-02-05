@@ -182,7 +182,7 @@ void cassidy::Engine::initInstance()
 {
   SDL_Init(SDL_INIT_VIDEO);
 
-  VkApplicationInfo appInfo = cassidy::init::applicationInfo("Cassidy v0.0.2", 0, 0, 2, 0, VK_API_VERSION_1_3);
+  VkApplicationInfo appInfo = cassidy::init::applicationInfo("Cassidy v0.0.3", 0, 0, 3, 0, VK_API_VERSION_1_3);
   m_window = SDL_CreateWindow(appInfo.pApplicationName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
     m_windowDimensions.x, m_windowDimensions.y, SDL_WindowFlags::SDL_WINDOW_VULKAN | SDL_WindowFlags::SDL_WINDOW_RESIZABLE);
 
