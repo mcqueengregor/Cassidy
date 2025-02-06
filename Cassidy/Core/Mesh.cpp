@@ -137,7 +137,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
         const char* texName = texFilename.C_Str();
         std::cout << texType << ": " << texName;
 
-        cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + directory + texName, allocator, rendererRef, format, VK_FALSE);
+        cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + directory + texName, allocator, rendererRef, format, VK_TRUE);
 
         if (!loadedTexture)
         {

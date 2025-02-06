@@ -709,9 +709,9 @@ void cassidy::Renderer::initMeshes()
   m_triangleMesh.setIndices(triangleIndices);
 
   m_backpackMesh.loadModel("Backpack/backpack.obj", m_allocator, this);
-  m_backpackAlbedo.load(MESH_ABS_FILEPATH   + std::string("Backpack/diffuse.jpg"),  m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
-  m_backpackSpecular.load(MESH_ABS_FILEPATH + std::string("Backpack/specular.jpg"), m_allocator, this, VK_FORMAT_R8_UNORM, VK_FALSE);
-  m_backpackNormal.load(MESH_ABS_FILEPATH   + std::string("Backpack/normal.png"),   m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_FALSE);
+  m_backpackAlbedo.load(MESH_ABS_FILEPATH   + std::string("Backpack/diffuse.jpg"),  m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_TRUE);
+  m_backpackSpecular.load(MESH_ABS_FILEPATH + std::string("Backpack/specular.jpg"), m_allocator, this, VK_FORMAT_R8_UNORM, VK_TRUE);
+  m_backpackNormal.load(MESH_ABS_FILEPATH   + std::string("Backpack/normal.png"),   m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_TRUE);
 
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
     VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);

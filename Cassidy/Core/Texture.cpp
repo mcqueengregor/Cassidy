@@ -57,11 +57,22 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
     1
   };
 
+  // Check support for linear filtering necessary for generating mipmaps, skip mipmap generation if it isn't:
+  VkFormatProperties formatProperties;
+  vkGetPhysicalDeviceFormatProperties(rendererRef->getPhysicalDevice(), format, &formatProperties);
+
+  if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+    shouldGenMipmaps = VK_FALSE;
+
   const uint32_t mipLevels = shouldGenMipmaps == VK_TRUE ? 
     static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1 : 1;
 
-  VkImageCreateInfo imageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D, imageExtent, mipLevels, format, 
-    VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+  // If generating mipmaps for this texture, add TRANSFER_SRC to usage flags:
+  VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+  if (shouldGenMipmaps == VK_TRUE) usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+  VkImageCreateInfo imageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D, imageExtent, mipLevels,
+    format, VK_IMAGE_TILING_OPTIMAL, usage);
 
   VmaAllocationCreateInfo imageAllocInfo = {};
   imageAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
@@ -172,5 +183,94 @@ void cassidy::Texture::copyBufferToImage(VkCommandBuffer cmd, VkBuffer stagingBu
 
 void cassidy::Texture::generateMipmaps(VkCommandBuffer cmd, VkFormat format, uint32_t width, uint32_t height, uint8_t mipLevels)
 {
+  VkImageSubresourceRange range = {
+    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    .levelCount = 1,
+    .baseArrayLayer = 0,
+    .layerCount = 1,
+  };
 
+  VkImageMemoryBarrier barrier = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = m_image.image,
+    .subresourceRange = range,
+  };
+
+  int32_t mipWidth = width;
+  int32_t mipHeight = height;
+
+  // Blit lower mip level into level above it at progressively halving resolutions:
+  for (uint8_t i = 1; i < mipLevels; ++i)
+  {
+    // Transition layout of current mip level to TRANSFER_SRC for blit:
+    barrier.subresourceRange.baseMipLevel = i - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+    vkCmdPipelineBarrier(cmd,
+      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+      0,
+      0, nullptr,
+      0, nullptr,
+      1, &barrier);
+
+    const VkImageSubresourceLayers srcLayers = {
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = static_cast<uint32_t>(i - 1),
+      .baseArrayLayer = 0,
+      .layerCount = 1,
+    };
+    const VkImageSubresourceLayers dstLayers = {
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = i,
+      .baseArrayLayer = 0,
+      .layerCount = 1,
+    };
+
+    VkImageBlit blit = {
+      .srcSubresource = srcLayers,
+      .srcOffsets = { { 0, 0, 0, }, { mipWidth, mipHeight, 1} },
+      .dstSubresource = dstLayers,
+      .dstOffsets = { { 0, 0, 0 }, { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 } },
+    };
+
+    vkCmdBlitImage(cmd,
+      m_image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      m_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      1, &blit, VK_FILTER_LINEAR);
+
+    // Transition layout of current mip level to SHADER_READ_ONLY_OPTIMAL:
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(cmd, 
+      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+      0,
+      0, nullptr,
+      0, nullptr,
+      1, &barrier);
+
+    if (mipWidth > 1) mipWidth /= 2;
+    if (mipHeight > 1) mipHeight /= 2;
+  }
+
+  // Transition final mip level:
+  barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+  barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+  vkCmdPipelineBarrier(cmd,
+    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+    0,
+    0, nullptr,
+    0, nullptr,
+    1, &barrier);
 }
