@@ -14,24 +14,24 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 {
   int texWidth, texHeight, numChannels;
 
-  stbi_uc* data = nullptr;
+  int requiredComponents = 0;
 
-  if (format == VK_FORMAT_R8_UNORM)
-    data = stbi_load(filepath.c_str(), &texWidth, &texHeight, &numChannels, STBI_grey);
-  else if (format == VK_FORMAT_R8G8B8A8_SRGB || format == VK_FORMAT_R8G8B8A8_UNORM)
-    data = stbi_load(filepath.c_str(), &texWidth, &texHeight, &numChannels, STBI_rgb_alpha);
-  else
-    data = stbi_load(filepath.c_str(), &texWidth, &texHeight, &numChannels, STBI_rgb);
-
-  if (!data)
+  if (format == VK_FORMAT_R8_UNORM
+    || format == VK_FORMAT_R8_SRGB)
   {
-    return nullptr;
+    requiredComponents = STBI_grey;
+  }
+  else if (format == VK_FORMAT_R8G8B8A8_SRGB
+    || format == VK_FORMAT_R8G8B8A8_UNORM)
+  {
+    requiredComponents = STBI_rgb_alpha;
   }
 
-  VkDeviceSize textureSize = texWidth * texHeight;
+  stbi_uc* data = stbi_load(filepath.c_str(), &texWidth, &texHeight, &numChannels, requiredComponents);
 
-  if (format == VK_FORMAT_R8G8B8A8_SRGB || format == VK_FORMAT_R8G8B8A8_UNORM)
-    textureSize *= STBI_rgb_alpha;
+  if (!data) return nullptr;
+
+  VkDeviceSize textureSize = texWidth * texHeight * requiredComponents;
 
   VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
   VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,

@@ -162,7 +162,7 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
   vkBeginCommandBuffer(cmd, &beginInfo);
 
   VkClearValue clearValues[2];
-  clearValues[0].color = { 0.4f, 0.6f, 0.9f, 1.0f };
+  clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_viewportRenderPass,
@@ -319,7 +319,7 @@ void cassidy::Renderer::recordGuiCommands(uint32_t imageIndex)
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
       ImGui::Text("Engine stats:");
       {
-        ImGui::Text("Frametime: %fms", m_engineRef->getDeltaTimeSecs() * 1000);
+        ImGui::Text("Frametime: %fms", m_engineRef->getDeltaTimeSecs() * 1000.0f);
 
         std::string texLibraryHeaderText = "Texture library size: " + std::to_string(TextureLibrary::getNumLoadedTextures());
 
