@@ -25,9 +25,9 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initLogicalDevice();
   initMemoryAllocator();
   initSwapchain();
-  initBackBufferImages();
-  initBackBufferRenderPass();
-  initBackBufferFramebuffers();
+  initEditorImages();
+  initEditorRenderPass();
+  initEditorFramebuffers();
   initCommandPool();
   initCommandBuffers();
   initSyncObjects();
@@ -65,8 +65,8 @@ void cassidy::Renderer::draw()
 
   updateBuffers(currentFrameData);
   recordViewportCommands(swapchainImageIndex);
-  recordGuiCommands(swapchainImageIndex);
-  recordDrawCommands(swapchainImageIndex);
+  createImGuiCommands(swapchainImageIndex);
+  recordEditorCommands(swapchainImageIndex);
   submitCommandBuffers(swapchainImageIndex);
 
   m_currentFrameIndex = (m_currentFrameIndex + 1) % FRAMES_IN_FLIGHT;
@@ -104,7 +104,7 @@ void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
   vmaUnmapMemory(m_allocator, m_perObjectUniformBufferDynamic.allocation);
 }
 
-void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
+void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
 {
   const VkCommandBuffer& cmd = m_commandBuffers[m_currentFrameIndex];
 
@@ -117,7 +117,7 @@ void cassidy::Renderer::recordDrawCommands(uint32_t imageIndex)
   clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
-  VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_backBufferRenderPass,
+  VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_editorRenderPass,
     m_swapchain.framebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
 
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -310,7 +310,7 @@ void cassidy::Renderer::immediateSubmit(std::function<void(VkCommandBuffer cmd)>
   vkResetCommandPool(m_device, m_uploadContext.uploadCommandPool, 0);
 }
 
-void cassidy::Renderer::recordGuiCommands(uint32_t imageIndex)
+void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
 {
   ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
   {
@@ -523,15 +523,15 @@ void cassidy::Renderer::initSwapchain()
   std::cout << "Created swapchain!\n" << std::endl;
 }
 
-void cassidy::Renderer::initBackBufferImages()
+void cassidy::Renderer::initEditorImages()
 {
-  m_backBufferImages.resize(m_swapchain.images.size());
+  m_editorImages.resize(m_swapchain.images.size());
 
-  for (size_t i = 0; i < m_backBufferImages.size(); ++i)
+  for (size_t i = 0; i < m_editorImages.size(); ++i)
   {
-    AllocatedImage& currentImage = m_backBufferImages[i];
+    AllocatedImage& currentImage = m_editorImages[i];
 
-    const VkFormat backBufferFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    const VkFormat editorFormat = VK_FORMAT_R8G8B8A8_UNORM;
     const VkExtent3D imageExtent = {
       m_swapchain.extent.width,
       m_swapchain.extent.height,
@@ -542,7 +542,7 @@ void cassidy::Renderer::initBackBufferImages()
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .pNext = nullptr,
       .imageType = VK_IMAGE_TYPE_2D,
-      .format = backBufferFormat,
+      .format = editorFormat,
       .extent = imageExtent,
       .mipLevels = 1,
       .arrayLayers = 1,
@@ -562,7 +562,7 @@ void cassidy::Renderer::initBackBufferImages()
     vmaCreateImage(m_allocator, &imageInfo, &allocInfo, &currentImage.image,
       &currentImage.allocation, nullptr);
 
-    m_backBufferImages[i].format = backBufferFormat;
+    m_editorImages[i].format = editorFormat;
 
     VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(currentImage.image,
       currentImage.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
@@ -571,7 +571,7 @@ void cassidy::Renderer::initBackBufferImages()
   }
 
   m_deletionQueue.addFunction([=]() {
-    for (const auto& i : m_backBufferImages)
+    for (const auto& i : m_editorImages)
     {
       vmaDestroyImage(m_allocator, i.image, i.allocation);
       vkDestroyImageView(m_device, i.view, nullptr);
@@ -579,7 +579,7 @@ void cassidy::Renderer::initBackBufferImages()
     });
 }
 
-void cassidy::Renderer::initBackBufferRenderPass()
+void cassidy::Renderer::initEditorRenderPass()
 {
   VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(
     m_swapchain.imageFormat, VK_SAMPLE_COUNT_1_BIT, 
@@ -635,29 +635,29 @@ void cassidy::Renderer::initBackBufferRenderPass()
     .pDependencies = dependencies,
   };
 
-  VK_CHECK(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_backBufferRenderPass));
+  VK_CHECK(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_editorRenderPass));
 
   m_deletionQueue.addFunction([=]() {
-    vkDestroyRenderPass(m_device, m_backBufferRenderPass, nullptr);
+    vkDestroyRenderPass(m_device, m_editorRenderPass, nullptr);
     });
 
   std::cout << "Created back buffer render pass!" << std::endl;
 }
 
-void cassidy::Renderer::initBackBufferFramebuffers()
+void cassidy::Renderer::initEditorFramebuffers()
 {
-  m_backBufferFramebuffers.resize(m_swapchain.images.size());
+  m_editorFramebuffers.resize(m_swapchain.images.size());
 
-  for (size_t i = 0; i < m_backBufferFramebuffers.size(); ++i)
+  for (size_t i = 0; i < m_editorFramebuffers.size(); ++i)
   {
-    VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_backBufferRenderPass,
-      1, &m_backBufferImages[i].view, m_swapchain.extent);
+    VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_editorRenderPass,
+      1, &m_editorImages[i].view, m_swapchain.extent);
 
-    vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_backBufferFramebuffers[i]);
+    vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_editorFramebuffers[i]);
   }
 
   m_deletionQueue.addFunction([=]() {
-    for (const auto& fb : m_backBufferFramebuffers)
+    for (const auto& fb : m_editorFramebuffers)
       vkDestroyFramebuffer(m_device, fb, nullptr);
     });
 }
@@ -665,7 +665,7 @@ void cassidy::Renderer::initBackBufferFramebuffers()
 void cassidy::Renderer::initPipelines()
 {
   m_helloTrianglePipeline.init(this)
-    .setRenderPass(m_backBufferRenderPass)
+    .setRenderPass(m_editorRenderPass)
     .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
     .addPushConstantRange(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants))
     .addDescriptorSetLayout(m_perPassSetLayout)

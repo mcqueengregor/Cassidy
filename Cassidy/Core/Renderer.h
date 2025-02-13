@@ -76,9 +76,9 @@ namespace cassidy
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
-    void recordDrawCommands(uint32_t imageIndex);
+    void recordEditorCommands(uint32_t imageIndex);
     void recordViewportCommands(uint32_t imageIndex);
-    void recordGuiCommands(uint32_t imageIndex);
+    void createImGuiCommands(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
 
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
@@ -88,9 +88,9 @@ namespace cassidy
     void initLogicalDevice();
     void initSwapchain();
 
-    void initBackBufferImages();
-    void initBackBufferRenderPass();
-    void initBackBufferFramebuffers();
+    void initEditorImages();
+    void initEditorRenderPass();
+    void initEditorFramebuffers();
     void initPipelines();
     void initSwapchainFramebuffers();
     void initCommandPool();
@@ -159,10 +159,10 @@ namespace cassidy
     VkCommandPool m_graphicsCommandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
 
-    // Offscreen "back buffer" images blitted into swapchain images:
-    std::vector<AllocatedImage> m_backBufferImages;
-    VkRenderPass m_backBufferRenderPass;
-    std::vector<VkFramebuffer> m_backBufferFramebuffers;
+    // Engine editor images and render pass:
+    std::vector<AllocatedImage> m_editorImages;
+    VkRenderPass                m_editorRenderPass;
+    std::vector<VkFramebuffer>  m_editorFramebuffers;
 
     // Synchronisation objects:
     std::vector<VkSemaphore> m_imageAvailableSemaphores;
