@@ -78,7 +78,7 @@ namespace cassidy
     void updateBuffers(const FrameData& currentFrameData);
     void recordDrawCommands(uint32_t imageIndex);
     void recordViewportCommands(uint32_t imageIndex);
-    void recordGuiCommands();
+    void recordGuiCommands(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
 
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
