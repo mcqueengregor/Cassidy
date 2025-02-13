@@ -20,7 +20,6 @@ namespace cassidy
     std::vector<VkImageView> imageViews;
     std::vector<VkFramebuffer> framebuffers;
     AllocatedImage depthImage;
-    VkImageView depthView;
     VkFormat imageFormat;
     VkExtent2D extent;
     bool hasBeenBuilt = false;
@@ -34,7 +33,7 @@ namespace cassidy
       }
 
       vmaDestroyImage(allocator, depthImage.image, depthImage.allocation);
-      vkDestroyImageView(device, depthView, nullptr);
+      vkDestroyImageView(device, depthImage.view, nullptr);
       vkDestroySwapchainKHR(device, swapchain, nullptr);
     }
   };
@@ -73,7 +72,7 @@ namespace cassidy
     inline VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; }
     inline VkDevice         getLogicalDevice() { return m_device; }
     inline Swapchain        getSwapchain() { return m_swapchain; }
-    inline UploadContext& getUploadContext() { return m_uploadContext; }
+    inline UploadContext&   getUploadContext() { return m_uploadContext; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
@@ -169,9 +168,7 @@ namespace cassidy
 
     // Viewport rendering objects:
     std::vector<AllocatedImage>   m_viewportImages;
-    std::vector<VkImageView>      m_viewportImageViews;
     AllocatedImage                m_viewportDepthImage;
-    VkImageView                   m_viewportDepthView;
     Pipeline                      m_viewportPipeline;
     VkRenderPass                  m_viewportRenderPass;
     VkCommandPool                 m_viewportCommandPool;

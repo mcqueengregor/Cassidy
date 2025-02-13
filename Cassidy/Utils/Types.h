@@ -104,6 +104,7 @@ struct Vertex
 struct AllocatedImage
 {
   VkImage image;
+  VkImageView view;
   VmaAllocation allocation;
   VkFormat format;
 };

@@ -204,8 +204,8 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
 {
   VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
   VkCommandBuffer submitBuffers[] = {
-    m_commandBuffers[m_currentFrameIndex],
     m_viewportCommandBuffers[m_currentFrameIndex],
+    m_commandBuffers[m_currentFrameIndex],
   };
 
   VkSubmitInfo submitInfo = cassidy::init::submitInfo(1, &m_imageAvailableSemaphores[m_currentFrameIndex], waitStages, 
@@ -507,7 +507,7 @@ void cassidy::Renderer::initSwapchain()
   VkImageViewCreateInfo depthViewInfo = cassidy::init::imageViewCreateInfo(m_swapchain.depthImage.image, format,
     VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-  VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_swapchain.depthView));
+  VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_swapchain.depthImage.view));
 
   // Prevent multiple deletion commands on swapchain if it gets rebuilt:
   if (!m_swapchain.hasBeenBuilt)
@@ -618,7 +618,7 @@ void cassidy::Renderer::initSwapchainFramebuffers()
 
   for (uint8_t i = 0; i < m_swapchain.imageViews.size(); ++i)
   {
-    VkImageView attachments[] = { m_swapchain.imageViews[i], m_swapchain.depthView };
+    VkImageView attachments[] = { m_swapchain.imageViews[i], m_swapchain.depthImage.view };
 
     VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_backBufferRenderPass,
       2, attachments, m_swapchain.extent);
@@ -883,12 +883,12 @@ void cassidy::Renderer::initImGui()
     {
       vmaDestroyImage(m_allocator, m_viewportImages[i].image, 
         m_viewportImages[i].allocation);
-      vkDestroyImageView(m_device, m_viewportImageViews[i], nullptr);
+      vkDestroyImageView(m_device, m_viewportImages[i].view, nullptr);
     }
 
     vmaDestroyImage(m_allocator, m_viewportDepthImage.image,
       m_viewportDepthImage.allocation);
-    vkDestroyImageView(m_device, m_viewportDepthView, nullptr);
+    vkDestroyImageView(m_device, m_viewportDepthImage.view, nullptr);
 
     vkDestroyCommandPool(m_device, m_viewportCommandPool, nullptr);
     vkDestroyRenderPass(m_device, m_viewportRenderPass, nullptr);
@@ -907,7 +907,6 @@ void cassidy::Renderer::initImGui()
 void cassidy::Renderer::initViewportImages()
 {
   m_viewportImages.resize(m_swapchain.images.size());
-  m_viewportImageViews.resize(m_viewportImages.size());
 
   for (size_t i = 0; i < m_viewportImages.size(); ++i)
   {
@@ -959,7 +958,7 @@ void cassidy::Renderer::initViewportImages()
       .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1, },
     };
 
-    VK_CHECK(vkCreateImageView(m_device, &viewInfo, nullptr, &m_viewportImageViews[i]));
+    VK_CHECK(vkCreateImageView(m_device, &viewInfo, nullptr, &m_viewportImages[i].view));
   }
 
   // Create swapchain depth image and image view:
@@ -997,13 +996,13 @@ void cassidy::Renderer::initViewportImages()
     .subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1, },
   };
   
-  VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_viewportDepthView));
+  VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_viewportDepthImage.view));
 
   m_viewportDescSets.resize(m_swapchain.imageViews.size());
-  for (uint32_t i = 0; i < m_viewportImageViews.size(); ++i)
+  for (uint32_t i = 0; i < m_viewportImages.size(); ++i)
   {
     m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
-      m_viewportImageViews[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+      m_viewportImages[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   }
 
   // (Deletion of viewport resources is handled in ImGui deletion queue function)
@@ -1111,8 +1110,8 @@ void cassidy::Renderer::initViewportFramebuffers()
   for (uint32_t i = 0; i < m_swapchain.imageViews.size(); ++i)
   {
     VkImageView imageViews[] = {
-      m_viewportImageViews[i],
-      m_viewportDepthView,
+      m_viewportImages[i].view,
+      m_viewportDepthImage.view,
     };
 
     VkFramebufferCreateInfo info = cassidy::init::framebufferCreateInfo(m_viewportRenderPass,
@@ -1139,9 +1138,9 @@ void cassidy::Renderer::rebuildSwapchain()
   for (const auto& i : m_viewportImages)
     vmaDestroyImage(m_allocator, i.image, i.allocation);
   vmaDestroyImage(m_allocator, m_viewportDepthImage.image, m_viewportDepthImage.allocation);
-  for (const auto& iv : m_viewportImageViews)
-    vkDestroyImageView(m_device, iv, nullptr);
-  vkDestroyImageView(m_device, m_viewportDepthView, nullptr);
+  for (const auto& i : m_viewportImages)
+    vkDestroyImageView(m_device, i.view, nullptr);
+  vkDestroyImageView(m_device, m_viewportDepthImage.view, nullptr);
 
   for (size_t i = 0; i < m_viewportDescSets.size(); ++i)
     ImGui_ImplVulkan_RemoveTexture(m_viewportDescSets[i]);
