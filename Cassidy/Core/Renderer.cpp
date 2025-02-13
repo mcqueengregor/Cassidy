@@ -25,12 +25,14 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initLogicalDevice();
   initMemoryAllocator();
   initSwapchain();
+  initBackBufferImages();
+  initBackBufferRenderPass();
+  initBackBufferFramebuffers();
   initCommandPool();
   initCommandBuffers();
   initSyncObjects();
   initMeshes();
   initDescriptorSets();
-  initDefaultRenderPass();
   initViewportRenderPass();
   initPipelines();
   initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
@@ -521,7 +523,63 @@ void cassidy::Renderer::initSwapchain()
   std::cout << "Created swapchain!\n" << std::endl;
 }
 
-void cassidy::Renderer::initDefaultRenderPass()
+void cassidy::Renderer::initBackBufferImages()
+{
+  m_backBufferImages.resize(m_swapchain.images.size());
+
+  for (size_t i = 0; i < m_backBufferImages.size(); ++i)
+  {
+    AllocatedImage& currentImage = m_backBufferImages[i];
+
+    const VkFormat backBufferFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    const VkExtent3D imageExtent = {
+      m_swapchain.extent.width,
+      m_swapchain.extent.height,
+      1,
+    };
+
+    VkImageCreateInfo imageInfo = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .pNext = nullptr,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = backBufferFormat,
+      .extent = imageExtent,
+      .mipLevels = 1,
+      .arrayLayers = 1,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .tiling = VK_IMAGE_TILING_OPTIMAL,
+      .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT  // (graphics pipelines can draw into this image)
+                | VK_IMAGE_USAGE_STORAGE_BIT        // (compute shaders can write to this image)
+                | VK_IMAGE_USAGE_TRANSFER_DST_BIT   // (this image can have other images copied into it)
+                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,  // (this image can be copied into other images)
+      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    VmaAllocationCreateInfo allocInfo = cassidy::init::vmaAllocationCreateInfo(
+      VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+
+    vmaCreateImage(m_allocator, &imageInfo, &allocInfo, &currentImage.image,
+      &currentImage.allocation, nullptr);
+
+    m_backBufferImages[i].format = backBufferFormat;
+
+    VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(currentImage.image,
+      currentImage.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    vkCreateImageView(m_device, &viewInfo, nullptr, &currentImage.view);
+  }
+
+  m_deletionQueue.addFunction([=]() {
+    for (const auto& i : m_backBufferImages)
+    {
+      vmaDestroyImage(m_allocator, i.image, i.allocation);
+      vkDestroyImageView(m_device, i.view, nullptr);
+    }
+    });
+}
+
+void cassidy::Renderer::initBackBufferRenderPass()
 {
   VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(
     m_swapchain.imageFormat, VK_SAMPLE_COUNT_1_BIT, 
@@ -584,6 +642,24 @@ void cassidy::Renderer::initDefaultRenderPass()
     });
 
   std::cout << "Created back buffer render pass!" << std::endl;
+}
+
+void cassidy::Renderer::initBackBufferFramebuffers()
+{
+  m_backBufferFramebuffers.resize(m_swapchain.images.size());
+
+  for (size_t i = 0; i < m_backBufferFramebuffers.size(); ++i)
+  {
+    VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_backBufferRenderPass,
+      1, &m_backBufferImages[i].view, m_swapchain.extent);
+
+    vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_backBufferFramebuffers[i]);
+  }
+
+  m_deletionQueue.addFunction([=]() {
+    for (const auto& fb : m_backBufferFramebuffers)
+      vkDestroyFramebuffer(m_device, fb, nullptr);
+    });
 }
 
 void cassidy::Renderer::initPipelines()
@@ -938,6 +1014,8 @@ void cassidy::Renderer::initViewportImages()
     vmaCreateImage(m_allocator, &imageInfo, &allocInfo, &m_viewportImages[i].image,
       &m_viewportImages[i].allocation, nullptr);
 
+    m_viewportImages[i].format = format;
+
     // Transition viewport image layout to IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
     cassidy::helper::immediateSubmit(m_device, m_uploadContext,
       [=](VkCommandBuffer cmd) {
@@ -1107,7 +1185,7 @@ void cassidy::Renderer::initViewportFramebuffers()
 {
   m_viewportFramebuffers.resize(m_swapchain.imageViews.size());
 
-  for (uint32_t i = 0; i < m_swapchain.imageViews.size(); ++i)
+  for (size_t i = 0; i < m_viewportFramebuffers.size(); ++i)
   {
     VkImageView imageViews[] = {
       m_viewportImages[i].view,

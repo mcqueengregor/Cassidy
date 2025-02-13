@@ -88,7 +88,9 @@ namespace cassidy
     void initLogicalDevice();
     void initSwapchain();
 
-    void initDefaultRenderPass();
+    void initBackBufferImages();
+    void initBackBufferRenderPass();
+    void initBackBufferFramebuffers();
     void initPipelines();
     void initSwapchainFramebuffers();
     void initCommandPool();
@@ -122,9 +124,8 @@ namespace cassidy
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
 
-    // Pipelines and renderpasses:
+    // Pipelines:
     Pipeline m_helloTrianglePipeline;
-    VkRenderPass m_backBufferRenderPass;
 
     // Rendering data:
     DefaultPushConstants m_matrixPushConstants;
@@ -158,6 +159,11 @@ namespace cassidy
     VkCommandPool m_graphicsCommandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
 
+    // Offscreen "back buffer" images blitted into swapchain images:
+    std::vector<AllocatedImage> m_backBufferImages;
+    VkRenderPass m_backBufferRenderPass;
+    std::vector<VkFramebuffer> m_backBufferFramebuffers;
+
     // Synchronisation objects:
     std::vector<VkSemaphore> m_imageAvailableSemaphores;
     std::vector<VkSemaphore> m_renderFinishedSemaphores;
@@ -187,7 +193,7 @@ namespace cassidy
     const std::vector<Vertex> triangleVertices =
     {
       {{ 0.0f,  0.5f, 0.0f},  {0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-      {{-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+      {{-0.5f, -0.5f, 0.0f},  {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
       {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
     };
 
