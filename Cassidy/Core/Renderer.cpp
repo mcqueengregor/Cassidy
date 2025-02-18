@@ -113,44 +113,66 @@ void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
   VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
   vkBeginCommandBuffer(cmd, &beginInfo);
 
+  // Transition editor image to general layout so it can be written into:
+  cassidy::helper::transitionImageLayout(cmd,
+    m_editorImages[imageIndex].image, m_swapchain.imageFormat,
+    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    1);
+
   VkClearValue clearValues[2];
   clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_editorRenderPass,
-    m_swapchain.framebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
+    m_editorFramebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
 
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-  {
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getGraphicsPipeline());
-
-    VkViewport viewport = cassidy::init::viewport(0.0f, 0.0f, m_swapchain.extent.width, m_swapchain.extent.height);
-    vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-    VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, m_swapchain.extent);
-    vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-    // Bind per-pass descriptor set to slot 0:
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
-      0, 1, &getCurrentFrameData().perPassSet, 0, nullptr);
-
-    // Bind per-object dynamic descriptor set to slot 1:
-    const uint32_t dynamicUniformOffset = m_currentFrameIndex * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData), m_physicalDeviceProperties);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
-      1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
-
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
-      2, 1, &getCurrentFrameData().m_backpackMaterialSet, 0, nullptr);
-
-    vkCmdPushConstants(cmd, m_helloTrianglePipeline.getLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 
-      sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants), &m_phongLightingPushConstants);
-
-    m_backpackMesh.draw(cmd);
-  }
-
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
-
   vkCmdEndRenderPass(cmd);
+
+  // Transition editor image and swapchain image to transfer layout:
+  cassidy::helper::transitionImageLayout(cmd,
+    m_editorImages[imageIndex].image, m_swapchain.imageFormat,
+    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    1);
+
+  cassidy::helper::transitionImageLayout(cmd,
+    m_swapchain.images[imageIndex], m_swapchain.imageFormat,
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    1);
+
+  const int32_t imageWidth = static_cast<int32_t>(m_swapchain.extent.width);
+  const int32_t imageHeight = static_cast<int32_t>(m_swapchain.extent.height);
+
+  // Copy editor image into swapchain image:
+  VkImageBlit blit = {
+    .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
+    .srcOffsets = { { 0, 0, 0 }, { imageWidth, imageHeight, 1, }
+                  },
+    .dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
+    .dstOffsets = { { 0, 0, 0 }, { imageWidth, imageHeight, 1, }
+                  },
+  };
+
+  vkCmdBlitImage(cmd,
+    m_editorImages[imageIndex].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    m_swapchain.images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    1, &blit, VK_FILTER_NEAREST);
+
+  // Transition swapchain image to present layout:
+  cassidy::helper::transitionImageLayout(cmd,
+    m_swapchain.images[imageIndex], m_swapchain.imageFormat,
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    VK_ACCESS_NONE, VK_ACCESS_MEMORY_READ_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    1);
+
   VK_CHECK(vkEndCommandBuffer(cmd));
 }
  
@@ -467,7 +489,7 @@ void cassidy::Renderer::initSwapchain()
   uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
   VkSwapchainCreateInfoKHR swapchainInfo = cassidy::init::swapchainCreateInfo(details, indices, m_engineRef->getSurface(),
-    surfaceFormat, presentMode, extent, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 2, queueFamilyIndices);
+    surfaceFormat, presentMode, extent, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 2, queueFamilyIndices);
 
   VK_CHECK(vkCreateSwapchainKHR(m_device, &swapchainInfo, nullptr, &m_swapchain.swapchain));
 
@@ -531,7 +553,7 @@ void cassidy::Renderer::initEditorImages()
   {
     AllocatedImage& currentImage = m_editorImages[i];
 
-    const VkFormat editorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    const VkFormat editorFormat = m_swapchain.imageFormat;
     const VkExtent3D imageExtent = {
       m_swapchain.extent.width,
       m_swapchain.extent.height,
@@ -584,22 +606,12 @@ void cassidy::Renderer::initEditorRenderPass()
   VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(
     m_swapchain.imageFormat, VK_SAMPLE_COUNT_1_BIT, 
     VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-  VkFormat depthFormatCandidates[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-  const VkFormat depthFormat = cassidy::helper::findSupportedFormat(m_physicalDevice, 3, depthFormatCandidates,
-    VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-  VkAttachmentDescription depthAttachment = cassidy::init::attachmentDescription(
-    depthFormat, VK_SAMPLE_COUNT_1_BIT, 
-    VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
   VkAttachmentReference colourAttachmentRef = cassidy::init::attachmentReference(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-  VkAttachmentReference depthAttachmentRef = cassidy::init::attachmentReference(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
   VkSubpassDescription subpass = cassidy::init::subpassDescription(VK_PIPELINE_BIND_POINT_GRAPHICS, 1,
-    &colourAttachmentRef, &depthAttachmentRef);
+    &colourAttachmentRef, nullptr);
  
   VkSubpassDependency dependencies[] = {
     {
@@ -622,13 +634,11 @@ void cassidy::Renderer::initEditorRenderPass()
     }
   };
 
-  VkAttachmentDescription attachments[] = { colourAttachment, depthAttachment };
-
   VkRenderPassCreateInfo renderPassInfo = {
     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
     .pNext = nullptr,
-    .attachmentCount = 2,
-    .pAttachments = attachments,
+    .attachmentCount = 1,
+    .pAttachments = &colourAttachment,
     .subpassCount = 1,
     .pSubpasses = &subpass,
     .dependencyCount = 2,
@@ -641,7 +651,7 @@ void cassidy::Renderer::initEditorRenderPass()
     vkDestroyRenderPass(m_device, m_editorRenderPass, nullptr);
     });
 
-  std::cout << "Created back buffer render pass!" << std::endl;
+  std::cout << "Created editor render pass!" << std::endl;
 }
 
 void cassidy::Renderer::initEditorFramebuffers()
@@ -694,10 +704,8 @@ void cassidy::Renderer::initSwapchainFramebuffers()
 
   for (uint8_t i = 0; i < m_swapchain.imageViews.size(); ++i)
   {
-    VkImageView attachments[] = { m_swapchain.imageViews[i], m_swapchain.depthImage.view };
-
-    VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_backBufferRenderPass,
-      2, attachments, m_swapchain.extent);
+    VkFramebufferCreateInfo framebufferInfo = cassidy::init::framebufferCreateInfo(m_editorRenderPass,
+      1, &m_swapchain.imageViews[i], m_swapchain.extent);
 
     VK_CHECK(vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapchain.framebuffers[i]));
   }
@@ -931,7 +939,7 @@ void cassidy::Renderer::initImGui()
   initInfo.ImageCount = m_swapchain.images.size();
   initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-  ImGui_ImplVulkan_Init(&initInfo, m_backBufferRenderPass);
+  ImGui_ImplVulkan_Init(&initInfo, m_editorRenderPass);
 
   cassidy::helper::immediateSubmit(m_device, m_uploadContext,
     [&](VkCommandBuffer cmd) {
