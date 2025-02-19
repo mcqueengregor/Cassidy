@@ -16,7 +16,6 @@ cassidy::Texture* TextureLibrary::loadTextureImpl(std::string filepath, VmaAlloc
   if (newTexture.load(filepath, allocator, rendererRef, format, shouldGenMipmaps))
   {
     m_loadedTextures[filepath] = newTexture;
-    std::cout << "Loaded " << m_loadedTextures.size() << " textures" << std::endl;
     return &m_loadedTextures.at(filepath);
   }
 

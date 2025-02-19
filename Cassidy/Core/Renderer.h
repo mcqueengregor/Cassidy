@@ -112,6 +112,8 @@ namespace cassidy
     void initViewportCommandBuffers();
     void initViewportFramebuffers();
 
+    void transitionSwapchainImages();
+
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }
 

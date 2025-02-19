@@ -31,14 +31,14 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initCommandPool();
   initCommandBuffers();
   initSyncObjects();
+  transitionSwapchainImages();
   initMeshes();
   initDescriptorSets();
-  initViewportRenderPass();
+  initImGui();
   initPipelines();
   initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
   initVertexBuffers();
   initIndexBuffers();
-  initImGui();
 
   m_currentFrameIndex = 0;
 }
@@ -113,7 +113,7 @@ void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
   VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
   vkBeginCommandBuffer(cmd, &beginInfo);
 
-  // Transition editor image to general layout so it can be written into:
+  // Transition editor image to colour attachment for ImGui rendering:
   cassidy::helper::transitionImageLayout(cmd,
     m_editorImages[imageIndex].image, m_swapchain.imageFormat,
     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -133,13 +133,7 @@ void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
   vkCmdEndRenderPass(cmd);
 
   // Transition editor image and swapchain image to transfer layout:
-  cassidy::helper::transitionImageLayout(cmd,
-    m_editorImages[imageIndex].image, m_swapchain.imageFormat,
-    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-    1);
-
+  // (editor render pass has implicit UNDEFINED -> TRANSFER_SRC transition)
   cassidy::helper::transitionImageLayout(cmd,
     m_swapchain.images[imageIndex], m_swapchain.imageFormat,
     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -606,7 +600,7 @@ void cassidy::Renderer::initEditorRenderPass()
   VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(
     m_swapchain.imageFormat, VK_SAMPLE_COUNT_1_BIT, 
     VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
   VkAttachmentReference colourAttachmentRef = cassidy::init::attachmentReference(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -953,6 +947,7 @@ void cassidy::Renderer::initImGui()
   initViewportCommandPool();
   initViewportCommandBuffers();
   initViewportImages();
+  initViewportRenderPass();
   initViewportFramebuffers();
 
   // Solution for full ImGui setup w/ viewport: https://github.com/ocornut/imgui/issues/5110
@@ -1205,6 +1200,20 @@ void cassidy::Renderer::initViewportFramebuffers()
 
     VK_CHECK(vkCreateFramebuffer(m_device, &info, nullptr, &m_viewportFramebuffers[i]));
   }
+}
+
+void cassidy::Renderer::transitionSwapchainImages()
+{
+  // Manually transition swapchain images to PRESENT_SRC_KHR since there's no render pass 
+  // with implicit layout transition anymore:
+  cassidy::helper::immediateSubmit(m_device, m_uploadContext, [=](VkCommandBuffer cmd) {
+    for (size_t i = 0; i < m_swapchain.images.size(); ++i)
+      cassidy::helper::transitionImageLayout(cmd, m_swapchain.images[i], m_swapchain.imageFormat,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        0, 0,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        1);
+    });
 }
 
 void cassidy::Renderer::rebuildSwapchain()
