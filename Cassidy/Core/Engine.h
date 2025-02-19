@@ -65,7 +65,18 @@ namespace cassidy
       const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
       void*                                       pUserData)
     {
-      std::cout << "Validation layer: " << pCallbackData->pMessage << std::endl;
+      std::cout << "Validation layer (";
+      
+      if ((messageType | VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) != 0)
+        std::cout << " GENERAL";
+      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0)
+        std::cout << " INFO";
+      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0)
+        std::cout << " WARNING";
+      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0)
+        std::cout << " ERROR";
+
+      std::cout << " ): " << pCallbackData->pMessage << "\n" << std::endl;
       return VK_FALSE;
     }
 

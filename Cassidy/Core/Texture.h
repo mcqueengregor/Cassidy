@@ -25,8 +25,8 @@ namespace cassidy
     void release(VkDevice device, VmaAllocator allocator);
 
     // Getters/setters: ------------------------------------------------------------------------------------------
-    inline VkImage getImage()         { return m_image.image; }
-    inline VkImageView getImageView() { return m_imageView; }
+    inline VkImage      getImage()      { return m_image.image; }
+    inline VkImageView  getImageView()  { return m_image.view; }
 
   private:
     void transitionImageLayout(VkCommandBuffer cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint8_t mipLevels);
@@ -34,6 +34,5 @@ namespace cassidy
     void generateMipmaps(VkCommandBuffer cmd, VkFormat format, uint32_t width, uint32_t height, uint8_t mipLevels);
 
     AllocatedImage m_image;
-    VkImageView m_imageView;
   };
 }

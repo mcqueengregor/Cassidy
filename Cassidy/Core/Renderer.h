@@ -20,7 +20,6 @@ namespace cassidy
     std::vector<VkImageView> imageViews;
     std::vector<VkFramebuffer> framebuffers;
     AllocatedImage depthImage;
-    VkImageView depthView;
     VkFormat imageFormat;
     VkExtent2D extent;
     bool hasBeenBuilt = false;
@@ -34,7 +33,7 @@ namespace cassidy
       }
 
       vmaDestroyImage(allocator, depthImage.image, depthImage.allocation);
-      vkDestroyImageView(device, depthView, nullptr);
+      vkDestroyImageView(device, depthImage.view, nullptr);
       vkDestroySwapchainKHR(device, swapchain, nullptr);
     }
   };
@@ -71,15 +70,15 @@ namespace cassidy
 
     // Getters/setters: ------------------------------------------------------------------------------------------
     inline VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; }
-    inline VkDevice         getLogicalDevice() { return m_device; }
-    inline Swapchain        getSwapchain() { return m_swapchain; }
-    inline UploadContext& getUploadContext() { return m_uploadContext; }
+    inline VkDevice         getLogicalDevice()  { return m_device; }
+    inline Swapchain        getSwapchain()      { return m_swapchain; }
+    inline UploadContext&   getUploadContext()  { return m_uploadContext; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
-    void recordDrawCommands(uint32_t imageIndex);
+    void recordEditorCommands(uint32_t imageIndex);
     void recordViewportCommands(uint32_t imageIndex);
-    void recordGuiCommands(uint32_t imageIndex);
+    void createImGuiCommands(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
 
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
@@ -89,7 +88,9 @@ namespace cassidy
     void initLogicalDevice();
     void initSwapchain();
 
-    void initDefaultRenderPass();
+    void initEditorImages();
+    void initEditorRenderPass();
+    void initEditorFramebuffers();
     void initPipelines();
     void initSwapchainFramebuffers();
     void initCommandPool();
@@ -111,6 +112,8 @@ namespace cassidy
     void initViewportCommandBuffers();
     void initViewportFramebuffers();
 
+    void transitionSwapchainImages();
+
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }
 
@@ -123,9 +126,8 @@ namespace cassidy
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
 
-    // Pipelines and renderpasses:
+    // Pipelines:
     Pipeline m_helloTrianglePipeline;
-    VkRenderPass m_backBufferRenderPass;
 
     // Rendering data:
     DefaultPushConstants m_matrixPushConstants;
@@ -159,6 +161,11 @@ namespace cassidy
     VkCommandPool m_graphicsCommandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
 
+    // Engine editor images and render pass:
+    std::vector<AllocatedImage> m_editorImages;
+    VkRenderPass                m_editorRenderPass;
+    std::vector<VkFramebuffer>  m_editorFramebuffers;
+
     // Synchronisation objects:
     std::vector<VkSemaphore> m_imageAvailableSemaphores;
     std::vector<VkSemaphore> m_renderFinishedSemaphores;
@@ -169,9 +176,7 @@ namespace cassidy
 
     // Viewport rendering objects:
     std::vector<AllocatedImage>   m_viewportImages;
-    std::vector<VkImageView>      m_viewportImageViews;
     AllocatedImage                m_viewportDepthImage;
-    VkImageView                   m_viewportDepthView;
     Pipeline                      m_viewportPipeline;
     VkRenderPass                  m_viewportRenderPass;
     VkCommandPool                 m_viewportCommandPool;
@@ -190,7 +195,7 @@ namespace cassidy
     const std::vector<Vertex> triangleVertices =
     {
       {{ 0.0f,  0.5f, 0.0f},  {0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-      {{-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+      {{-0.5f, -0.5f, 0.0f},  {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
       {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
     };
 

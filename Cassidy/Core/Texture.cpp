@@ -91,7 +91,7 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_image.image, format,
     VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
-  vkCreateImageView(rendererRef->getLogicalDevice(), &viewInfo, nullptr, &m_imageView);
+  vkCreateImageView(rendererRef->getLogicalDevice(), &viewInfo, nullptr, &m_image.view);
 
   vmaDestroyBuffer(allocator, stagingBuffer.buffer, stagingBuffer.allocation);
 
@@ -101,7 +101,7 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 void cassidy::Texture::release(VkDevice device, VmaAllocator allocator)
 {
   vmaDestroyImage(allocator, m_image.image, m_image.allocation);
-  vkDestroyImageView(device, m_imageView, nullptr);
+  vkDestroyImageView(device, m_image.view, nullptr);
 }
 
 void cassidy::Texture::transitionImageLayout(VkCommandBuffer cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint8_t mipLevels)
