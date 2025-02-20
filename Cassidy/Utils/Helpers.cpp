@@ -193,10 +193,10 @@ VkFormat cassidy::helper::findSupportedFormat(VkPhysicalDevice physicalDevice, u
     switch (tiling)
     {
     case VK_IMAGE_TILING_LINEAR:
-      if (properties.linearTilingFeatures & features == features)
+      if ((properties.linearTilingFeatures & features) == features)
         return formats[i];
     case VK_IMAGE_TILING_OPTIMAL:
-      if (properties.optimalTilingFeatures & features == features)
+      if ((properties.optimalTilingFeatures & features) == features)
         return formats[i];
     }
   }
@@ -204,7 +204,7 @@ VkFormat cassidy::helper::findSupportedFormat(VkPhysicalDevice physicalDevice, u
 }
 
 // https://github.com/SaschaWillems/Vulkan/tree/master/examples/dynamicuniformbuffer
-size_t cassidy::helper::padUniformBufferSize(size_t originalSize, const VkPhysicalDeviceProperties& gpuProperties)
+uint32_t cassidy::helper::padUniformBufferSize(size_t originalSize, const VkPhysicalDeviceProperties& gpuProperties)
 {
   // Calculate a buffer size that satisfies the GPU's alignment requirements:
   size_t minUBOAlignment = gpuProperties.limits.minUniformBufferOffsetAlignment;
@@ -213,7 +213,7 @@ size_t cassidy::helper::padUniformBufferSize(size_t originalSize, const VkPhysic
   if (minUBOAlignment > 0)
     alignedSize = (alignedSize + minUBOAlignment - 1) & ~(minUBOAlignment - 1);
 
-  return alignedSize;
+  return static_cast<uint32_t>(alignedSize);
 }
 
 VkSampler cassidy::helper::createTextureSampler(const VkDevice& device, const VkPhysicalDeviceProperties& physicalDeviceProperties, VkFilter filter, VkSamplerAddressMode wrapMode, uint8_t numMips, bool useAniso)

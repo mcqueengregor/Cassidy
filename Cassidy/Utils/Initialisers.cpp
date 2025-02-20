@@ -66,8 +66,9 @@ VkDeviceQueueCreateInfo cassidy::init::deviceQueueCreateInfo(uint32_t queueFamil
   return info;
 }
 
-VkDeviceCreateInfo cassidy::init::deviceCreateInfo(const VkDeviceQueueCreateInfo* queueCreateInfos, 
-  uint32_t queueCreateInfoCount, const VkPhysicalDeviceFeatures* deviceFeatures, uint32_t extensionCount, 
+VkDeviceCreateInfo cassidy::init::deviceCreateInfo(
+  uint32_t queueCreateInfoCount, const VkDeviceQueueCreateInfo* queueCreateInfos,
+  const VkPhysicalDeviceFeatures* deviceFeatures, uint32_t extensionCount, 
   const char* const* extensionNames, uint32_t layerCount, const char* const* layerNames)
 {
   VkDeviceCreateInfo info = {};
@@ -331,13 +332,13 @@ VkPipelineDepthStencilStateCreateInfo cassidy::init::pipelineDepthStencilStateCr
   return info;
 }
 
-VkViewport cassidy::init::viewport(float x, float y, float width, float height)
+VkViewport cassidy::init::viewport(float x, float y, uint32_t width, uint32_t height)
 {
   VkViewport viewport = {};
   viewport.x = x;
   viewport.y = y;
-  viewport.width = width;
-  viewport.height = height;
+  viewport.width = static_cast<float>(width);
+  viewport.height = static_cast<float>(height);
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
 

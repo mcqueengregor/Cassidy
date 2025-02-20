@@ -15,6 +15,7 @@ namespace cassidy
   public:
     Engine();
     Engine(glm::vec2 windowDimensions);
+    Engine(glm::uvec2 windowDimensions);
 
     void init();
     void run();

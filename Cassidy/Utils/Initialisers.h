@@ -38,8 +38,8 @@ namespace cassidy::init
     float* queuePriority
   );
   VkDeviceCreateInfo deviceCreateInfo(
-    const VkDeviceQueueCreateInfo* queueCreateInfos,
     uint32_t queueCreateInfoCount,
+    const VkDeviceQueueCreateInfo* queueCreateInfos,
     const VkPhysicalDeviceFeatures* deviceFeatures, 
     uint32_t extensionCount, 
     const char* const* extensionNames, 
@@ -139,8 +139,8 @@ namespace cassidy::init
   VkViewport viewport(
     float x, 
     float y, 
-    float width, 
-    float height
+    uint32_t width, 
+    uint32_t height
   );
   VkPipelineViewportStateCreateInfo pipelineViewportStateCreateInfo(
     uint32_t numViewports,

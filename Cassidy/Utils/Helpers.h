@@ -36,7 +36,7 @@ namespace cassidy::helper
 
   VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, uint32_t numFormats, VkFormat* formats, VkImageTiling tiling, VkFormatFeatureFlags features);
 
-  size_t padUniformBufferSize(size_t originalSize, const VkPhysicalDeviceProperties& gpuProperties);
+  uint32_t padUniformBufferSize(size_t originalSize, const VkPhysicalDeviceProperties& gpuProperties);
 
   VkSampler createTextureSampler(const VkDevice& device, const VkPhysicalDeviceProperties& physicalDeviceProperties, VkFilter filter, VkSamplerAddressMode wrapMode, uint8_t numMips, bool useAniso);
 

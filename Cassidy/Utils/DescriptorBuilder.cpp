@@ -171,7 +171,7 @@ VkDescriptorSetLayout cassidy::DescriptorLayoutCache::createDescLayout(VkDescrip
   int lastBinding = -1;
 
   // Copy create info struct into bindings vector:
-  for (int i = 0; i < layoutCreateInfo->bindingCount; ++i)
+  for (uint32_t i = 0; i < layoutCreateInfo->bindingCount; ++i)
   {
     layoutInfo.bindings.push_back(layoutCreateInfo->pBindings[i]);
 

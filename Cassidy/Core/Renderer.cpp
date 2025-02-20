@@ -245,10 +245,10 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
 AllocatedBuffer cassidy::Renderer::allocateVertexBuffer(const std::vector<Vertex>& vertices)
 {
   // Build CPU-side staging buffer:
-  VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(vertices.size() * sizeof(Vertex),
-    VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-  VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
-    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+  VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(
+    static_cast<uint32_t>(vertices.size()) * sizeof(Vertex), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+  VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(
+    VMA_MEMORY_USAGE_AUTO_PREFER_HOST, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
   AllocatedBuffer stagingBuffer;
 
@@ -263,8 +263,8 @@ AllocatedBuffer cassidy::Renderer::allocateVertexBuffer(const std::vector<Vertex
   memcpy(data, vertices.data(), vertices.size() * sizeof(Vertex));
   vmaUnmapMemory(m_allocator, stagingBuffer.allocation);
 
-  VkBufferCreateInfo vertexBufferInfo = cassidy::init::bufferCreateInfo(vertices.size() * sizeof(Vertex),
-    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  VkBufferCreateInfo vertexBufferInfo = cassidy::init::bufferCreateInfo(
+    static_cast<uint32_t>(vertices.size()) * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
   bufferAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
@@ -430,9 +430,10 @@ void cassidy::Renderer::initLogicalDevice()
   VkPhysicalDeviceFeatures deviceFeatures = {};
   deviceFeatures.samplerAnisotropy = VK_TRUE;
 
-  VkDeviceCreateInfo deviceInfo = cassidy::init::deviceCreateInfo(queueInfos.data(), queueInfos.size(),
-    &deviceFeatures, DEVICE_EXTENSIONS.size(), DEVICE_EXTENSIONS.data(), VALIDATION_LAYERS.size(),
-    VALIDATION_LAYERS.data());
+  VkDeviceCreateInfo deviceInfo = cassidy::init::deviceCreateInfo(
+    static_cast<uint32_t>(queueInfos.size()), queueInfos.data(), &deviceFeatures,
+    static_cast<uint32_t>(DEVICE_EXTENSIONS.size()), DEVICE_EXTENSIONS.data(), 
+    static_cast<uint32_t>(VALIDATION_LAYERS.size()), VALIDATION_LAYERS.data());
 
   const VkResult deviceCreateResult = vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device);
   VK_CHECK(deviceCreateResult);
@@ -469,13 +470,13 @@ void cassidy::Renderer::initSwapchain()
 
   // If desired format isn't available on the chosen physical device, default to the first available format:
   const VkSurfaceFormatKHR desiredFormat = { VK_FORMAT_B8G8R8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-  VkSurfaceFormatKHR surfaceFormat = cassidy::helper::isSwapchainSurfaceFormatSupported(details.formats.size(), details.formats.data(), 
-    desiredFormat) ? desiredFormat : details.formats[0];
+  VkSurfaceFormatKHR surfaceFormat = cassidy::helper::isSwapchainSurfaceFormatSupported(
+    static_cast<uint32_t>(details.formats.size()), details.formats.data(), desiredFormat) ? desiredFormat : details.formats[0];
 
   // If desired present mode isn't available on the chosen physical device, default to FIFO (guaranteed to be avaiable):
   const VkPresentModeKHR desiredMode = VK_PRESENT_MODE_FIFO_KHR;
-  VkPresentModeKHR presentMode = cassidy::helper::isSwapchainPresentModeSupported(details.presentModes.size(), details.presentModes.data(), 
-    desiredMode) ? desiredMode : VK_PRESENT_MODE_FIFO_KHR;
+  VkPresentModeKHR presentMode = cassidy::helper::isSwapchainPresentModeSupported(
+    static_cast<uint32_t>(details.presentModes.size()), details.presentModes.data(), desiredMode) ? desiredMode : VK_PRESENT_MODE_FIFO_KHR;
 
   VkExtent2D extent = cassidy::helper::chooseSwapchainExtent(m_engineRef->getWindow(), details.capabilities);
 
@@ -891,6 +892,7 @@ void cassidy::Renderer::initUniformBuffers()
   }
 }
 
+
 void cassidy::Renderer::initImGui()
 {
   const uint32_t NUM_SIZES = 11;
@@ -929,8 +931,8 @@ void cassidy::Renderer::initImGui()
   initInfo.Device = m_device;
   initInfo.Queue = m_graphicsQueue;
   initInfo.DescriptorPool = imGuiPool;
-  initInfo.MinImageCount = m_swapchain.images.size();
-  initInfo.ImageCount = m_swapchain.images.size();
+  initInfo.MinImageCount = static_cast<uint32_t>(m_swapchain.images.size());
+  initInfo.ImageCount = static_cast<uint32_t>(m_swapchain.images.size());
   initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
   ImGui_ImplVulkan_Init(&initInfo, m_editorRenderPass);
@@ -1224,7 +1226,7 @@ void cassidy::Renderer::rebuildSwapchain()
   SDL_Window* window = m_engineRef->getWindow();
   SDL_GetWindowSize(window, &width, &height);
 
-  vkWaitForFences(m_device, m_inFlightFences.size(), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
+  vkWaitForFences(m_device,static_cast<uint32_t>(m_inFlightFences.size()), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
   m_swapchain.release(m_device, m_allocator);
 
   // Release ImGui viewport resources:

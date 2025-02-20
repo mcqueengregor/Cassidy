@@ -76,7 +76,7 @@ void cassidy::Pipeline::buildGraphicsPipeline(const std::string& vertexFilepath,
   auto attributeDescriptions = Vertex::getAttributeDescs();
 
   VkPipelineVertexInputStateCreateInfo vertexInput = cassidy::init::pipelineVertexInputStateCreateInfo(1,
-    &bindingDescription, attributeDescriptions.size(), attributeDescriptions.data());
+    &bindingDescription, static_cast<uint32_t>(attributeDescriptions.size()), attributeDescriptions.data());
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = cassidy::init::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
@@ -105,8 +105,9 @@ void cassidy::Pipeline::buildGraphicsPipeline(const std::string& vertexFilepath,
   VkPipelineDepthStencilStateCreateInfo depthStencil = cassidy::init::pipelineDepthStencilStateCreateInfo(VK_TRUE, VK_TRUE,
     VK_COMPARE_OP_LESS);
 
-  VkPipelineLayoutCreateInfo pipelineLayout = cassidy::init::pipelineLayoutCreateInfo(m_descSetLayouts.size(), 
-    m_descSetLayouts.data(), m_pushConstantRanges.size(), m_pushConstantRanges.data());
+  VkPipelineLayoutCreateInfo pipelineLayout = cassidy::init::pipelineLayoutCreateInfo(
+    static_cast<uint32_t>(m_descSetLayouts.size()), m_descSetLayouts.data(), 
+    static_cast<uint32_t>(m_pushConstantRanges.size()), m_pushConstantRanges.data());
 
   vkCreatePipelineLayout(m_rendererRef->getLogicalDevice(), &pipelineLayout, nullptr, &m_pipelineLayout);
 

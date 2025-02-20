@@ -33,7 +33,8 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
   if (format == VK_FORMAT_R8G8B8A8_SRGB || format == VK_FORMAT_R8G8B8A8_UNORM)
     textureSize *= STBI_rgb_alpha;
 
-  VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+  VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(
+    static_cast<uint32_t>(textureSize), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
   VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 

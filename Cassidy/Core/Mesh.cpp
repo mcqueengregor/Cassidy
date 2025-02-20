@@ -237,7 +237,7 @@ void cassidy::Model::allocateIndexBuffers(VkCommandBuffer cmd, VmaAllocator allo
     VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
       VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
-    AllocatedBuffer stagingBuffer;
+    AllocatedBuffer stagingBuffer = {};
 
     vmaCreateBuffer(allocator, &stagingBufferInfo, &bufferAllocInfo,
       &stagingBuffer.buffer,
@@ -255,7 +255,7 @@ void cassidy::Model::allocateIndexBuffers(VkCommandBuffer cmd, VmaAllocator allo
 
     bufferAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-    AllocatedBuffer newBuffer;
+    AllocatedBuffer newBuffer = {};
 
     vmaCreateBuffer(allocator, &indexBufferInfo, &bufferAllocInfo,
       &newBuffer.buffer,

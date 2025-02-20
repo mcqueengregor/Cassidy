@@ -13,7 +13,7 @@ namespace cassidy
 
   struct MaterialInfo
   {
-    std::string debugName;
+    std::string_view debugName;
     PBRTextures pbrTextures;
 
     bool operator==(const MaterialInfo& other) const;
@@ -21,7 +21,7 @@ namespace cassidy
     // Source: https://github.com/vblanco20-1/vulkan-guide/blob/engine/extra-engine/material_system.cpp
     size_t hash() const
     {
-      size_t result = std::hash<std::string>()(debugName);
+      size_t result = std::hash<std::string_view>()(debugName);
 
       for (auto& [key, val] : pbrTextures)
       {

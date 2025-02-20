@@ -23,6 +23,11 @@ cassidy::Engine::Engine(glm::vec2 windowDimensions) :
 {
 }
 
+cassidy::Engine::Engine(glm::uvec2 windowDimensions) :
+  m_windowDimensions(windowDimensions)
+{
+}
+
 void cassidy::Engine::init()
 {
   std::cout << "Initialising engine..." << std::endl;
@@ -237,8 +242,10 @@ void cassidy::Engine::initInstance()
 
   const auto& validationLayers = cassidy::Renderer::VALIDATION_LAYERS;
 
-  VkInstanceCreateInfo instanceCreateInfo = cassidy::init::instanceCreateInfo(&appInfo, extensionNames.size(),
-    extensionNames.data(), validationLayers.size(), validationLayers.data(), &debugMessengerInfo);
+  VkInstanceCreateInfo instanceCreateInfo = cassidy::init::instanceCreateInfo(&appInfo, 
+    static_cast<uint32_t>(extensionNames.size()), extensionNames.data(),
+    static_cast<uint32_t>(validationLayers.size()), validationLayers.data(), 
+    &debugMessengerInfo);
 
   const VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_instance);
 
