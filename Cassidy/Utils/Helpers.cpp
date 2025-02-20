@@ -228,7 +228,7 @@ VkSampler cassidy::helper::createTextureSampler(const VkDevice& device, const Vk
 
   samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
   samplerInfo.minLod = 0.0f;
-  samplerInfo.maxLod = static_cast<float>(numMips);
+  samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
   samplerInfo.mipLodBias = 0.0f;
 
   samplerInfo.anisotropyEnable = useAniso ? VK_TRUE : VK_FALSE;

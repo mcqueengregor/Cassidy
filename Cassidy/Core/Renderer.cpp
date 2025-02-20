@@ -180,7 +180,7 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
   vkBeginCommandBuffer(cmd, &beginInfo);
 
   VkClearValue clearValues[2];
-  clearValues[0].color = { 0.4f, 0.6f, 0.9f, 1.0f };
+  clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_viewportRenderPass,
@@ -337,7 +337,7 @@ void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
       ImGui::Text("Engine stats:");
       {
-        ImGui::Text("Frametime: %fms", m_engineRef->getDeltaTimeSecs() * 1000);
+        ImGui::Text("Frametime: %fms", m_engineRef->getDeltaTimeSecs() * 1000.0f);
 
         std::string texLibraryHeaderText = "Texture library size: " + std::to_string(TextureLibrary::getNumLoadedTextures());
 
@@ -788,9 +788,9 @@ void cassidy::Renderer::initMeshes()
   m_triangleMesh.setIndices(triangleIndices);
 
   m_backpackMesh.loadModel("Backpack/backpack.obj", m_allocator, this);
-  m_backpackAlbedo.load(MESH_ABS_FILEPATH   + std::string("Backpack/diffuse.jpg"),  m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_FALSE);
-  m_backpackSpecular.load(MESH_ABS_FILEPATH + std::string("Backpack/specular.jpg"), m_allocator, this, VK_FORMAT_R8_UNORM, VK_FALSE);
-  m_backpackNormal.load(MESH_ABS_FILEPATH   + std::string("Backpack/normal.png"),   m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_FALSE);
+  m_backpackAlbedo.load(MESH_ABS_FILEPATH   + std::string("Backpack/diffuse.jpg"),  m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_TRUE);
+  m_backpackSpecular.load(MESH_ABS_FILEPATH + std::string("Backpack/specular.jpg"), m_allocator, this, VK_FORMAT_R8_UNORM, VK_TRUE);
+  m_backpackNormal.load(MESH_ABS_FILEPATH   + std::string("Backpack/normal.png"),   m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_TRUE);
 
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
     VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
