@@ -22,6 +22,8 @@ namespace cassidy
   public:
     cassidy::Texture* load(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef,
       VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
+    cassidy::Texture* create(unsigned char* data, size_t size, VkExtent2D textureDim, VmaAllocator allocator, 
+      cassidy::Renderer* rendererRef, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
     void release(VkDevice device, VmaAllocator allocator);
 
     // Getters/setters: ------------------------------------------------------------------------------------------

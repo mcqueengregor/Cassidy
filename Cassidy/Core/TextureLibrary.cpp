@@ -1,6 +1,13 @@
 #include "TextureLibrary.h"
 #include <iostream>
 
+#define FALLBACK_TEXTURE_PREFIX "Fallback/"
+
+void TextureLibrary::initImpl(VmaAllocator allocator, cassidy::Renderer* rendererRef)
+{
+  generateFallbackTextures();
+}
+
 cassidy::Texture* TextureLibrary::loadTextureImpl(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef,
   VkFormat format, VkBool32 shouldGenMipmaps)
 {
@@ -28,6 +35,22 @@ void TextureLibrary::releaseAllImpl(VkDevice device, VmaAllocator allocator)
   {
     val.release(device, allocator);
   }
+}
+
+void TextureLibrary::generateFallbackTexturesImpl()
+{
+  float magentaColour[] = { 1.0f, 0.0f, 1.0f, 1.0f };
+  float normalColour[]  = { 0.5f, 0.5f, 1.0f, 1.0f };
+  float blackColour[]   = { 0.0f, 0.0f, 0.0f, 1.0f };
+  float whiteColour[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+  const VkExtent2D fallbackTexDim = { 1, 1 };
+
+  cassidy::Texture magentaTex;
+  magentaTex.create(reinterpret_cast<unsigned char*>(magentaColour), sizeof(float) * 4, fallbackTexDim,
+
+
+  
 }
 
 cassidy::Texture* TextureLibrary::retrieveFallbackTextureImpl(cassidy::TextureType type)
