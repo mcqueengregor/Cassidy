@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Utils/Types.h>
 
 // Source:  https://vkguide.dev/docs/extra-chapter/abstracting_descriptors/
@@ -129,5 +128,11 @@ namespace cassidy
 
     std::vector<VkDescriptorPool> m_usedDescriptorPools;
     std::vector<VkDescriptorPool> m_freeDescriptorPools;
+  };
+
+  namespace globals
+  {
+    inline DescriptorAllocator g_descAllocator;
+    inline DescriptorLayoutCache g_descLayoutCache;
   };
 }

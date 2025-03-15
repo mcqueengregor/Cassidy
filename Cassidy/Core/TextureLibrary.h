@@ -14,7 +14,7 @@ public:
   }
 
   static inline void init(VmaAllocator allocator, cassidy::Renderer* rendererRef) {
-    initImpl(allocator, rendererRef);
+    return;
   }
 
   static inline cassidy::Texture* loadTexture(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef,

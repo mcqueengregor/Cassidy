@@ -807,8 +807,8 @@ void cassidy::Renderer::initMeshes()
 
 void cassidy::Renderer::initDescriptorSets()
 {
-  m_descAllocator.init(m_device);
-  m_descLayoutCache.init(m_device);
+  cassidy::globals::g_descAllocator.init(m_device);
+  cassidy::globals::g_descLayoutCache.init(m_device);
 
   initUniformBuffers();
 
@@ -829,16 +829,16 @@ void cassidy::Renderer::initDescriptorSets()
     VkDescriptorImageInfo perMaterialNormalInfo = cassidy::init::descriptorImageInfo(
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackNormal.getImageView(), m_linearSampler);
 
-    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
+    cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
       .bindBuffer(0, &perPassBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
       .build(m_frameData[i].perPassSet, m_perPassSetLayout);
 
-    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
+    cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
       .bindBuffer(0, &perObjectBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
       .bindImage(1, &perObjectImageInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
       .build(m_frameData[i].perObjectSet, m_perObjectSetLayout);
 
-    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
+    cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
       .bindImage(0, &perMaterialAlbedoInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
       .bindImage(1, &perMaterialSpecularInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
       .bindImage(2, &perMaterialNormalInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -846,8 +846,8 @@ void cassidy::Renderer::initDescriptorSets()
   }
 
   m_deletionQueue.addFunction([=]() {
-    m_descLayoutCache.release();
-    m_descAllocator.release();
+    cassidy::globals::g_descLayoutCache.release();
+    cassidy::globals::g_descAllocator.release();
     });
 }
 

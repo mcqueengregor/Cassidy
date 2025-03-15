@@ -77,8 +77,8 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
   if (shouldGenMipmaps == VK_TRUE) usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
   const VkExtent3D extent = {
-    extent.width,
-    extent.height,
+    textureDim.width,
+    textureDim.height,
     1
   };
 

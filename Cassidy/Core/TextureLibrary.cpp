@@ -47,7 +47,7 @@ void TextureLibrary::generateFallbackTexturesImpl()
   const VkExtent2D fallbackTexDim = { 1, 1 };
 
   cassidy::Texture magentaTex;
-  magentaTex.create(reinterpret_cast<unsigned char*>(magentaColour), sizeof(float) * 4, fallbackTexDim,
+  //magentaTex.create(reinterpret_cast<unsigned char*>(magentaColour), sizeof(float) * 4, fallbackTexDim,
 
 
   

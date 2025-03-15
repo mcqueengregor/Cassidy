@@ -4,7 +4,6 @@
 #include "Core/Pipeline.h"
 #include <Core/Mesh.h>
 #include <Core/Texture.h>
-#include <Utils/DescriptorBuilder.h>
 
 // Forward declarations:
 struct SDL_Window;
@@ -154,12 +153,9 @@ namespace cassidy
 
     VkDescriptorSet m_imguiViewportSets[FRAMES_IN_FLIGHT];  // Used to display the renderer viewport via an ImGui image.
 
-    cassidy::DescriptorAllocator m_descAllocator;
-    cassidy::DescriptorLayoutCache m_descLayoutCache;
-
     // Command objects:
-    VkCommandPool m_graphicsCommandPool;
-    std::vector<VkCommandBuffer> m_commandBuffers;
+    VkCommandPool                 m_graphicsCommandPool;
+    std::vector<VkCommandBuffer>  m_commandBuffers;
 
     // Engine editor images and render pass:
     std::vector<AllocatedImage> m_editorImages;
@@ -167,9 +163,9 @@ namespace cassidy
     std::vector<VkFramebuffer>  m_editorFramebuffers;
 
     // Synchronisation objects:
-    std::vector<VkSemaphore> m_imageAvailableSemaphores;
-    std::vector<VkSemaphore> m_renderFinishedSemaphores;
-    std::vector<VkFence> m_inFlightFences;
+    std::vector<VkSemaphore>  m_imageAvailableSemaphores;
+    std::vector<VkSemaphore>  m_renderFinishedSemaphores;
+    std::vector<VkFence>      m_inFlightFences;
 
     // Memory allocator and allocated objects:
     VmaAllocator m_allocator;
