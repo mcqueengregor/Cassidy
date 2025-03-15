@@ -13,13 +13,12 @@ public:
     return s_instance;
   }
 
-  static inline void init(VmaAllocator allocator, cassidy::Renderer* rendererRef) {
-    return;
+  static inline void init(VmaAllocator* allocatorRef, cassidy::Renderer* rendererRef) {
+    TextureLibrary::get().initImpl(allocatorRef, rendererRef);
   }
 
-  static inline cassidy::Texture* loadTexture(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef,
-    VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE) {
-    return TextureLibrary::get().loadTextureImpl(filepath, allocator, rendererRef, format, shouldGenMipmaps);
+  static inline cassidy::Texture* loadTexture(std::string filepath, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE) {
+    return TextureLibrary::get().loadTextureImpl(filepath, format, shouldGenMipmaps);
   }
 
   static inline void releaseAll(VkDevice device, VmaAllocator allocator) {
@@ -45,8 +44,8 @@ public:
 private:
   TextureLibrary() {}
 
-  void              initImpl(VmaAllocator allocator, cassidy::Renderer* rendererRef);
-  cassidy::Texture* loadTextureImpl(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
+  void              initImpl(VmaAllocator* allocatorRef, cassidy::Renderer* rendererRef);
+  cassidy::Texture* loadTextureImpl(std::string filepath, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
   void              releaseAllImpl(VkDevice device, VmaAllocator allocator);
   void              generateFallbackTexturesImpl();
   cassidy::Texture* retrieveFallbackTextureImpl(cassidy::TextureType type);
@@ -54,4 +53,7 @@ private:
   inline const std::unordered_map<std::string, cassidy::Texture>& getTextureLibraryMapImpl() { return m_loadedTextures; }
 
   std::unordered_map<std::string, cassidy::Texture> m_loadedTextures;
+  VmaAllocator* m_allocatorRef;
+  cassidy::Renderer* m_rendererRef;
+  bool m_isInitialised = false;
 };

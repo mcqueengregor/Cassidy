@@ -784,6 +784,8 @@ void cassidy::Renderer::initSyncObjects()
 
 void cassidy::Renderer::initMeshes()
 {
+  TextureLibrary::init(&m_allocator, this);
+
   m_triangleMesh.setVertices(triangleVertices);
   m_triangleMesh.setIndices(triangleIndices);
 

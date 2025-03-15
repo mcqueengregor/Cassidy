@@ -137,13 +137,13 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
         const char* texName = texFilename.C_Str();
         std::cout << texType << ": " << texName;
 
-        cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + directory + texName, allocator, rendererRef, format, VK_TRUE);
+        cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + directory + texName, format, VK_TRUE);
 
         if (!loadedTexture)
         {
           // Fallback to default texture based on type:
           cassidy::Texture* fallback = TextureLibrary::retrieveFallbackTexture(engineTexType);
-          std::cout << "\t(ERROR: could not load texture!)";
+          std::cout << "\t(CASSIDY ERROR: could not load texture!)";
         }
         else if (matInfo.pbrTextures.find(engineTexType) == matInfo.pbrTextures.end())
         {

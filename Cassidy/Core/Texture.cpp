@@ -33,7 +33,10 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   size_t textureSize = texWidth * texHeight * requiredComponents;
 
-  const VkExtent2D extent = { texWidth, texHeight };
+  const VkExtent2D extent = { 
+    static_cast<uint32_t>(texWidth), 
+    static_cast<uint32_t>(texHeight) 
+  };
 
   create(data, textureSize, extent, allocator, rendererRef, format, shouldGenMipmaps);
 
@@ -59,8 +62,6 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
   vmaMapMemory(allocator, stagingBuffer.allocation, &mappingData);
   memcpy(mappingData, data, size);
   vmaUnmapMemory(allocator, stagingBuffer.allocation);
-
-  stbi_image_free(data);
 
   // Check support for linear filtering necessary for generating mipmaps, skip mipmap generation if it isn't:
   VkFormatProperties formatProperties;
