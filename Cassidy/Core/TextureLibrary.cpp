@@ -1,7 +1,7 @@
 #include "TextureLibrary.h"
 #include <iostream>
 
-#define FALLBACK_TEXTURE_PREFIX std::string("Fallback/")
+#define FALLBACK_TEXTURE_PREFIX std::string("Fallback_")
 
 void TextureLibrary::initImpl(VmaAllocator* allocatorRef, cassidy::Renderer* rendererRef)
 {

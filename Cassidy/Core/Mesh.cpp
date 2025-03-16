@@ -155,6 +155,13 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
     }
     matInfo.debugName = debugName;
     MaterialLibrary::buildMaterial(currentMat->GetName().C_Str(), matInfo);
+
+    // TODO: Get proper material creation and binding working:
+    /*
+      - When processing sub-meshes on a model, keep track of the material index they use
+      - If a material index is encountered for the first time, build it and keep track of index to prevent duplicate builds
+      - Once mesh has been processed, bind newly- or already-built material to it
+    */
   }
 }
 
