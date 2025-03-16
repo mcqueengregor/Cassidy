@@ -49,120 +49,11 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
 
   std::cout << "Found " << scene->mNumMaterials << " materials on model!" << std::endl;
 
-  processSceneNode(scene->mRootNode, scene);
+  BuiltMaterials builtMaterials;
+
+  processSceneNode(scene->mRootNode, scene, builtMaterials, directory);
 
   std::cout << "Successfully loaded mesh " << filepath << "!" << std::endl;
-
-  // TODO: Make fixes for texture self-discovery with notes from https://scylardor.fr/2021/05/21/coercing-assimp-into-reading-obj-pbr-materials/
-  for (uint32_t i = 0; i < scene->mNumMaterials; ++i)
-  {
-    const aiMaterial* currentMat = scene->mMaterials[i];
-    std::string debugName = directory + currentMat->GetName().C_Str();
-    std::cout << "\nMaterial: " << currentMat->GetName().C_Str() << std::endl;
-
-    MaterialInfo matInfo;
-
-    for (uint8_t j = aiTextureType_DIFFUSE; j < aiTextureType_UNKNOWN; ++j)
-    {
-      cassidy::TextureType engineTexType;
-      const aiTextureType type = static_cast<aiTextureType>(j);
-      VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-      const char* texType = "";
-      aiString texFilename;
-
-      // Update image format based on texture map type:
-      switch (type)
-      {
-      case aiTextureType_DIFFUSE:
-        texType = "\tDiffuse";
-        engineTexType = cassidy::TextureType::DIFFUSE;
-        break;
-      case aiTextureType_SPECULAR:
-        texType = "\tSpecular";
-        format = VK_FORMAT_R8_UNORM;
-        engineTexType = cassidy::TextureType::SPECULAR;
-        break;
-      case aiTextureType_AMBIENT:
-        texType = "\tAmbient";
-        format = VK_FORMAT_R8_UNORM;
-        engineTexType = cassidy::TextureType::AO;
-        break;
-      case aiTextureType_EMISSIVE:
-        texType = "\tEmissive";
-        engineTexType = cassidy::TextureType::EMISSIVE;
-        break;
-      case aiTextureType_HEIGHT:
-        texType = "\tHeight";
-        format = VK_FORMAT_R8_UNORM;
-        break;
-      case aiTextureType_NORMALS:
-        texType = "\tNormal";
-        format = VK_FORMAT_R8G8B8A8_UNORM;
-        engineTexType = cassidy::TextureType::NORMAL;
-        break;
-      case aiTextureType_DISPLACEMENT:
-        texType = "\tDisplacement";
-        format = VK_FORMAT_R8_UNORM;
-        break;
-      case aiTextureType_METALNESS:
-        texType = "\tMetallic";
-        format = VK_FORMAT_R8_UNORM;
-        engineTexType = cassidy::TextureType::METALLIC;
-        break;
-      case aiTextureType_AMBIENT_OCCLUSION:
-        texType = "\tAO";
-        format = VK_FORMAT_R8_UNORM;
-        engineTexType = cassidy::TextureType::AO;
-        break;
-      case aiTextureType_LIGHTMAP:
-        texType = "\tAO (lightmap)";
-        format = VK_FORMAT_R8_UNORM;
-        break;
-      case aiTextureType_BASE_COLOR:
-        texType = "\tBase color";
-        engineTexType = cassidy::TextureType::DIFFUSE;
-        break;
-      case aiTextureType_DIFFUSE_ROUGHNESS:
-        texType = "\tDiffuse-roughness";
-        format = VK_FORMAT_R8G8_UNORM;
-        engineTexType = cassidy::TextureType::ROUGHNESS;
-        break;
-      default:
-        // Skip unneeded texture.
-        continue;
-      }
-
-      if (scene->mMaterials[i]->GetTexture(type, 0, &texFilename) == aiReturn::aiReturn_SUCCESS)
-      {
-        const char* texName = texFilename.C_Str();
-        std::cout << texType << ": " << texName;
-
-        cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + directory + texName, format, VK_TRUE);
-
-        if (!loadedTexture)
-        {
-          // Fallback to default texture based on type:
-          cassidy::Texture* fallback = TextureLibrary::retrieveFallbackTexture(engineTexType);
-          std::cout << "\t(CASSIDY ERROR: could not load texture!)";
-        }
-        else if (matInfo.pbrTextures.find(engineTexType) == matInfo.pbrTextures.end())
-        {
-          matInfo.attachTexture(loadedTexture, engineTexType);
-        }
-
-        std::cout << std::endl;
-      }
-    }
-    matInfo.debugName = debugName;
-    MaterialLibrary::buildMaterial(currentMat->GetName().C_Str(), matInfo);
-
-    // TODO: Get proper material creation and binding working:
-    /*
-      - When processing sub-meshes on a model, keep track of the material index they use
-      - If a material index is encountered for the first time, build it and keep track of index to prevent duplicate builds
-      - Once mesh has been processed, bind newly- or already-built material to it
-    */
-  }
 }
 
 // Used for single-mesh models which have their vertices directly set by an array.
@@ -284,22 +175,37 @@ void cassidy::Model::allocateIndexBuffers(VkCommandBuffer cmd, VmaAllocator allo
   }
 }
 
-void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene)
+void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltMaterials& builtMaterials, const std::string& directory)
 {
   m_meshes.reserve(node->mNumMeshes);
 
-  // Iterate over all meshes, merge into common vertex buffer:
   for (uint32_t i = 0; i < node->mNumMeshes; ++i)
   {
     const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
     m_meshes.emplace_back(Mesh());
     m_meshes[m_meshes.size() - 1].processMesh(mesh);
+
+    const uint32_t matIndex = mesh->mMaterialIndex;
+
+    if (builtMaterials.find(matIndex) != builtMaterials.end())
+    {
+      m_meshes[i].setMaterial(builtMaterials.at(matIndex));
+      continue;
+    }
+
+    MaterialInfo matInfo = m_meshes[i].buildMaterialInfo(scene, matIndex, directory);
+
+    const aiMaterial* currentMat = scene->mMaterials[matIndex];
+
+    cassidy::Material* builtMaterial = MaterialLibrary::buildMaterial(currentMat->GetName().C_Str(), matInfo);
+    m_meshes[i].setMaterial(builtMaterial);
+    builtMaterials[matIndex] = builtMaterial;
   }
 
   // Recursively iterate over child nodes and their meshes:
   for (uint32_t i = 0; i < node->mNumChildren; ++i)
   {
-    processSceneNode(node->mChildren[i], scene);
+    processSceneNode(node->mChildren[i], scene, builtMaterials, directory);
   }
 }
 
@@ -307,7 +213,6 @@ void cassidy::Mesh::processMesh(const aiMesh* mesh)
 {
   Vertex vertex;
 
-  // Store the vertex data in the current mesh, add to merged vertex buffer:
   m_vertices.reserve(mesh->mNumVertices);
 
   for (uint32_t i = 0; i < mesh->mNumVertices; ++i)
@@ -356,18 +261,113 @@ void cassidy::Mesh::processMesh(const aiMesh* mesh)
   }
 }
 
+cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uint32_t matIndex, const std::string& texturesDirectory)
+{
+  const aiMaterial* currentMat = scene->mMaterials[matIndex];
+  std::string debugName = texturesDirectory + currentMat->GetName().C_Str();
+  std::cout << "\nMaterial: " << currentMat->GetName().C_Str() << std::endl;
+
+  cassidy::MaterialInfo matInfo;
+
+  for (uint8_t i = aiTextureType_DIFFUSE; i < aiTextureType_UNKNOWN; ++i)
+  {
+    cassidy::TextureType engineTexType;
+    const aiTextureType type = static_cast<aiTextureType>(i);
+    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    const char* texType = "";
+    aiString texFilename;
+
+    // Update image format based on texture map type:
+    switch (type)
+    {
+    case aiTextureType_DIFFUSE:
+      texType = "\tDiffuse";
+      engineTexType = cassidy::TextureType::DIFFUSE;
+      break;
+    case aiTextureType_SPECULAR:
+      texType = "\tSpecular";
+      format = VK_FORMAT_R8_UNORM;
+      engineTexType = cassidy::TextureType::SPECULAR;
+      break;
+    case aiTextureType_AMBIENT:
+      texType = "\tAmbient";
+      format = VK_FORMAT_R8_UNORM;
+      engineTexType = cassidy::TextureType::AO;
+      break;
+    case aiTextureType_EMISSIVE:
+      texType = "\tEmissive";
+      engineTexType = cassidy::TextureType::EMISSIVE;
+      break;
+    case aiTextureType_HEIGHT:
+      texType = "\tHeight";
+      format = VK_FORMAT_R8_UNORM;
+      break;
+    case aiTextureType_NORMALS:
+      texType = "\tNormal";
+      format = VK_FORMAT_R8G8B8A8_UNORM;
+      engineTexType = cassidy::TextureType::NORMAL;
+      break;
+    case aiTextureType_DISPLACEMENT:
+      texType = "\tDisplacement";
+      format = VK_FORMAT_R8_UNORM;
+      break;
+    case aiTextureType_METALNESS:
+      texType = "\tMetallic";
+      format = VK_FORMAT_R8_UNORM;
+      engineTexType = cassidy::TextureType::METALLIC;
+      break;
+    case aiTextureType_AMBIENT_OCCLUSION:
+      texType = "\tAO";
+      format = VK_FORMAT_R8_UNORM;
+      engineTexType = cassidy::TextureType::AO;
+      break;
+    case aiTextureType_LIGHTMAP:
+      texType = "\tAO (lightmap)";
+      format = VK_FORMAT_R8_UNORM;
+      break;
+    case aiTextureType_BASE_COLOR:
+      texType = "\tBase color";
+      engineTexType = cassidy::TextureType::DIFFUSE;
+      break;
+    case aiTextureType_DIFFUSE_ROUGHNESS:
+      texType = "\tDiffuse-roughness";
+      format = VK_FORMAT_R8G8_UNORM;
+      engineTexType = cassidy::TextureType::ROUGHNESS;
+      break;
+    default:
+      // Skip unneeded texture.
+      continue;
+    }
+
+    if (scene->mMaterials[matIndex]->GetTexture(type, 0, &texFilename) == aiReturn::aiReturn_SUCCESS)
+    {
+      const char* texName = texFilename.C_Str();
+      std::cout << texType << ": " << texName;
+
+      cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + texturesDirectory + texName, format, VK_TRUE);
+
+      if (!loadedTexture)
+      {
+        // Fallback to default texture based on type:
+        cassidy::Texture* fallback = TextureLibrary::retrieveFallbackTexture(engineTexType);
+        std::cout << "\t(CASSIDY ERROR: could not load texture!)";
+
+        matInfo.attachTexture(fallback, engineTexType);
+      }
+      else if (matInfo.pbrTextures.find(engineTexType) == matInfo.pbrTextures.end())
+      {
+        matInfo.attachTexture(loadedTexture, engineTexType);
+      }
+
+      std::cout << std::endl;
+    }
+  }
+  matInfo.debugName = debugName;
+  return matInfo;
+}
+
 void cassidy::Mesh::release(VkDevice device, VmaAllocator allocator) const
 {
   vmaDestroyBuffer(allocator, m_vertexBuffer.buffer, m_vertexBuffer.allocation);
   vmaDestroyBuffer(allocator, m_indexBuffer.buffer, m_indexBuffer.allocation);
-}
-
-void cassidy::Mesh::setVertices(const std::vector<Vertex>& vertices)
-{
-  m_vertices.assign(vertices.begin(), vertices.end());
-}
-
-void cassidy::Mesh::setIndices(const std::vector<uint32_t>& indices)
-{
-  m_indices.assign(indices.begin(), indices.end());
 }

@@ -18,7 +18,7 @@ cassidy::Texture* TextureLibrary::loadTextureImpl(std::string filepath, VkFormat
   // If the texture has already been loaded, return the already-existing version:
   if (m_loadedTextures.find(filepath) != m_loadedTextures.end())
   {
-    std::cout << "Texture " << filepath << " has already been loaded into memory!" << std::endl;
+    std::cout << "\n\tTexture \"" << filepath << "\" has already been loaded into memory!" << std::endl;
     return &m_loadedTextures.at(filepath);
   }
 

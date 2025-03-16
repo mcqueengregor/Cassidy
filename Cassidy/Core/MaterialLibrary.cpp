@@ -1,4 +1,5 @@
 #include "MaterialLibrary.h"
+#include <Utils/DescriptorBuilder.h>
 #include <iostream>
 
 cassidy::Material* MaterialLibrary::buildMaterialImpl(const std::string& materialName, const cassidy::MaterialInfo& materialInfo)
