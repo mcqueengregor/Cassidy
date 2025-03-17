@@ -38,7 +38,7 @@ namespace cassidy::helper
 
   uint32_t padUniformBufferSize(size_t originalSize, const VkPhysicalDeviceProperties& gpuProperties);
 
-  VkSampler createTextureSampler(const VkDevice& device, const VkPhysicalDeviceProperties& physicalDeviceProperties, VkFilter filter, VkSamplerAddressMode wrapMode, uint8_t numMips, bool useAniso);
+  VkSampler createTextureSampler(const VkDevice& device, const VkPhysicalDeviceProperties& physicalDeviceProperties, VkFilter filter, VkSamplerAddressMode wrapMode, VkBool32 useAniso);
 
   void immediateSubmit(VkDevice device, UploadContext& uploadContext, std::function<void(VkCommandBuffer cmd)>&& function);
   void transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,

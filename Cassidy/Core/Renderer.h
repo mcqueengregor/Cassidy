@@ -68,10 +68,11 @@ namespace cassidy
     };
 
     // Getters/setters: ------------------------------------------------------------------------------------------
-    inline VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; }
-    inline VkDevice         getLogicalDevice()  { return m_device; }
-    inline Swapchain        getSwapchain()      { return m_swapchain; }
-    inline UploadContext&   getUploadContext()  { return m_uploadContext; }
+    inline VkPhysicalDevice           getPhysicalDevice()       { return m_physicalDevice; }
+    inline VkDevice                   getLogicalDevice()        { return m_device; }
+    inline Swapchain                  getSwapchain()            { return m_swapchain; }
+    inline UploadContext&             getUploadContext()        { return m_uploadContext; }
+    inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);

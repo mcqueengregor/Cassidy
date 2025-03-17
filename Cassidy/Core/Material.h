@@ -61,6 +61,10 @@ namespace cassidy
 
     Pipeline& getPipeline() { return *m_pipeline; }
 
+    inline void setMatInfo(const cassidy::MaterialInfo& info) { m_info = info; }
+    inline void setTextureDescSet(VkDescriptorSet set) { m_textureDescriptorSet = set; }
+    inline const VkDescriptorSet& getTextureDescSet() { return m_textureDescriptorSet; }
+
   private:
     VkDescriptorSet m_textureDescriptorSet;
     Pipeline* m_pipeline;

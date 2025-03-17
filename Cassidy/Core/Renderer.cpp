@@ -795,7 +795,7 @@ void cassidy::Renderer::initMeshes()
   m_backpackNormal.load(MESH_ABS_FILEPATH   + std::string("Backpack/normal.png"),   m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_TRUE);
 
   m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
-    VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
+    VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_TRUE);
 
   m_deletionQueue.addFunction([=]() {
     m_backpackAlbedo.release(m_device, m_allocator);
@@ -946,7 +946,7 @@ void cassidy::Renderer::initImGui()
 
   // Create sampler used for swapchain image in viewport:
   m_viewportSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties,
-    VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, VK_FALSE);
+    VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_FALSE);
 
   initViewportCommandPool();
   initViewportCommandBuffers();

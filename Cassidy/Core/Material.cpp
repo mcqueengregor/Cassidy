@@ -2,6 +2,8 @@
 
 void cassidy::Material::release(VkDevice device, VmaAllocator allocator)
 {
+  // TODO: Link this to texture library where textures unused by any materials are automatically released
+  // (this would require resource tracking)
   for (auto [key, val] : m_info.pbrTextures)
   {
     val->release(device, allocator);

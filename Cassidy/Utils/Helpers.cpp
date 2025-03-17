@@ -216,7 +216,7 @@ uint32_t cassidy::helper::padUniformBufferSize(size_t originalSize, const VkPhys
   return static_cast<uint32_t>(alignedSize);
 }
 
-VkSampler cassidy::helper::createTextureSampler(const VkDevice& device, const VkPhysicalDeviceProperties& physicalDeviceProperties, VkFilter filter, VkSamplerAddressMode wrapMode, uint8_t numMips, bool useAniso)
+VkSampler cassidy::helper::createTextureSampler(const VkDevice& device, const VkPhysicalDeviceProperties& physicalDeviceProperties, VkFilter filter, VkSamplerAddressMode wrapMode, VkBool32 useAniso)
 {
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -231,7 +231,7 @@ VkSampler cassidy::helper::createTextureSampler(const VkDevice& device, const Vk
   samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
   samplerInfo.mipLodBias = 0.0f;
 
-  samplerInfo.anisotropyEnable = useAniso ? VK_TRUE : VK_FALSE;
+  samplerInfo.anisotropyEnable = useAniso;
 
   samplerInfo.maxAnisotropy = physicalDeviceProperties.limits.maxSamplerAnisotropy;
 

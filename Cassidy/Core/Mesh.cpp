@@ -1,8 +1,9 @@
 #include "Mesh.h"
-#include <Utils/Initialisers.h>
 #include <Core/Renderer.h>
 #include <Core/TextureLibrary.h>
 #include <Core/MaterialLibrary.h>
+#include <Utils/Initialisers.h>
+
 #include <Vendor/assimp/include/assimp/Importer.hpp>
 #include <Vendor/assimp/include/assimp/scene.h>
 #include <Vendor/assimp/include/assimp/postprocess.h>
@@ -281,8 +282,8 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
     switch (type)
     {
     case aiTextureType_DIFFUSE:
-      texType = "\tDiffuse";
-      engineTexType = cassidy::TextureType::DIFFUSE;
+      texType = "\tAlbedo";
+      engineTexType = cassidy::TextureType::ALBEDO;
       break;
     case aiTextureType_SPECULAR:
       texType = "\tSpecular";
@@ -327,7 +328,7 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
       break;
     case aiTextureType_BASE_COLOR:
       texType = "\tBase color";
-      engineTexType = cassidy::TextureType::DIFFUSE;
+      engineTexType = cassidy::TextureType::ALBEDO;
       break;
     case aiTextureType_DIFFUSE_ROUGHNESS:
       texType = "\tDiffuse-roughness";

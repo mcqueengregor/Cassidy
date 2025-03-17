@@ -8,7 +8,7 @@ namespace cassidy
 
   enum class TextureType : uint8_t
   {
-    DIFFUSE = 0,
+    ALBEDO = 0,
     NORMAL = 1,
     METALLIC = 2,
     ROUGHNESS = 3,
