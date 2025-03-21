@@ -66,14 +66,10 @@ void cassidy::TextureLibrary::generateFallbackTexturesImpl()
   constexpr VkExtent2D fallbackTexDim = { 1, 1 };
 
   cassidy::Texture magentaTex, normalTex, blackTex, whiteTex;
-  magentaTex.create(reinterpret_cast<unsigned char*>(magentaColour), fallbackTexSize, fallbackTexDim,
-    *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
-  normalTex.create(reinterpret_cast<unsigned char*>(normalColour), fallbackTexSize, fallbackTexDim,
-    *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_UNORM);
-  blackTex.create(reinterpret_cast<unsigned char*>(blackColour), fallbackTexSize, fallbackTexDim,
-    *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
-  whiteTex.create(reinterpret_cast<unsigned char*>(blackColour), fallbackTexSize, fallbackTexDim,
-    *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
+  magentaTex.create(magentaColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
+  normalTex.create(normalColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_UNORM);
+  blackTex.create(blackColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
+  whiteTex.create(blackColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
 
   const std::string magentaKeyVal = FALLBACK_TEXTURE_PREFIX + std::string("magenta");
   const std::string normalKeyVal  = FALLBACK_TEXTURE_PREFIX + std::string("normal");

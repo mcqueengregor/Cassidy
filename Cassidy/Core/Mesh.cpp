@@ -1,5 +1,6 @@
 #include "Mesh.h"
 #include <Core/Renderer.h>
+#include <Core/Pipeline.h>
 #include <Core/TextureLibrary.h>
 #include <Core/MaterialLibrary.h>
 #include <Utils/Initialisers.h>
@@ -10,10 +11,20 @@
 
 #include <iostream>
 
-void cassidy::Model::draw(VkCommandBuffer cmd)
+void cassidy::Model::draw(VkCommandBuffer cmd, const Pipeline* pipeline)
 {
+  cassidy::Material* lastMaterial = nullptr;
+
   for (const auto& mesh : m_meshes)
   {
+    if (mesh.getMaterial() != lastMaterial)
+    {
+      VkDescriptorSet&& textureSet = mesh.getMaterial()->getTextureDescSet();
+
+      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getLayout(),
+        2, 1, &textureSet, 0, nullptr);
+    }
+
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &mesh.getVertexBuffer()->buffer, &offset);
     vkCmdBindIndexBuffer(cmd, mesh.getIndexBuffer()->buffer, 0, VK_INDEX_TYPE_UINT32);
@@ -188,17 +199,17 @@ void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltM
 
     const uint32_t matIndex = mesh->mMaterialIndex;
 
-    if (builtMaterials.find(matIndex) != builtMaterials.end())
-    {
-      m_meshes[i].setMaterial(builtMaterials.at(matIndex));
-      continue;
-    }
+    //if (builtMaterials.find(matIndex) != builtMaterials.end())
+    //{
+    //  m_meshes[i].setMaterial(builtMaterials.at(matIndex));
+    //  continue;
+    //}
 
     MaterialInfo matInfo = m_meshes[i].buildMaterialInfo(scene, matIndex, directory);
 
     const aiMaterial* currentMat = scene->mMaterials[matIndex];
 
-    cassidy::Material* builtMaterial = MaterialLibrary::buildMaterial(currentMat->GetName().C_Str(), matInfo);
+    cassidy::Material* builtMaterial = MaterialLibrary::buildMaterial(directory + std::string(currentMat->GetName().C_Str()), matInfo);
     m_meshes[i].setMaterial(builtMaterial);
     builtMaterials[matIndex] = builtMaterial;
   }

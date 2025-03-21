@@ -39,6 +39,7 @@ namespace cassidy
     void release();
 
     VkDescriptorSetLayout createDescLayout(VkDescriptorSetLayoutCreateInfo* layoutCreateInfo);
+    void createDescLayout(VkDescriptorSetLayoutCreateInfo* layoutCreateInfo, VkDescriptorSetLayout& layout);
 
     struct DescriptorLayoutInfo
     {

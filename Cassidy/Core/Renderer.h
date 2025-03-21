@@ -140,11 +140,9 @@ namespace cassidy
     Model m_backpackMesh;
     Texture m_backpackAlbedo;
     Texture m_backpackSpecular;
-    Texture m_backpackNormal;
     UploadContext m_uploadContext;
 
     // Samplers:
-    VkSampler m_linearSampler;
     VkSampler m_viewportSampler;
 
     // Descriptor objects:
