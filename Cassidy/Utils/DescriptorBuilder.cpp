@@ -201,23 +201,3 @@ VkDescriptorSetLayout cassidy::DescriptorLayoutCache::createDescLayout(VkDescrip
   m_layoutCache[layoutInfo] = newLayout;
   return newLayout;
 }
-
-void cassidy::DescriptorLayoutCache::createDescLayout(VkDescriptorSetLayoutCreateInfo* layoutCreateInfo, VkDescriptorSetLayout& layout)
-{
-  DescriptorLayoutInfo layoutInfo;
-  layoutInfo.bindings.resize(layoutCreateInfo->bindingCount);
-  memcpy(layoutInfo.bindings.data(), const_cast<VkDescriptorSetLayoutBinding*>(layoutCreateInfo->pBindings),
-    layoutCreateInfo->bindingCount * sizeof(VkDescriptorSetLayoutBinding));
-
-  if (m_layoutCache.find(layoutInfo) != m_layoutCache.end())
-    layout = m_layoutCache[layoutInfo];
-
-  VkResult layoutResult = vkCreateDescriptorSetLayout(m_deviceRef, layoutCreateInfo, nullptr, &layout);
-  if (layoutResult != VK_SUCCESS)
-  {
-    std::cout << "CASSIDY ERROR: Manual creation of descriptor set layout with layout cache failed!" << std::endl;
-    return;
-  }
-
-  m_layoutCache[layoutInfo] = layout;
-}

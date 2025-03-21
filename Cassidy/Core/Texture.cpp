@@ -29,7 +29,11 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   stbi_uc* data = stbi_load(filepath.c_str(), &texWidth, &texHeight, &numChannels, requiredComponents);
 
-  if (!data) return nullptr;
+  if (!data)
+  {
+    m_loadResult = LoadResult::NOT_FOUND;
+    return nullptr;
+  }
 
   size_t textureSize = texWidth * texHeight * requiredComponents;
 
@@ -40,6 +44,7 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   create(data, textureSize, extent, allocator, rendererRef, format, shouldGenMipmaps);
 
+  m_loadResult = LoadResult::SUCCESS;
   return this;
 }
 
@@ -118,11 +123,15 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
 
   vmaDestroyBuffer(allocator, stagingBuffer.buffer, stagingBuffer.allocation);
 
+  m_loadResult = LoadResult::SUCCESS;
   return this;
 }
 
 void cassidy::Texture::release(VkDevice device, VmaAllocator allocator)
 {
+  if (m_loadResult != LoadResult::SUCCESS)
+    return;
+
   vmaDestroyImage(allocator, m_image.image, m_image.allocation);
   vkDestroyImageView(device, m_image.view, nullptr);
 }

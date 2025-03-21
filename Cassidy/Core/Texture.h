@@ -17,6 +17,12 @@ namespace cassidy
     SPECULAR = 6,
   };
 
+  enum class LoadResult : uint8_t
+  {
+    SUCCESS = 0b0000'0001,
+    NOT_FOUND = 0b000'0010,
+  };
+
   class Texture
   {
   public:
@@ -36,5 +42,6 @@ namespace cassidy
     void generateMipmaps(VkCommandBuffer cmd, VkFormat format, uint32_t width, uint32_t height, uint8_t mipLevels);
 
     AllocatedImage m_image;
+    LoadResult m_loadResult;
   };
 }

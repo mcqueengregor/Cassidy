@@ -836,7 +836,7 @@ void cassidy::Renderer::initDescriptorSets()
   };
 
   VkDescriptorSetLayoutCreateInfo layoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(NUM_BINDINGS, bindings);
-  cassidy::globals::g_descLayoutCache.createDescLayout(&layoutInfo, m_perMaterialSetLayout);
+  m_perMaterialSetLayout = cassidy::globals::g_descLayoutCache.createDescLayout(&layoutInfo);
 
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {

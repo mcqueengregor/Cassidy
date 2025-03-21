@@ -69,7 +69,7 @@ void cassidy::TextureLibrary::generateFallbackTexturesImpl()
   magentaTex.create(magentaColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
   normalTex.create(normalColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_UNORM);
   blackTex.create(blackColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
-  whiteTex.create(blackColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
+  whiteTex.create(whiteColour, fallbackTexSize, fallbackTexDim, *m_allocatorRef, m_rendererRef, VK_FORMAT_R8G8B8A8_SRGB);
 
   const std::string magentaKeyVal = FALLBACK_TEXTURE_PREFIX + std::string("magenta");
   const std::string normalKeyVal  = FALLBACK_TEXTURE_PREFIX + std::string("normal");
@@ -100,9 +100,10 @@ cassidy::Texture* cassidy::TextureLibrary::retrieveFallbackTextureImpl(cassidy::
     return &m_loadedTextures.at(FALLBACK_TEXTURE_PREFIX + std::string("black"));
 
   case cassidy::TextureType::AO:
+  case cassidy::TextureType::SPECULAR:
     return &m_loadedTextures.at(FALLBACK_TEXTURE_PREFIX + std::string("white"));
   }
-  std::cout << "CASSIDY ERROR: No suitable fallback texture for TextureType " <<
+  std::cout << "\tCASSIDY ERROR: No suitable fallback texture for TextureType " <<
     static_cast<uint8_t>(type) << ", defaulting to magenta." << std::endl;
   return &m_loadedTextures.at(FALLBACK_TEXTURE_PREFIX + std::string("magenta"));
 }
