@@ -63,7 +63,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
 
   BuiltMaterials builtMaterials;
 
-  processSceneNode(scene->mRootNode, scene, builtMaterials, directory);
+  processSceneNode(scene->mRootNode, scene, builtMaterials, directory, rendererRef);
 
   std::cout << "Successfully loaded mesh " << filepath << "!" << std::endl;
 }
@@ -187,7 +187,7 @@ void cassidy::Model::allocateIndexBuffers(VkCommandBuffer cmd, VmaAllocator allo
   }
 }
 
-void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltMaterials& builtMaterials, const std::string& directory)
+void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltMaterials& builtMaterials, const std::string& directory, cassidy::Renderer* rendererRef)
 {
   m_meshes.reserve(node->mNumMeshes);
 
@@ -205,7 +205,7 @@ void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltM
     //  continue;
     //}
 
-    MaterialInfo matInfo = m_meshes[i].buildMaterialInfo(scene, matIndex, directory);
+    MaterialInfo matInfo = m_meshes[i].buildMaterialInfo(scene, matIndex, directory, rendererRef);
 
     const aiMaterial* currentMat = scene->mMaterials[matIndex];
 
@@ -217,7 +217,7 @@ void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltM
   // Recursively iterate over child nodes and their meshes:
   for (uint32_t i = 0; i < node->mNumChildren; ++i)
   {
-    processSceneNode(node->mChildren[i], scene, builtMaterials, directory);
+    processSceneNode(node->mChildren[i], scene, builtMaterials, directory, rendererRef);
   }
 }
 
@@ -273,7 +273,7 @@ void cassidy::Mesh::processMesh(const aiMesh* mesh)
   }
 }
 
-cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uint32_t matIndex, const std::string& texturesDirectory)
+cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uint32_t matIndex, const std::string& texturesDirectory, cassidy::Renderer* rendererRef)
 {
   const aiMaterial* currentMat = scene->mMaterials[matIndex];
   std::string debugName = texturesDirectory + currentMat->GetName().C_Str();
@@ -336,7 +336,7 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
     case aiTextureType_LIGHTMAP:
       texType = "\tAO (lightmap)";
       format = VK_FORMAT_R8_UNORM;
-      break;
+      continue;
     case aiTextureType_BASE_COLOR:
       texType = "\tBase color";
       engineTexType = cassidy::TextureType::ALBEDO;
@@ -344,7 +344,7 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
     case aiTextureType_DIFFUSE_ROUGHNESS:
       texType = "\tDiffuse-roughness";
       format = VK_FORMAT_R8G8_UNORM;
-      engineTexType = cassidy::TextureType::ROUGHNESS;
+      engineTexType = cassidy::TextureType::SPECULAR;
       break;
     default:
       // Skip unneeded texture.
@@ -360,6 +360,33 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
 
       if (!loadedTexture)
       {
+        // Attempt to find embedded version of texture:
+        if (scene->HasTextures())
+        {
+          const aiTexture* embeddedTex = scene->GetEmbeddedTexture(texName);
+
+          // When loading embedded textures with ASSIMP, if mHeight is 0 then the texture is in a 
+          // compressed format (e.g. JPEG), and the texture size is mWidth instead of mWidth * mHeight.
+          size_t texSize = sizeof(aiTexel) * embeddedTex->mHeight == 0 ? 
+            embeddedTex->mWidth :
+            embeddedTex->mWidth * embeddedTex->mHeight;
+
+          const VkExtent2D extent = {
+            std::max(embeddedTex->mWidth, 1U),
+            std::max(embeddedTex->mHeight, 1U),
+          };
+
+          cassidy::Texture engineTex;
+          if (engineTex.create(reinterpret_cast<unsigned char*>(embeddedTex->pcData), texSize, extent,
+            rendererRef->getAllocator(), rendererRef, format, VK_TRUE))
+          {
+            const std::string name = MESH_ABS_FILEPATH + texturesDirectory + embeddedTex->mFilename.C_Str();
+
+            TextureLibrary::registerTexture(name, engineTex);
+            matInfo.attachTexture(TextureLibrary::getTexture(name), engineTexType);
+          }
+        }
+
         // Fallback to default texture based on type:
         cassidy::Texture* fallback = TextureLibrary::retrieveFallbackTexture(engineTexType);
         std::cout << "\t(CASSIDY ERROR: could not load texture!)";

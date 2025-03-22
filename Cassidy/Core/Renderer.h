@@ -73,6 +73,7 @@ namespace cassidy
     inline Swapchain                  getSwapchain()            { return m_swapchain; }
     inline UploadContext&             getUploadContext()        { return m_uploadContext; }
     inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
+    inline VmaAllocator&              getAllocator()            { return m_allocator; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);

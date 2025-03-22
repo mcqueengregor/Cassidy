@@ -16,6 +16,8 @@
 #include <Vendor/imgui-docking/imgui_impl_sdl2.h>
 #include <Vendor/imgui-docking/imgui_impl_vulkan.h>
 
+#include <assimp/postprocess.h>
+
 #include <set>
 #include <iostream>
 
@@ -807,7 +809,7 @@ void cassidy::Renderer::initMeshes()
   m_triangleMesh.setVertices(triangleVertices);
   m_triangleMesh.setIndices(triangleIndices);
 
-  m_backpackMesh.loadModel("Backpack/backpack.obj", m_allocator, this);
+  m_backpackMesh.loadModel("Helmet/DamagedHelmet.glb", m_allocator, this, aiProcess_FlipUVs);
 
   m_deletionQueue.addFunction([=]() {
     m_backpackAlbedo.release(m_device, m_allocator);

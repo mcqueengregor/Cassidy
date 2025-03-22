@@ -25,8 +25,12 @@ namespace cassidy
       TextureLibrary::get().initImpl(allocatorRef, rendererRef);
     }
 
-    static inline cassidy::Texture* loadTexture(std::string filepath, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE) {
+    static inline cassidy::Texture* loadTexture(const std::string& filepath, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE) {
       return TextureLibrary::get().loadTextureImpl(filepath, format, shouldGenMipmaps);
+    }
+
+    static inline void registerTexture(const std::string& name, const cassidy::Texture& texture) {
+      return TextureLibrary::get().registerTextureImpl(name, texture);
     }
 
     static inline void releaseAll(VkDevice device, VmaAllocator allocator) {
@@ -39,6 +43,10 @@ namespace cassidy
 
     static inline cassidy::Texture* retrieveFallbackTexture(cassidy::TextureType type) {
       return TextureLibrary::get().retrieveFallbackTextureImpl(type);
+    }
+
+    static inline cassidy::Texture* getTexture(const std::string& name) {
+      return TextureLibrary::get().getTextureImpl(name);
     }
 
     static inline size_t getNumLoadedTextures() {
@@ -54,9 +62,11 @@ namespace cassidy
 
     void              initImpl(VmaAllocator* allocatorRef, cassidy::Renderer* rendererRef);
     cassidy::Texture* loadTextureImpl(std::string filepath, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
+    void              registerTextureImpl(const std::string& name, const cassidy::Texture& texture);
     void              releaseAllImpl(VkDevice device, VmaAllocator allocator);
     void              generateFallbackTexturesImpl();
     cassidy::Texture* retrieveFallbackTextureImpl(cassidy::TextureType type);
+    inline cassidy::Texture* getTextureImpl(const std::string& name) { return m_loadedTextures.find(name) != m_loadedTextures.end() ? &m_loadedTextures[name] : nullptr; }
     inline size_t     getNumLoadedTexturesImpl() { return m_loadedTextures.size(); }
     inline const std::unordered_map<std::string, cassidy::Texture>& getTextureLibraryMapImpl() { return m_loadedTextures; }
 

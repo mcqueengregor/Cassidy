@@ -42,6 +42,18 @@ cassidy::Texture* cassidy::TextureLibrary::loadTextureImpl(std::string filepath,
   return nullptr;
 }
 
+void cassidy::TextureLibrary::registerTextureImpl(const std::string& name, const cassidy::Texture& texture)
+{
+  if (m_loadedTextures.find(name) != m_loadedTextures.end())
+  {
+    std::cout << "CASSIDY ERROR: Attempted to register texture " << name << " into library when " <<
+      "a texture with this name already exists!" << std::endl;
+    return;
+  }
+
+  m_loadedTextures[name] = texture;
+}
+
 void cassidy::TextureLibrary::releaseAllImpl(VkDevice device, VmaAllocator allocator)
 {
   vkDestroySampler(device, cassidy::globals::m_linearTextureSampler, nullptr);

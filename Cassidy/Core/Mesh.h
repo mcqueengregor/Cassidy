@@ -25,7 +25,7 @@ namespace cassidy
     void release(VkDevice device, VmaAllocator allocator) const;
 
     void processMesh(const aiMesh* mesh);
-    cassidy::MaterialInfo buildMaterialInfo(const aiScene* scene, uint32_t matIndex, const std::string& texturesDirectory);
+    cassidy::MaterialInfo buildMaterialInfo(const aiScene* scene, uint32_t matIndex, const std::string& texturesDirectory, cassidy::Renderer* rendererRef);
 
     inline void setMaterial(cassidy::Material* material)          { m_material = material; }
     inline void setVertices(const std::vector<Vertex>& vertices)  { m_vertices.assign(vertices.begin(), vertices.end()); }
@@ -69,7 +69,7 @@ namespace cassidy
   private:
     typedef std::unordered_map<uint32_t, cassidy::Material*> BuiltMaterials;
 
-    void processSceneNode(aiNode* node, const aiScene* scene, BuiltMaterials& builtMaterials, const std::string& directory);
+    void processSceneNode(aiNode* node, const aiScene* scene, BuiltMaterials& builtMaterials, const std::string& directory, cassidy::Renderer* rendererRef);
 
     std::vector<Mesh> m_meshes;
   };
