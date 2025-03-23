@@ -367,20 +367,25 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
 
           // When loading embedded textures with ASSIMP, if mHeight is 0 then the texture is in a 
           // compressed format (e.g. JPEG), and the texture size is mWidth instead of mWidth * mHeight.
-          size_t texSize = sizeof(aiTexel) * embeddedTex->mHeight == 0 ? 
-            embeddedTex->mWidth :
-            embeddedTex->mWidth * embeddedTex->mHeight;
-
-          const VkExtent2D extent = {
+          const VkExtent2D extent = embeddedTex->mHeight == 0 ?
+          VkExtent2D{
+            static_cast<uint32_t>(std::ceil(std::sqrt(embeddedTex->mWidth))),
+            static_cast<uint32_t>(std::ceil(std::sqrt(embeddedTex->mWidth))),
+          } :
+          VkExtent2D{
             std::max(embeddedTex->mWidth, 1U),
             std::max(embeddedTex->mHeight, 1U),
           };
 
+          size_t texSize = embeddedTex->mHeight == 0 ? 
+            extent.width * extent.width :
+            sizeof(aiTexel) * extent.width * extent.height;
+
           cassidy::Texture engineTex;
           if (engineTex.create(reinterpret_cast<unsigned char*>(embeddedTex->pcData), texSize, extent,
-            rendererRef->getAllocator(), rendererRef, format, VK_TRUE))
+            rendererRef->getAllocator(), rendererRef, VK_FORMAT_R8_UNORM, VK_TRUE))
           {
-            const std::string name = MESH_ABS_FILEPATH + texturesDirectory + embeddedTex->mFilename.C_Str();
+            const std::string& name = MESH_ABS_FILEPATH + texturesDirectory + texName;
 
             TextureLibrary::registerTexture(name, engineTex);
             matInfo.attachTexture(TextureLibrary::getTexture(name), engineTexType);

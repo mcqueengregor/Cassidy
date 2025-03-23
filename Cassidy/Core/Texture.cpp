@@ -76,7 +76,9 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
     shouldGenMipmaps = VK_FALSE;
 
   const uint32_t mipLevels = shouldGenMipmaps == VK_TRUE ?
-    static_cast<uint32_t>(std::floor(std::log2(std::max(textureDim.width, textureDim.height)))) + 1 : 1;
+    std::min(static_cast<uint32_t>(
+      std::floor(std::log2(std::max(textureDim.width, textureDim.height)))), 16U) + 1 :
+    1;
 
   // If generating mipmaps for this texture, add TRANSFER_SRC to usage flags:
   VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;

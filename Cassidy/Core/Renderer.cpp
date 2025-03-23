@@ -809,7 +809,7 @@ void cassidy::Renderer::initMeshes()
   m_triangleMesh.setVertices(triangleVertices);
   m_triangleMesh.setIndices(triangleIndices);
 
-  m_backpackMesh.loadModel("Helmet/DamagedHelmet.glb", m_allocator, this, aiProcess_FlipUVs);
+  m_backpackMesh.loadModel("Helmet/DamagedHelmet.gltf", m_allocator, this, aiProcess_FlipUVs);
 
   m_deletionQueue.addFunction([=]() {
     m_backpackAlbedo.release(m_device, m_allocator);
