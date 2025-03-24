@@ -8,7 +8,7 @@ namespace cassidy
 
   enum class TextureType : uint8_t
   {
-    DIFFUSE = 0,
+    ALBEDO = 0,
     NORMAL = 1,
     METALLIC = 2,
     ROUGHNESS = 3,
@@ -17,11 +17,19 @@ namespace cassidy
     SPECULAR = 6,
   };
 
+  enum class LoadResult : uint8_t
+  {
+    SUCCESS = 0b0000'0001,
+    NOT_FOUND = 0b000'0010,
+  };
+
   class Texture
   {
   public:
     cassidy::Texture* load(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef,
       VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
+    cassidy::Texture* create(unsigned char* data, size_t size, VkExtent2D textureDim, VmaAllocator allocator, 
+      cassidy::Renderer* rendererRef, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
     void release(VkDevice device, VmaAllocator allocator);
 
     // Getters/setters: ------------------------------------------------------------------------------------------
@@ -34,5 +42,6 @@ namespace cassidy
     void generateMipmaps(VkCommandBuffer cmd, VkFormat format, uint32_t width, uint32_t height, uint8_t mipLevels);
 
     AllocatedImage m_image;
+    LoadResult m_loadResult;
   };
 }

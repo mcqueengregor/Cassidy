@@ -29,12 +29,30 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   stbi_uc* data = stbi_load(filepath.c_str(), &texWidth, &texHeight, &numChannels, requiredComponents);
 
-  if (!data) return nullptr;
+  if (!data)
+  {
+    m_loadResult = LoadResult::NOT_FOUND;
+    return nullptr;
+  }
 
-  VkDeviceSize textureSize = texWidth * texHeight * requiredComponents;
+  size_t textureSize = texWidth * texHeight * requiredComponents;
 
-  VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(
-    static_cast<uint32_t>(textureSize), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+  const VkExtent2D extent = { 
+    static_cast<uint32_t>(texWidth), 
+    static_cast<uint32_t>(texHeight) 
+  };
+
+  create(data, textureSize, extent, allocator, rendererRef, format, shouldGenMipmaps);
+
+  m_loadResult = LoadResult::SUCCESS;
+  return this;
+}
+
+cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkExtent2D textureDim, 
+  VmaAllocator allocator, cassidy::Renderer* rendererRef, VkFormat format, VkBool32 shouldGenMipmaps)
+{
+  VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(static_cast<uint32_t>(size),
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
   VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
@@ -47,16 +65,8 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   void* mappingData;
   vmaMapMemory(allocator, stagingBuffer.allocation, &mappingData);
-  memcpy(mappingData, data, static_cast<size_t>(textureSize));
+  memcpy(mappingData, data, size);
   vmaUnmapMemory(allocator, stagingBuffer.allocation);
-
-  stbi_image_free(data);
-
-  VkExtent3D imageExtent = {
-    static_cast<uint32_t>(texWidth),
-    static_cast<uint32_t>(texHeight),
-    1
-  };
 
   // Check support for linear filtering necessary for generating mipmaps, skip mipmap generation if it isn't:
   VkFormatProperties formatProperties;
@@ -65,14 +75,22 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
   if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
     shouldGenMipmaps = VK_FALSE;
 
-  const uint32_t mipLevels = shouldGenMipmaps == VK_TRUE ? 
-    static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1 : 1;
+  const uint32_t mipLevels = shouldGenMipmaps == VK_TRUE ?
+    std::min(static_cast<uint32_t>(
+      std::floor(std::log2(std::max(textureDim.width, textureDim.height)))), 16U) + 1 :
+    1;
 
   // If generating mipmaps for this texture, add TRANSFER_SRC to usage flags:
   VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
   if (shouldGenMipmaps == VK_TRUE) usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-  VkImageCreateInfo imageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D, imageExtent, mipLevels,
+  const VkExtent3D extent = {
+    textureDim.width,
+    textureDim.height,
+    1
+  };
+
+  VkImageCreateInfo imageInfo = cassidy::init::imageCreateInfo(VK_IMAGE_TYPE_2D, extent, mipLevels,
     format, VK_IMAGE_TILING_OPTIMAL, usage);
 
   VmaAllocationCreateInfo imageAllocInfo = {};
@@ -82,23 +100,23 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   cassidy::helper::immediateSubmit(rendererRef->getLogicalDevice(),
     rendererRef->getUploadContext(), [=](VkCommandBuffer cmd)
-  {
-    cassidy::helper::transitionImageLayout(cmd, m_image.image, format, 
-      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-      0, VK_ACCESS_TRANSFER_WRITE_BIT,
-      VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-      mipLevels);
-
-    copyBufferToImage(cmd, stagingBuffer.buffer, texWidth, texHeight);
-
-    if (shouldGenMipmaps == VK_TRUE)
-      generateMipmaps(cmd, format, texWidth, texHeight, mipLevels);
-    else
+    {
       cassidy::helper::transitionImageLayout(cmd, m_image.image, format,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        0, VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
         mipLevels);
+
+      copyBufferToImage(cmd, stagingBuffer.buffer, textureDim.width, textureDim.height);
+
+      if (shouldGenMipmaps == VK_TRUE)
+        generateMipmaps(cmd, format, textureDim.width, textureDim.height, mipLevels);
+      else
+        cassidy::helper::transitionImageLayout(cmd, m_image.image, format,
+          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+          VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+          VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+          mipLevels);
     });
 
   VkImageViewCreateInfo viewInfo = cassidy::init::imageViewCreateInfo(m_image.image, format,
@@ -107,11 +125,15 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 
   vmaDestroyBuffer(allocator, stagingBuffer.buffer, stagingBuffer.allocation);
 
+  m_loadResult = LoadResult::SUCCESS;
   return this;
 }
 
 void cassidy::Texture::release(VkDevice device, VmaAllocator allocator)
 {
+  if (m_loadResult != LoadResult::SUCCESS)
+    return;
+
   vmaDestroyImage(allocator, m_image.image, m_image.allocation);
   vkDestroyImageView(device, m_image.view, nullptr);
 }

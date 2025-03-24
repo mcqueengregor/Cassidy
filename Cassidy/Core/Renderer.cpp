@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "Core/Engine.h"
 #include "Core/TextureLibrary.h"
+#include "Core/MaterialLibrary.h"
 #include "Utils/DescriptorBuilder.h"
 #include "Utils/Helpers.h"
 #include "Utils/Initialisers.h"
@@ -14,6 +15,8 @@
 #include <Vendor/imgui-docking/imgui.h>
 #include <Vendor/imgui-docking/imgui_impl_sdl2.h>
 #include <Vendor/imgui-docking/imgui_impl_vulkan.h>
+
+#include <assimp/postprocess.h>
 
 #include <set>
 #include <iostream>
@@ -128,6 +131,7 @@ void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_editorRenderPass,
     m_editorFramebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
 
+  // Draw ImGui contents:
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
   vkCmdEndRenderPass(cmd);
@@ -205,13 +209,10 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
 
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_helloTrianglePipeline.getLayout(),
-      2, 1, &getCurrentFrameData().m_backpackMaterialSet, 0, nullptr);
-
-    vkCmdPushConstants(cmd, m_helloTrianglePipeline.getLayout(), VK_SHADER_STAGE_FRAGMENT_BIT,
+    vkCmdPushConstants(cmd, m_viewportPipeline.getLayout(), VK_SHADER_STAGE_FRAGMENT_BIT,
       sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants), &m_phongLightingPushConstants);
     
-    m_backpackMesh.draw(cmd);
+    m_backpackMesh.draw(cmd, &m_viewportPipeline);
   }
 
   vkCmdEndRenderPass(cmd);
@@ -339,7 +340,7 @@ void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
       {
         ImGui::Text("Frametime: %fms", m_engineRef->getDeltaTimeSecs() * 1000.0f);
 
-        std::string texLibraryHeaderText = "Texture library size: " + std::to_string(TextureLibrary::getNumLoadedTextures());
+        const std::string texLibraryHeaderText = "Texture library size: " + std::to_string(TextureLibrary::getNumLoadedTextures());
 
         if (ImGui::TreeNode(texLibraryHeaderText.c_str()))
         {
@@ -352,6 +353,22 @@ void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
             std::string_view textureFilenameSub = textureFilename.substr(lastBackSlash, textureFilename.size() - lastBackSlash);
             ImGui::Text(textureFilenameSub.data());
           }
+          ImGui::TreePop();
+        }
+
+        const std::string matLibraryHeaderText = "Material library size: " + std::to_string(MaterialLibrary::getMaterialCache().size());
+
+        if (ImGui::TreeNode(matLibraryHeaderText.c_str()))
+        {
+          const auto& materialCache = MaterialLibrary::getMaterialCache();
+          for (const auto& mat : materialCache)
+          {
+            std::string_view matName = mat.first;
+            ImGui::Text(matName.data());
+          }
+
+          // TODO: Restrict this to debug build?
+          ImGui::Text("(Num duplicate materials prevented: %i)", MaterialLibrary::getNumDuplicateMaterialBuildsPrevented());
           ImGui::TreePop();
         }
       }
@@ -784,33 +801,44 @@ void cassidy::Renderer::initSyncObjects()
 
 void cassidy::Renderer::initMeshes()
 {
+  cassidy::globals::g_descAllocator.init(m_device);
+  cassidy::globals::g_descLayoutCache.init(m_device);
+
+  TextureLibrary::init(&m_allocator, this);
+
   m_triangleMesh.setVertices(triangleVertices);
   m_triangleMesh.setIndices(triangleIndices);
 
-  m_backpackMesh.loadModel("Backpack/backpack.obj", m_allocator, this);
-  m_backpackAlbedo.load(MESH_ABS_FILEPATH   + std::string("Backpack/diffuse.jpg"),  m_allocator, this, VK_FORMAT_R8G8B8A8_SRGB, VK_TRUE);
-  m_backpackSpecular.load(MESH_ABS_FILEPATH + std::string("Backpack/specular.jpg"), m_allocator, this, VK_FORMAT_R8_UNORM, VK_TRUE);
-  m_backpackNormal.load(MESH_ABS_FILEPATH   + std::string("Backpack/normal.png"),   m_allocator, this, VK_FORMAT_R8G8B8A8_UNORM, VK_TRUE);
-
-  m_linearSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties, VK_FILTER_LINEAR,
-    VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, true);
+  m_backpackMesh.loadModel("Helmet/DamagedHelmet.gltf", m_allocator, this, aiProcess_FlipUVs);
 
   m_deletionQueue.addFunction([=]() {
     m_backpackAlbedo.release(m_device, m_allocator);
     m_backpackSpecular.release(m_device, m_allocator);
-    m_backpackNormal.release(m_device, m_allocator);
 
     TextureLibrary::releaseAll(m_device, m_allocator);
-    vkDestroySampler(m_device, m_linearSampler, nullptr);
   });
 }
 
 void cassidy::Renderer::initDescriptorSets()
 {
-  m_descAllocator.init(m_device);
-  m_descLayoutCache.init(m_device);
-
   initUniformBuffers();
+  
+  constexpr uint32_t NUM_BINDINGS = 3;
+  VkDescriptorSetLayoutBinding bindings[NUM_BINDINGS];
+  for (uint32_t i = 0; i < 3; ++i)
+  {
+    bindings[i] =
+    {
+        .binding = i,
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = &cassidy::globals::m_linearTextureSampler,
+    };
+  };
+
+  VkDescriptorSetLayoutCreateInfo layoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(NUM_BINDINGS, bindings);
+  m_perMaterialSetLayout = cassidy::globals::g_descLayoutCache.createDescLayout(&layoutInfo);
 
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
@@ -819,35 +847,19 @@ void cassidy::Renderer::initDescriptorSets()
 
     VkDescriptorBufferInfo perObjectBufferInfo = cassidy::init::descriptorBufferInfo(
       m_perObjectUniformBufferDynamic.buffer, 0, sizeof(PerObjectData));
-    VkDescriptorImageInfo perObjectImageInfo = cassidy::init::descriptorImageInfo(
-      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackAlbedo.getImageView(), m_linearSampler);
 
-    VkDescriptorImageInfo perMaterialAlbedoInfo = cassidy::init::descriptorImageInfo(
-      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackAlbedo.getImageView(), m_linearSampler);
-    VkDescriptorImageInfo perMaterialSpecularInfo = cassidy::init::descriptorImageInfo(
-      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackSpecular.getImageView(), m_linearSampler);
-    VkDescriptorImageInfo perMaterialNormalInfo = cassidy::init::descriptorImageInfo(
-      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_backpackNormal.getImageView(), m_linearSampler);
-
-    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
+    cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
       .bindBuffer(0, &perPassBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
       .build(m_frameData[i].perPassSet, m_perPassSetLayout);
 
-    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
+    cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
       .bindBuffer(0, &perObjectBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT)
-      .bindImage(1, &perObjectImageInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
       .build(m_frameData[i].perObjectSet, m_perObjectSetLayout);
-
-    cassidy::DescriptorBuilder::begin(&m_descAllocator, &m_descLayoutCache)
-      .bindImage(0, &perMaterialAlbedoInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-      .bindImage(1, &perMaterialSpecularInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-      .bindImage(2, &perMaterialNormalInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-      .build(m_frameData[i].m_backpackMaterialSet, m_perMaterialSetLayout);
   }
 
   m_deletionQueue.addFunction([=]() {
-    m_descLayoutCache.release();
-    m_descAllocator.release();
+    cassidy::globals::g_descLayoutCache.release();
+    cassidy::globals::g_descAllocator.release();
     });
 }
 
@@ -944,7 +956,7 @@ void cassidy::Renderer::initImGui()
 
   // Create sampler used for swapchain image in viewport:
   m_viewportSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties,
-    VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 1, VK_FALSE);
+    VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_FALSE);
 
   initViewportCommandPool();
   initViewportCommandBuffers();

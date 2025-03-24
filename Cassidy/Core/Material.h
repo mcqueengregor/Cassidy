@@ -13,7 +13,7 @@ namespace cassidy
 
   struct MaterialInfo
   {
-    std::string_view debugName;
+    std::string debugName;
     PBRTextures pbrTextures;
 
     bool operator==(const MaterialInfo& other) const;
@@ -60,6 +60,10 @@ namespace cassidy
     Material& setPipeline(Pipeline* pipeline);
 
     Pipeline& getPipeline() { return *m_pipeline; }
+
+    inline void setMatInfo(const cassidy::MaterialInfo& info) { m_info = info; }
+    inline void setTextureDescSet(VkDescriptorSet set) { m_textureDescriptorSet = set; }
+    inline VkDescriptorSet getTextureDescSet() const { return m_textureDescriptorSet; }
 
   private:
     VkDescriptorSet m_textureDescriptorSet;
