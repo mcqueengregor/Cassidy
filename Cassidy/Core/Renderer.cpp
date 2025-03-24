@@ -86,6 +86,13 @@ void cassidy::Renderer::release()
 
 void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
 {
+  glm::mat4 lightWorld = glm::rotate(glm::mat4(1.0f), glm::radians(m_lightRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+  lightWorld = glm::rotate(lightWorld, glm::radians(m_lightRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+  lightWorld = glm::rotate(lightWorld, glm::radians(m_lightRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+  m_phongLightingPushConstants.dirLight.directionWS = lightWorld * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+  m_phongLightingPushConstants.dirLight.colour = glm::vec3(1.0f);
+
   PerPassData perPassData;
   perPassData.view = m_engineRef->getCamera().getLookatMatrix();
   perPassData.proj = m_engineRef->getCamera().getPerspectiveMatrix();
@@ -376,12 +383,17 @@ void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
           ImGui::TreePop();
         }
       }
+
       ImGui::Text("Directional light:");
-      ImGui::SliderFloat3("Direction", &m_phongLightingPushConstants.dirLight.directionWS.x, -1.0f, 1.0f);
+      ImGui::SliderFloat("Light pitch", &m_lightRotation.x, 0.0f, 360.0f);
+      ImGui::SliderFloat("Light yaw", &m_lightRotation.y, 0.0f, 360.0f);
+      ImGui::SliderFloat("Light roll", &m_lightRotation.z, 0.0f, 360.0f);
       ImGui::SliderFloat("Ambient", &m_phongLightingPushConstants.dirLight.ambient, 0.0f, 1.0f);
 
-      ImGui::Text("Object rotation");
-      ImGui::SliderFloat3("Euler angles", &m_objectRotation.x, 0.0f, 360.0f);
+      ImGui::Text("Object rotation:");
+      ImGui::SliderFloat("Object pitch", &m_objectRotation.x, 0.0f, 360.0f);
+      ImGui::SliderFloat("Object yaw", &m_objectRotation.y, 0.0f, 360.0f);
+      ImGui::SliderFloat("Object roll", &m_objectRotation.z, 0.0f, 360.0f);
     }
     ImGui::End();
 
@@ -885,12 +897,9 @@ void cassidy::Renderer::initIndexBuffers()
 
 void cassidy::Renderer::initUniformBuffers()
 {
-  m_phongLightingPushConstants.dirLight.directionWS = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+  m_phongLightingPushConstants.dirLight.directionWS = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
   m_phongLightingPushConstants.dirLight.colour = glm::vec3(1.0f);
   m_phongLightingPushConstants.dirLight.ambient = 0.01f;
-
-  if (glm::length(m_phongLightingPushConstants.dirLight.directionWS) == 0.0f)
-    m_phongLightingPushConstants.dirLight.directionWS = glm::vec4(1e-5f, 0.0f, 1.0f, 1.0f);
 
   const uint32_t objectBufferSize = FRAMES_IN_FLIGHT * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData),
     m_physicalDeviceProperties);

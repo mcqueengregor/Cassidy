@@ -145,6 +145,7 @@ namespace cassidy
 
     // Object data:
     glm::vec3 m_objectRotation = glm::vec3(0.0f);
+    glm::vec3 m_lightRotation = glm::vec3(0.0f);
 
     // Samplers:
     VkSampler m_viewportSampler;
