@@ -145,14 +145,13 @@ struct PerObjectData
 
 struct DirectionalLight
 {
-  glm::vec4 direction;
-  glm::vec4 colour;
+  glm::vec4 directionWS;
+  glm::vec3 colour;
+  float ambient;
 };
 
 struct PhongLightingPushConstants
 {
-  glm::uint texToDisplay = 0;
-  glm::uint padding[3];
   DirectionalLight dirLight;
 };
 

@@ -372,15 +372,9 @@ void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
           ImGui::TreePop();
         }
       }
-
-      const char* const textures[] = {
-        "Diffuse",
-        "Specular",
-        "Normal"
-      };
-
-      ImGui::ListBox("Textures", (int*)(&m_phongLightingPushConstants.texToDisplay), textures, 3);
-      ImGui::Text("Current index: %u", m_phongLightingPushConstants.texToDisplay);
+      ImGui::Text("Directional light:");
+      ImGui::SliderFloat3("Direction", &m_phongLightingPushConstants.dirLight.directionWS.x, -1.0f, 1.0f);
+      ImGui::SliderFloat("Ambient", &m_phongLightingPushConstants.dirLight.ambient, 0.0f, 1.0f);
     }
     ImGui::End();
 
@@ -884,6 +878,13 @@ void cassidy::Renderer::initIndexBuffers()
 
 void cassidy::Renderer::initUniformBuffers()
 {
+  m_phongLightingPushConstants.dirLight.directionWS = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+  m_phongLightingPushConstants.dirLight.colour = glm::vec3(1.0f);
+  m_phongLightingPushConstants.dirLight.ambient = 0.5f;
+
+  if (glm::length(m_phongLightingPushConstants.dirLight.directionWS) == 0.0f)
+    m_phongLightingPushConstants.dirLight.directionWS = glm::vec4(1e-5f, 0.0f, 1.0f, 1.0f);
+
   const uint32_t objectBufferSize = FRAMES_IN_FLIGHT * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData),
     m_physicalDeviceProperties);
   m_perObjectUniformBufferDynamic = allocateBuffer(objectBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

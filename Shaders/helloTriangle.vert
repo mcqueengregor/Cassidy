@@ -5,6 +5,7 @@ layout (location = 1) in vec2 aUV;
 layout (location = 2) in vec3 aNormal;
 
 layout (location = 0) out vec2 uv;
+layout (location = 1) out vec3 normalWS;
 
 layout (set = 0, binding = 0) uniform PerPassBuffer
 {
@@ -29,4 +30,5 @@ void main()
 {
     gl_Position = perPassBuffer.viewProj * perObjectBuffer.world * vec4(aPos, 1.0);
     uv = aUV;
+    normalWS = (perObjectBuffer.world * vec4(aNormal, 0.0)).xyz;
 }
