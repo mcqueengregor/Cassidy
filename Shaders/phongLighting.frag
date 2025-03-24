@@ -36,5 +36,5 @@ void main()
 	
 	vec3 lightingResults = (NdotL + dirLight.ambient) * albedoColour * dirLight.colour.rgb;
 	
-	outColour = vec4(pow(lightingResults.rgb, vec3(2.2)), 1.0);
+	outColour = vec4(pow(lightingResults.rgb, vec3(1.0 / 2.2)), 1.0);
 }

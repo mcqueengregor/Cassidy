@@ -143,6 +143,9 @@ namespace cassidy
     Texture m_backpackSpecular;
     UploadContext m_uploadContext;
 
+    // Object data:
+    glm::vec3 m_objectRotation = glm::vec3(0.0f);
+
     // Samplers:
     VkSampler m_viewportSampler;
 

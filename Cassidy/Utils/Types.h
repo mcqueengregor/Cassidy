@@ -163,8 +163,6 @@ struct FrameData
   VkDescriptorSet perPassSet;
 
   VkDescriptorSet perObjectSet;
-
-  VkDescriptorSet m_backpackMaterialSet;
 };
 
 struct UploadContext

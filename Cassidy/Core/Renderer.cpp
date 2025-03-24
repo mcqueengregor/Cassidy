@@ -97,8 +97,12 @@ void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
   memcpy(perPassDataPtr, &perPassData, sizeof(PerPassData));
   vmaUnmapMemory(m_allocator, currentFrameData.perPassUniformBuffer.allocation);
 
+  glm::mat4 objectWorld = glm::rotate(glm::mat4(1.0f), glm::radians(m_objectRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+  objectWorld = glm::rotate(objectWorld, glm::radians(m_objectRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+  objectWorld = glm::rotate(objectWorld, glm::radians(m_objectRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));  
+
   PerObjectData perObjectData;
-  perObjectData.world = glm::mat4(1.0f);
+  perObjectData.world = objectWorld;
 
   char* perObjectDataPtr;
   vmaMapMemory(m_allocator, m_perObjectUniformBufferDynamic.allocation, (void**)&perObjectDataPtr);
@@ -375,6 +379,9 @@ void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
       ImGui::Text("Directional light:");
       ImGui::SliderFloat3("Direction", &m_phongLightingPushConstants.dirLight.directionWS.x, -1.0f, 1.0f);
       ImGui::SliderFloat("Ambient", &m_phongLightingPushConstants.dirLight.ambient, 0.0f, 1.0f);
+
+      ImGui::Text("Object rotation");
+      ImGui::SliderFloat3("Euler angles", &m_objectRotation.x, 0.0f, 360.0f);
     }
     ImGui::End();
 
@@ -880,7 +887,7 @@ void cassidy::Renderer::initUniformBuffers()
 {
   m_phongLightingPushConstants.dirLight.directionWS = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
   m_phongLightingPushConstants.dirLight.colour = glm::vec3(1.0f);
-  m_phongLightingPushConstants.dirLight.ambient = 0.5f;
+  m_phongLightingPushConstants.dirLight.ambient = 0.01f;
 
   if (glm::length(m_phongLightingPushConstants.dirLight.directionWS) == 0.0f)
     m_phongLightingPushConstants.dirLight.directionWS = glm::vec4(1e-5f, 0.0f, 1.0f, 1.0f);
