@@ -850,8 +850,8 @@ void cassidy::Renderer::initDescriptorSets()
     };
   };
 
-  VkDescriptorSetLayoutCreateInfo layoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(NUM_BINDINGS, bindings);
-  m_perMaterialSetLayout = cassidy::globals::g_descLayoutCache.createDescLayout(&layoutInfo);
+  VkDescriptorSetLayoutCreateInfo materialLayoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(NUM_BINDINGS, bindings);
+  m_perMaterialSetLayout = cassidy::globals::g_descLayoutCache.createDescLayout(&materialLayoutInfo);
 
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
@@ -862,7 +862,7 @@ void cassidy::Renderer::initDescriptorSets()
       m_perObjectUniformBufferDynamic.buffer, 0, sizeof(PerObjectData));
 
     cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
-      .bindBuffer(0, &perPassBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+      .bindBuffer(0, &perPassBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
       .build(m_frameData[i].perPassSet, m_perPassSetLayout);
 
     cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
