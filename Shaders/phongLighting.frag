@@ -21,10 +21,12 @@ struct DirectionalLight
 	float ambient;
 };
 
+#define NUM_LIGHTS 4
+
 layout (set = 0, binding = 1) uniform LightBuffer
 {
 	uvec4 numActiveLights;
-	DirectionalLight dirLights[];
+	DirectionalLight dirLights[NUM_LIGHTS];
 } u_lightBuffer;
 
 layout (set = 2, binding = 0) uniform sampler2D albedoTex;
@@ -45,7 +47,7 @@ void main()
 
 	for (uint i = 0; i < u_lightBuffer.numActiveLights.x; ++i)
 	{
-		const DirectionalLight dirLight = u_lightBuffer.dirLights[0];
+		const DirectionalLight dirLight = u_lightBuffer.dirLights[i];
 	
 		const vec3 lightDir = normalize(dirLight.directionWS.xyz);
 		const vec3 halfVec = normalize(lightDir + viewDir);
