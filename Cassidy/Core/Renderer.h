@@ -130,9 +130,7 @@ namespace cassidy
     // Pipelines:
     Pipeline m_helloTrianglePipeline;
 
-    // Rendering data:
-    DefaultPushConstants m_matrixPushConstants;
-    PhongLightingPushConstants m_phongLightingPushConstants;
+    // Rendering data (buffers and descriptor sets):
     FrameData m_frameData[FRAMES_IN_FLIGHT];
     AllocatedBuffer m_perObjectUniformBufferDynamic;
 
@@ -145,12 +143,25 @@ namespace cassidy
 
     // Object data:
     glm::vec3 m_objectRotation = glm::vec3(0.0f);
-    glm::vec3 m_lightRotation = glm::vec3(0.0f);
+    glm::vec3 m_lightRotation[NUM_LIGHTS] = {
+      glm::vec3(0.0f),
+      glm::vec3(0.0f), 
+      glm::vec3(0.0f), 
+      glm::vec3(0.0f), 
+    };
+    float m_lightAmbient[NUM_LIGHTS] = {
+      0.01f,
+      0.01f,
+      0.01f,
+      0.01f,
+    };
+    int m_currentLightIndex = 0;
+    int m_numActiveLights = 1;
 
     // Samplers:
     VkSampler m_viewportSampler;
 
-    // Descriptor objects:
+    // Descriptor layouts and ImGui set:
     VkDescriptorSetLayout m_perPassSetLayout;
     VkDescriptorSetLayout m_perObjectSetLayout; // (Dynamic)
     VkDescriptorSetLayout m_perMaterialSetLayout;

@@ -86,23 +86,34 @@ void cassidy::Renderer::release()
 
 void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
 {
-  glm::mat4 lightWorld = glm::rotate(glm::mat4(1.0f), glm::radians(m_lightRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-  lightWorld = glm::rotate(lightWorld, glm::radians(m_lightRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-  lightWorld = glm::rotate(lightWorld, glm::radians(m_lightRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+  MatrixBufferData matrixBufferData;
+  matrixBufferData.view = m_engineRef->getCamera().getLookatMatrix();
+  matrixBufferData.proj = m_engineRef->getCamera().getPerspectiveMatrix();
+  matrixBufferData.viewProj = matrixBufferData.proj * matrixBufferData.view;
+  matrixBufferData.invViewProj = glm::inverse(matrixBufferData.viewProj);
 
-  m_phongLightingPushConstants.dirLight.directionWS = lightWorld * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-  m_phongLightingPushConstants.dirLight.colour = glm::vec3(1.0f);
+  void* matrixBufferDataPtr;
+  vmaMapMemory(m_allocator, currentFrameData.perPassMatrixUniformBuffer.allocation, &matrixBufferDataPtr);
+  memcpy(matrixBufferDataPtr, &matrixBufferData, sizeof(MatrixBufferData));
+  vmaUnmapMemory(m_allocator, currentFrameData.perPassMatrixUniformBuffer.allocation);
 
-  PerPassData perPassData;
-  perPassData.view = m_engineRef->getCamera().getLookatMatrix();
-  perPassData.proj = m_engineRef->getCamera().getPerspectiveMatrix();
-  perPassData.viewProj = perPassData.proj * perPassData.view;
-  perPassData.invViewProj = glm::inverse(perPassData.viewProj);
+  LightBufferData lightBufferData;
+  lightBufferData.numActiveLights = m_numActiveLights;
+  for (uint32_t i = 0; i < NUM_LIGHTS; ++i)
+  {
+    glm::mat4 lightWorld = glm::rotate(glm::mat4(1.0f), glm::radians(m_lightRotation[i].x), glm::vec3(1.0f, 0.0f, 0.0f));
+    lightWorld = glm::rotate(lightWorld, glm::radians(m_lightRotation[i].y), glm::vec3(0.0f, 1.0f, 0.0f));
+    lightWorld = glm::rotate(lightWorld, glm::radians(m_lightRotation[i].z), glm::vec3(0.0f, 0.0f, 1.0f));
 
-  void* perPassDataPtr;
-  vmaMapMemory(m_allocator, currentFrameData.perPassUniformBuffer.allocation, &perPassDataPtr);
-  memcpy(perPassDataPtr, &perPassData, sizeof(PerPassData));
-  vmaUnmapMemory(m_allocator, currentFrameData.perPassUniformBuffer.allocation);
+    lightBufferData.dirLights[i].directionWS = lightWorld * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+    lightBufferData.dirLights[i].colour = glm::vec3(1.0f);
+    lightBufferData.dirLights[i].ambient = m_lightAmbient[i];
+  }
+
+  void* lightBufferDataPtr;
+  vmaMapMemory(m_allocator, currentFrameData.perPassLightUniformBuffer.allocation, &lightBufferDataPtr);
+  memcpy(lightBufferDataPtr, &lightBufferData, sizeof(LightBufferData));
+  vmaUnmapMemory(m_allocator, currentFrameData.perPassLightUniformBuffer.allocation);
 
   glm::mat4 objectWorld = glm::rotate(glm::mat4(1.0f), glm::radians(m_objectRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
   objectWorld = glm::rotate(objectWorld, glm::radians(m_objectRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -219,9 +230,6 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
     const uint32_t dynamicUniformOffset = m_currentFrameIndex * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData), m_physicalDeviceProperties);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
-
-    vkCmdPushConstants(cmd, m_viewportPipeline.getLayout(), VK_SHADER_STAGE_FRAGMENT_BIT,
-      sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants), &m_phongLightingPushConstants);
     
     m_backpackMesh.draw(cmd, &m_viewportPipeline);
   }
@@ -385,10 +393,13 @@ void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
       }
 
       ImGui::Text("Directional light:");
-      ImGui::SliderFloat("Light pitch", &m_lightRotation.x, 0.0f, 360.0f);
-      ImGui::SliderFloat("Light yaw", &m_lightRotation.y, 0.0f, 360.0f);
-      ImGui::SliderFloat("Light roll", &m_lightRotation.z, 0.0f, 360.0f);
-      ImGui::SliderFloat("Ambient", &m_phongLightingPushConstants.dirLight.ambient, 0.0f, 1.0f);
+      ImGui::SliderInt("Current light index:", &m_currentLightIndex, 0, NUM_LIGHTS - 1);
+      ImGui::SliderFloat("Light pitch", &m_lightRotation[m_currentLightIndex].x, 0.0f, 360.0f);
+      ImGui::SliderFloat("Light yaw", &m_lightRotation[m_currentLightIndex].y, 0.0f, 360.0f);
+      ImGui::SliderFloat("Light roll", &m_lightRotation[m_currentLightIndex].z, 0.0f, 360.0f);
+      ImGui::SliderFloat("Ambient", &m_lightAmbient[m_currentLightIndex], 0.0f, 1.0f);
+
+      ImGui::SliderInt("Num active lights: ", &m_numActiveLights, 0, NUM_LIGHTS);
 
       ImGui::Text("Object rotation:");
       ImGui::SliderFloat("Object pitch", &m_objectRotation.x, 0.0f, 360.0f);
@@ -701,8 +712,6 @@ void cassidy::Renderer::initPipelines()
 {
   m_helloTrianglePipeline.init(this)
     .setRenderPass(m_editorRenderPass)
-    .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
-    .addPushConstantRange(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants))
     .addDescriptorSetLayout(m_perPassSetLayout)
     .addDescriptorSetLayout(m_perObjectSetLayout)
     .addDescriptorSetLayout(m_perMaterialSetLayout)
@@ -710,8 +719,6 @@ void cassidy::Renderer::initPipelines()
 
   m_viewportPipeline.init(this)
     .setRenderPass(m_viewportRenderPass)
-    .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DefaultPushConstants))
-    .addPushConstantRange(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(DefaultPushConstants), sizeof(PhongLightingPushConstants))
     .addDescriptorSetLayout(m_perPassSetLayout)
     .addDescriptorSetLayout(m_perObjectSetLayout)
     .addDescriptorSetLayout(m_perMaterialSetLayout)
@@ -855,14 +862,17 @@ void cassidy::Renderer::initDescriptorSets()
 
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
-    VkDescriptorBufferInfo perPassBufferInfo = cassidy::init::descriptorBufferInfo(
-      m_frameData[i].perPassUniformBuffer.buffer, 0, sizeof(PerPassData));
+    VkDescriptorBufferInfo matrixBufferInfo = cassidy::init::descriptorBufferInfo(
+      m_frameData[i].perPassMatrixUniformBuffer.buffer, 0, sizeof(MatrixBufferData));
+    VkDescriptorBufferInfo lightBufferInfo = cassidy::init::descriptorBufferInfo(
+      m_frameData[i].perPassLightUniformBuffer.buffer, 0, sizeof(LightBufferData));
 
     VkDescriptorBufferInfo perObjectBufferInfo = cassidy::init::descriptorBufferInfo(
       m_perObjectUniformBufferDynamic.buffer, 0, sizeof(PerObjectData));
 
     cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
-      .bindBuffer(0, &perPassBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+      .bindBuffer(0, &matrixBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+      .bindBuffer(1, &lightBufferInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
       .build(m_frameData[i].perPassSet, m_perPassSetLayout);
 
     cassidy::DescriptorBuilder::begin(&cassidy::globals::g_descAllocator, &cassidy::globals::g_descLayoutCache)
@@ -897,10 +907,6 @@ void cassidy::Renderer::initIndexBuffers()
 
 void cassidy::Renderer::initUniformBuffers()
 {
-  m_phongLightingPushConstants.dirLight.directionWS = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-  m_phongLightingPushConstants.dirLight.colour = glm::vec3(1.0f);
-  m_phongLightingPushConstants.dirLight.ambient = 0.01f;
-
   const uint32_t objectBufferSize = FRAMES_IN_FLIGHT * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData),
     m_physicalDeviceProperties);
   m_perObjectUniformBufferDynamic = allocateBuffer(objectBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -912,11 +918,17 @@ void cassidy::Renderer::initUniformBuffers()
 
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
-    m_frameData[i].perPassUniformBuffer = allocateBuffer(sizeof(PerPassData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    m_frameData[i].perPassMatrixUniformBuffer = allocateBuffer(sizeof(MatrixBufferData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     
+    m_frameData[i].perPassLightUniformBuffer = allocateBuffer(sizeof(LightBufferData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
     m_deletionQueue.addFunction([=]() {
-      vmaDestroyBuffer(m_allocator, m_frameData[i].perPassUniformBuffer.buffer, m_frameData[i].perPassUniformBuffer.allocation);
+      vmaDestroyBuffer(m_allocator, m_frameData[i].perPassMatrixUniformBuffer.buffer, 
+        m_frameData[i].perPassMatrixUniformBuffer.allocation);
+      vmaDestroyBuffer(m_allocator, m_frameData[i].perPassLightUniformBuffer.buffer,
+        m_frameData[i].perPassLightUniformBuffer.allocation);
     });
   }
 }

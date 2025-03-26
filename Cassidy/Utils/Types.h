@@ -116,6 +116,13 @@ struct AllocatedBuffer
   VmaAllocation allocation;
 };
 
+struct DirectionalLight
+{
+  glm::vec4 directionWS;
+  glm::vec3 colour;
+  float ambient;
+};
+
 struct DefaultPushConstants
 {
   glm::mat4 world;
@@ -129,7 +136,7 @@ struct PerFrameData
 };
 
 // As above, but bound per-pass:
-struct PerPassData
+struct MatrixBufferData
 {
   glm::mat4 view;
   glm::mat4 proj;
@@ -137,17 +144,19 @@ struct PerPassData
   glm::mat4 invViewProj;
 };
 
+// Lighting information, bound per-pass:
+constexpr uint32_t NUM_LIGHTS = 4;
+struct LightBufferData
+{
+  uint32_t numActiveLights = 1;
+  uint32_t padding[3];
+  DirectionalLight dirLights[NUM_LIGHTS];
+};
+
 // As above, but bound per-mesh:
 struct PerObjectData
 {
   glm::mat4 world;
-};
-
-struct DirectionalLight
-{
-  glm::vec4 directionWS;
-  glm::vec3 colour;
-  float ambient;
 };
 
 struct PhongLightingPushConstants
@@ -159,7 +168,9 @@ struct FrameData
 {
   VkDescriptorSet perFrameSet;
 
-  AllocatedBuffer perPassUniformBuffer;
+  AllocatedBuffer perPassMatrixUniformBuffer;
+  AllocatedBuffer perPassLightUniformBuffer;
+
   VkDescriptorSet perPassSet;
 
   VkDescriptorSet perObjectSet;
