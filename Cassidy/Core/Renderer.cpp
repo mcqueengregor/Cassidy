@@ -832,9 +832,6 @@ void cassidy::Renderer::initMeshes()
   m_backpackMesh.loadModel("Helmet/DamagedHelmet.gltf", m_allocator, this, aiProcess_FlipUVs);
 
   m_deletionQueue.addFunction([=]() {
-    m_backpackAlbedo.release(m_device, m_allocator);
-    m_backpackSpecular.release(m_device, m_allocator);
-
     TextureLibrary::releaseAll(m_device, m_allocator);
   });
 }
@@ -912,27 +909,27 @@ void cassidy::Renderer::initUniformBuffers()
   m_perObjectUniformBufferDynamic = allocateBuffer(objectBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
-  m_deletionQueue.addFunction([=]() {
-    vmaDestroyBuffer(m_allocator, m_perObjectUniformBufferDynamic.buffer, m_perObjectUniformBufferDynamic.allocation);
-  });
-
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
     m_frameData[i].perPassMatrixUniformBuffer = allocateBuffer(sizeof(MatrixBufferData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-    
+
     m_frameData[i].perPassLightUniformBuffer = allocateBuffer(sizeof(LightBufferData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+  }
 
-    m_deletionQueue.addFunction([=]() {
-      vmaDestroyBuffer(m_allocator, m_frameData[i].perPassMatrixUniformBuffer.buffer, 
+  m_deletionQueue.addFunction([=]() {
+    vmaDestroyBuffer(m_allocator, m_perObjectUniformBufferDynamic.buffer, m_perObjectUniformBufferDynamic.allocation);
+
+    for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
+    {
+      vmaDestroyBuffer(m_allocator, m_frameData[i].perPassMatrixUniformBuffer.buffer,
         m_frameData[i].perPassMatrixUniformBuffer.allocation);
       vmaDestroyBuffer(m_allocator, m_frameData[i].perPassLightUniformBuffer.buffer,
         m_frameData[i].perPassLightUniformBuffer.allocation);
-    });
-  }
+    }
+  });
 }
-
 
 void cassidy::Renderer::initImGui()
 {

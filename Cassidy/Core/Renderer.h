@@ -137,8 +137,6 @@ namespace cassidy
     // Meshes:
     Model m_triangleMesh;
     Model m_backpackMesh;
-    Texture m_backpackAlbedo;
-    Texture m_backpackSpecular;
     UploadContext m_uploadContext;
 
     // Object data:
