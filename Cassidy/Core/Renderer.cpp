@@ -44,16 +44,16 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initIndexBuffers();
 
   m_currentFrameIndex = 0;
+  m_swapchainImageIndex = 0;
 }
 
 void cassidy::Renderer::draw()
 {
   vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex], VK_TRUE, UINT64_MAX);
 
-  uint32_t swapchainImageIndex;
   {
     const VkResult acquireImageResult = vkAcquireNextImageKHR(m_device, m_swapchain.swapchain, UINT64_MAX,
-      m_imageAvailableSemaphores[m_currentFrameIndex], VK_NULL_HANDLE, &swapchainImageIndex);
+      m_imageAvailableSemaphores[m_currentFrameIndex], VK_NULL_HANDLE, &m_swapchainImageIndex);
 
     if (acquireImageResult == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -67,10 +67,9 @@ void cassidy::Renderer::draw()
   const FrameData& currentFrameData = getCurrentFrameData();
 
   updateBuffers(currentFrameData);
-  recordViewportCommands(swapchainImageIndex);
-  createImGuiCommands(swapchainImageIndex);
-  recordEditorCommands(swapchainImageIndex);
-  submitCommandBuffers(swapchainImageIndex);
+  recordViewportCommands(m_swapchainImageIndex);
+  recordEditorCommands(m_swapchainImageIndex);
+  submitCommandBuffers(m_swapchainImageIndex);
 
   m_currentFrameIndex = (m_currentFrameIndex + 1) % FRAMES_IN_FLIGHT;
 }
@@ -344,104 +343,6 @@ void cassidy::Renderer::immediateSubmit(std::function<void(VkCommandBuffer cmd)>
   vkResetFences(m_device, 1, &m_uploadContext.uploadFence);
 
   vkResetCommandPool(m_device, m_uploadContext.uploadCommandPool, 0);
-}
-
-void cassidy::Renderer::createImGuiCommands(uint32_t imageIndex)
-{
-  ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
-  {
-    ImGui::ShowDemoWindow();
-
-    ImGui::Begin("Cassidy main");
-    {
-      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-      ImGui::Text("Engine stats:");
-      {
-        ImGui::Text("Frametime: %fms", m_engineRef->getDeltaTimeSecs() * 1000.0f);
-
-        const std::string texLibraryHeaderText = "Texture library size: " + std::to_string(TextureLibrary::getNumLoadedTextures());
-
-        if (ImGui::TreeNode(texLibraryHeaderText.c_str()))
-        {
-          const auto& textureLibrary = TextureLibrary::getTextureLibraryMap();
-          for (const auto& texture : textureLibrary)
-          {
-            std::string_view textureFilename = texture.first;
-            size_t lastBackSlash = textureFilename.find_last_of('/');
-            ++lastBackSlash;  // Advance one character forward to isolate the filename.
-            std::string_view textureFilenameSub = textureFilename.substr(lastBackSlash, textureFilename.size() - lastBackSlash);
-            ImGui::Text(textureFilenameSub.data());
-          }
-          ImGui::TreePop();
-        }
-
-        const std::string matLibraryHeaderText = "Material library size: " + std::to_string(MaterialLibrary::getMaterialCache().size());
-
-        if (ImGui::TreeNode(matLibraryHeaderText.c_str()))
-        {
-          const auto& materialCache = MaterialLibrary::getMaterialCache();
-          for (const auto& mat : materialCache)
-          {
-            std::string_view matName = mat.first;
-            ImGui::Text(matName.data());
-          }
-
-          // TODO: Restrict this to debug build?
-          ImGui::Text("(Num duplicate materials prevented: %i)", MaterialLibrary::getNumDuplicateMaterialBuildsPrevented());
-          ImGui::TreePop();
-        }
-      }
-
-      ImGui::Text("Directional light:");
-      ImGui::SliderInt("Current light index:", &m_currentLightIndex, 0, NUM_LIGHTS - 1);
-      ImGui::SliderFloat("Light pitch", &m_lightRotation[m_currentLightIndex].x, 0.0f, 360.0f);
-      ImGui::SliderFloat("Light yaw", &m_lightRotation[m_currentLightIndex].y, 0.0f, 360.0f);
-      ImGui::SliderFloat("Light roll", &m_lightRotation[m_currentLightIndex].z, 0.0f, 360.0f);
-      ImGui::SliderFloat("Ambient", &m_lightAmbient[m_currentLightIndex], 0.0f, 1.0f);
-
-      ImGui::SliderInt("Num active lights: ", &m_numActiveLights, 0, NUM_LIGHTS);
-
-      ImGui::Text("Object rotation:");
-      ImGui::SliderFloat("Object pitch", &m_objectRotation.x, 0.0f, 360.0f);
-      ImGui::SliderFloat("Object yaw", &m_objectRotation.y, 0.0f, 360.0f);
-      ImGui::SliderFloat("Object roll", &m_objectRotation.z, 0.0f, 360.0f);
-    }
-    ImGui::End();
-
-    if (ImGui::Begin("Viewport"))
-    {
-      ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-      ImVec2 newViewportSize = viewportSize;
-
-      float viewportAspect = viewportSize.y / viewportSize.x;
-      float swapchainAspect = static_cast<float>(m_swapchain.extent.height) / static_cast<float>(m_swapchain.extent.width);
-
-      // Force viewport aspect ratio to be equal to swapchain extent's aspect ratio:
-      if (viewportAspect > swapchainAspect)
-      {
-        newViewportSize.y = std::floor(viewportSize.x * swapchainAspect);
-      }
-
-      viewportAspect = viewportSize.x / viewportSize.y;
-      swapchainAspect = static_cast<float>(m_swapchain.extent.width) / static_cast<float>(m_swapchain.extent.height);
-
-      if (viewportAspect > swapchainAspect)
-      {
-        newViewportSize.x = std::floor(viewportSize.y * swapchainAspect);
-      }
-
-      // Centre viewport image in window:
-      ImVec2 cursorPos = ImGui::GetCursorPos();
-      cursorPos.x += (viewportSize.x - newViewportSize.x) * 0.5f;
-      cursorPos.y += (viewportSize.y - newViewportSize.y) * 0.5f;
-
-      ImGui::SetCursorPos(cursorPos);
-      ImGui::Image(m_viewportDescSets[imageIndex], newViewportSize);
-    }
-    ImGui::End();
-  }
-  
-  ImGui::Render();
 }
 
 void cassidy::Renderer::initLogicalDevice()

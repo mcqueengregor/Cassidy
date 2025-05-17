@@ -25,6 +25,8 @@ namespace cassidy
     void processInput();
     void update();
 
+    void buildGUI();
+
     void updateGlobalTimer();
     void initInstance();
     void initSurface();

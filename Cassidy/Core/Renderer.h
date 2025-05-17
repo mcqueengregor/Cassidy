@@ -74,12 +74,12 @@ namespace cassidy
     inline UploadContext&             getUploadContext()        { return m_uploadContext; }
     inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
     inline VmaAllocator&              getAllocator()            { return m_allocator; }
+    inline VkDescriptorSet&           getViewportDescSet()      { return m_viewportDescSets[m_swapchainImageIndex]; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
     void recordEditorCommands(uint32_t imageIndex);
     void recordViewportCommands(uint32_t imageIndex);
-    void createImGuiCommands(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
 
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
@@ -198,6 +198,7 @@ namespace cassidy
     // Misc.:
     DeletionQueue m_deletionQueue;
     uint32_t m_currentFrameIndex;
+    uint32_t m_swapchainImageIndex;
     VkPhysicalDeviceProperties m_physicalDeviceProperties;
 
     // TODO: Temp, tidy with mesh abstraction!
