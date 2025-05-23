@@ -1,10 +1,9 @@
 #include "Renderer.h"
-#include "Core/Engine.h"
-#include "Core/TextureLibrary.h"
-#include "Core/MaterialLibrary.h"
-#include "Utils/DescriptorBuilder.h"
-#include "Utils/Helpers.h"
-#include "Utils/Initialisers.h"
+#include <Core/Engine.h>
+#include <Core/AssetManager.h>
+#include <Utils/DescriptorBuilder.h>
+#include <Utils/Helpers.h>
+#include <Utils/Initialisers.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -27,6 +26,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
 
   initLogicalDevice();
   initMemoryAllocator();
+  initAssetManager();
   initSwapchain();
   initEditorImages();
   initEditorRenderPass();
@@ -482,6 +482,15 @@ void cassidy::Renderer::initSwapchain()
   std::cout << "Created swapchain!\n" << std::endl;
 }
 
+void cassidy::Renderer::initAssetManager()
+{
+  cassidy::globals::g_assetManager.init(&m_allocator, this);
+
+  m_deletionQueue.addFunction([=]() {
+    cassidy::globals::g_assetManager.release(m_device, m_allocator);
+    });
+}
+
 void cassidy::Renderer::initEditorImages()
 {
   m_editorImages.resize(m_swapchain.images.size());
@@ -725,16 +734,10 @@ void cassidy::Renderer::initMeshes()
   cassidy::globals::g_descAllocator.init(m_device);
   cassidy::globals::g_descLayoutCache.init(m_device);
 
-  TextureLibrary::init(&m_allocator, this);
-
   m_triangleMesh.setVertices(triangleVertices);
   m_triangleMesh.setIndices(triangleIndices);
 
   m_backpackMesh.loadModel("Helmet/DamagedHelmet.gltf", m_allocator, this, aiProcess_FlipUVs);
-
-  m_deletionQueue.addFunction([=]() {
-    TextureLibrary::releaseAll(m_device, m_allocator);
-  });
 }
 
 void cassidy::Renderer::initDescriptorSets()

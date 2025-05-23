@@ -6,8 +6,7 @@
 #include <Vendor/imgui-docking/imgui_impl_sdl2.h>
 #include <Vendor/imgui-docking/imgui_impl_vulkan.h>
 
-#include <Core/TextureLibrary.h>
-#include <Core/MaterialLibrary.h>
+#include <Core/AssetManager.h>
 
 #include <vector>
 #include <set>
@@ -196,11 +195,13 @@ void cassidy::Engine::buildGUI()
       {
         ImGui::Text("Frametime: %fms", getDeltaTimeSecs() * 1000.0f);
 
-        const std::string texLibraryHeaderText = "Texture library size: " + std::to_string(TextureLibrary::getNumLoadedTextures());
+        constexpr TextureLibrary& texLibrary = cassidy::globals::g_assetManager.textureLibrary;
+        constexpr MaterialLibrary& matLibrary = cassidy::globals::g_assetManager.materialLibrary;
+        const std::string texLibraryHeaderText = "Texture library size: " + std::to_string(texLibrary.getNumLoadedTextures());
 
         if (ImGui::TreeNode(texLibraryHeaderText.c_str()))
         {
-          const auto& textureLibrary = TextureLibrary::getTextureLibraryMap();
+          const auto& textureLibrary = texLibrary.getTextureLibraryMap();
           for (const auto& texture : textureLibrary)
           {
             std::string_view textureFilename = texture.first;
@@ -212,11 +213,11 @@ void cassidy::Engine::buildGUI()
           ImGui::TreePop();
         }
 
-        const std::string matLibraryHeaderText = "Material library size: " + std::to_string(MaterialLibrary::getMaterialCache().size());
+        const std::string matLibraryHeaderText = "Material library size: " + std::to_string(matLibrary.getMaterialCache().size());
 
         if (ImGui::TreeNode(matLibraryHeaderText.c_str()))
         {
-          const auto& materialCache = MaterialLibrary::getMaterialCache();
+          const auto& materialCache = matLibrary.getMaterialCache();
           for (const auto& mat : materialCache)
           {
             std::string_view matName = mat.first;
@@ -224,7 +225,7 @@ void cassidy::Engine::buildGUI()
           }
 
           // TODO: Restrict this to debug build?
-          ImGui::Text("(Num duplicate materials prevented: %i)", MaterialLibrary::getNumDuplicateMaterialBuildsPrevented());
+          ImGui::Text("(Num duplicate materials prevented: %i)", matLibrary.getNumDuplicateMaterialBuildsPrevented());
           ImGui::TreePop();
         }
       }

@@ -4,7 +4,7 @@
 #include <Utils/Initialisers.h>
 #include <iostream>
 
-cassidy::Material* MaterialLibrary::buildMaterialImpl(const std::string& materialName, const cassidy::MaterialInfo& materialInfo)
+cassidy::Material* MaterialLibrary::buildMaterial(const std::string& materialName, const cassidy::MaterialInfo& materialInfo)
 {
   // If material already exists, return reference to it:
   if (m_materialCache.find(materialName) != m_materialCache.end())

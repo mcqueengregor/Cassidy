@@ -1,8 +1,7 @@
 #include "Mesh.h"
 #include <Core/Renderer.h>
 #include <Core/Pipeline.h>
-#include <Core/TextureLibrary.h>
-#include <Core/MaterialLibrary.h>
+#include <Core/AssetManager.h>
 #include <Utils/Initialisers.h>
 
 #include <Vendor/assimp/include/assimp/Importer.hpp>
@@ -209,7 +208,8 @@ void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltM
 
     const aiMaterial* currentMat = scene->mMaterials[matIndex];
 
-    cassidy::Material* builtMaterial = MaterialLibrary::buildMaterial(directory + std::string(currentMat->GetName().C_Str()), matInfo);
+    constexpr MaterialLibrary& matLibrary = cassidy::globals::g_assetManager.materialLibrary;
+    cassidy::Material* builtMaterial = matLibrary.buildMaterial(directory + std::string(currentMat->GetName().C_Str()), matInfo);
     m_meshes[i].setMaterial(builtMaterial);
     builtMaterials[matIndex] = builtMaterial;
   }
@@ -356,7 +356,8 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
       const char* texName = texFilename.C_Str();
       std::cout << texType << ": " << texName;
 
-      cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + texturesDirectory + texName, format, VK_TRUE);
+      constexpr TextureLibrary& texLibrary = cassidy::globals::g_assetManager.textureLibrary;
+      cassidy::Texture* loadedTexture = texLibrary.loadTexture(MESH_ABS_FILEPATH + texturesDirectory + texName, format, VK_TRUE);
 
       if (!loadedTexture)
       {
@@ -387,13 +388,13 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
           {
             const std::string& name = MESH_ABS_FILEPATH + texturesDirectory + texName;
 
-            TextureLibrary::registerTexture(name, engineTex);
-            matInfo.attachTexture(TextureLibrary::getTexture(name), engineTexType);
+            texLibrary.registerTexture(name, engineTex);
+            matInfo.attachTexture(texLibrary.getTexture(name), engineTexType);
           }
         }
 
         // Fallback to default texture based on type:
-        cassidy::Texture* fallback = TextureLibrary::retrieveFallbackTexture(engineTexType);
+        cassidy::Texture* fallback = texLibrary.retrieveFallbackTexture(engineTexType);
         std::cout << "\t(CASSIDY ERROR: could not load texture!)";
 
         matInfo.attachTexture(fallback, engineTexType);

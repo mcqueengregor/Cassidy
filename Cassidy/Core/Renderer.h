@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
-#include "Utils/Types.h"
-#include "Core/Pipeline.h"
+#include <Utils/Types.h>
+#include <Core/Pipeline.h>
 #include <Core/Mesh.h>
 #include <Core/Texture.h>
 
@@ -88,6 +88,8 @@ namespace cassidy
     void initMemoryAllocator();
     void initLogicalDevice();
     void initSwapchain();
+
+    void initAssetManager();
 
     void initEditorImages();
     void initEditorRenderPass();
