@@ -16,21 +16,17 @@ namespace cassidy
     TextureLibrary() {}
 
     void init(VmaAllocator* allocatorRef, cassidy::Renderer* rendererRef);
-
+     
     cassidy::Texture* loadTexture(const std::string& filepath, VkFormat format, VkBool32 shouldGenMipmaps = VK_FALSE);
-
     void registerTexture(const std::string& name, const cassidy::Texture& texture);
 
     void releaseAll(VkDevice device, VmaAllocator allocator);
 
     void generateFallbackTextures();
-
     cassidy::Texture* retrieveFallbackTexture(cassidy::TextureType type);
 
     inline cassidy::Texture* getTexture(const std::string& name) { return &m_loadedTextures.at(name); }
-
     inline size_t getNumLoadedTextures() { return m_loadedTextures.size(); }
-
     inline const std::unordered_map<std::string, cassidy::Texture>& getTextureLibraryMap() { return m_loadedTextures; }
 
   private:

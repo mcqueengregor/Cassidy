@@ -1,6 +1,6 @@
 #include "Renderer.h"
 #include <Core/Engine.h>
-#include <Core/AssetManager.h>
+#include <Core/ResourceManager.h>
 #include <Utils/DescriptorBuilder.h>
 #include <Utils/Helpers.h>
 #include <Utils/Initialisers.h>
@@ -25,8 +25,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   m_engineRef = engine;
 
   initLogicalDevice();
-  initMemoryAllocator();
-  initAssetManager();
+  initResourceManager();
   initSwapchain();
   initEditorImages();
   initEditorRenderPass();
@@ -85,6 +84,8 @@ void cassidy::Renderer::release()
 
 void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
 {
+  const VmaAllocator allocator = getVmaAllocator();
+
   MatrixBufferData matrixBufferData;
   matrixBufferData.view = m_engineRef->getCamera().getLookatMatrix();
   matrixBufferData.proj = m_engineRef->getCamera().getPerspectiveMatrix();
@@ -92,9 +93,9 @@ void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
   matrixBufferData.invViewProj = glm::inverse(matrixBufferData.viewProj);
 
   void* matrixBufferDataPtr;
-  vmaMapMemory(m_allocator, currentFrameData.perPassMatrixUniformBuffer.allocation, &matrixBufferDataPtr);
+  vmaMapMemory(allocator, currentFrameData.perPassMatrixUniformBuffer.allocation, &matrixBufferDataPtr);
   memcpy(matrixBufferDataPtr, &matrixBufferData, sizeof(MatrixBufferData));
-  vmaUnmapMemory(m_allocator, currentFrameData.perPassMatrixUniformBuffer.allocation);
+  vmaUnmapMemory(allocator, currentFrameData.perPassMatrixUniformBuffer.allocation);
 
   LightBufferData lightBufferData;
   lightBufferData.numActiveLights = m_numActiveLights;
@@ -110,9 +111,9 @@ void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
   }
 
   void* lightBufferDataPtr;
-  vmaMapMemory(m_allocator, currentFrameData.perPassLightUniformBuffer.allocation, &lightBufferDataPtr);
+  vmaMapMemory(allocator, currentFrameData.perPassLightUniformBuffer.allocation, &lightBufferDataPtr);
   memcpy(lightBufferDataPtr, &lightBufferData, sizeof(LightBufferData));
-  vmaUnmapMemory(m_allocator, currentFrameData.perPassLightUniformBuffer.allocation);
+  vmaUnmapMemory(allocator, currentFrameData.perPassLightUniformBuffer.allocation);
 
   glm::mat4 objectWorld = glm::rotate(glm::mat4(1.0f), glm::radians(m_objectRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
   objectWorld = glm::rotate(objectWorld, glm::radians(m_objectRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -122,10 +123,10 @@ void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
   perObjectData.world = objectWorld;
 
   char* perObjectDataPtr;
-  vmaMapMemory(m_allocator, m_perObjectUniformBufferDynamic.allocation, (void**)&perObjectDataPtr);
+  vmaMapMemory(allocator, m_perObjectUniformBufferDynamic.allocation, (void**)&perObjectDataPtr);
   perObjectDataPtr += m_currentFrameIndex * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData), m_physicalDeviceProperties);
   memcpy(perObjectDataPtr, &perObjectData, sizeof(PerObjectData));
-  vmaUnmapMemory(m_allocator, m_perObjectUniformBufferDynamic.allocation);
+  vmaUnmapMemory(allocator, m_perObjectUniformBufferDynamic.allocation);
 }
 
 void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
@@ -263,6 +264,8 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
 
 AllocatedBuffer cassidy::Renderer::allocateVertexBuffer(const std::vector<Vertex>& vertices)
 {
+  const VmaAllocator allocator = getVmaAllocator();
+
   // Build CPU-side staging buffer:
   VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(
     static_cast<uint32_t>(vertices.size()) * sizeof(Vertex), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
@@ -271,16 +274,16 @@ AllocatedBuffer cassidy::Renderer::allocateVertexBuffer(const std::vector<Vertex
 
   AllocatedBuffer stagingBuffer;
 
-  vmaCreateBuffer(m_allocator, &stagingBufferInfo, &bufferAllocInfo,
+  vmaCreateBuffer(allocator, &stagingBufferInfo, &bufferAllocInfo,
     &stagingBuffer.buffer,
     &stagingBuffer.allocation,
     nullptr);
 
   // Write vertex data to newly-allocated buffer:
   void* data;
-  vmaMapMemory(m_allocator, stagingBuffer.allocation, &data);
+  vmaMapMemory(allocator, stagingBuffer.allocation, &data);
   memcpy(data, vertices.data(), vertices.size() * sizeof(Vertex));
-  vmaUnmapMemory(m_allocator, stagingBuffer.allocation);
+  vmaUnmapMemory(allocator, stagingBuffer.allocation);
 
   VkBufferCreateInfo vertexBufferInfo = cassidy::init::bufferCreateInfo(
     static_cast<uint32_t>(vertices.size()) * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -289,7 +292,7 @@ AllocatedBuffer cassidy::Renderer::allocateVertexBuffer(const std::vector<Vertex
 
   AllocatedBuffer newBuffer;
 
-  vmaCreateBuffer(m_allocator, &vertexBufferInfo, &bufferAllocInfo, 
+  vmaCreateBuffer(allocator, &vertexBufferInfo, &bufferAllocInfo,
     &newBuffer.buffer,
     &newBuffer.allocation,
     nullptr);
@@ -301,13 +304,13 @@ AllocatedBuffer cassidy::Renderer::allocateVertexBuffer(const std::vector<Vertex
     copy.srcOffset = 0;
     copy.size = vertices.size() * sizeof(Vertex);
     vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newBuffer.buffer, 1, &copy);
-  });
+    });
 
   m_deletionQueue.addFunction([=]() {
-    vmaDestroyBuffer(m_allocator, newBuffer.buffer, newBuffer.allocation);
-  });
+    vmaDestroyBuffer(allocator, newBuffer.buffer, newBuffer.allocation);
+    });
 
-  vmaDestroyBuffer(m_allocator, stagingBuffer.buffer, stagingBuffer.allocation);
+  vmaDestroyBuffer(allocator, stagingBuffer.buffer, stagingBuffer.allocation);
 
   return newBuffer;
 }
@@ -320,7 +323,7 @@ AllocatedBuffer cassidy::Renderer::allocateBuffer(uint32_t allocSize, VkBufferUs
 
   AllocatedBuffer newBuffer;
 
-  vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &newBuffer.buffer, &newBuffer.allocation, nullptr);
+  vmaCreateBuffer(getVmaAllocator(), &bufferInfo, &allocInfo, &newBuffer.buffer, &newBuffer.allocation, nullptr);
 
   return newBuffer;
 }
@@ -392,20 +395,6 @@ void cassidy::Renderer::initLogicalDevice()
   std::cout << "Created logical device!\n" << std::endl;
 }
 
-void cassidy::Renderer::initMemoryAllocator()
-{
-  VmaAllocatorCreateInfo info = {};
-  info.physicalDevice = m_physicalDevice;
-  info.device = m_device;
-  info.instance = m_engineRef->getInstance();
-
-  vmaCreateAllocator(&info, &m_allocator);
-
-  m_deletionQueue.addFunction([=]() {
-    vmaDestroyAllocator(m_allocator);
-  });
-}
-
 void cassidy::Renderer::initSwapchain()
 {
   SwapchainSupportDetails details = cassidy::helper::querySwapchainSupport(m_physicalDevice, m_engineRef->getSurface());
@@ -462,7 +451,7 @@ void cassidy::Renderer::initSwapchain()
   VmaAllocationCreateInfo vmaAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 
     VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
-  vmaCreateImage(m_allocator, &depthImageInfo, &vmaAllocInfo, 
+  vmaCreateImage(getVmaAllocator(), &depthImageInfo, &vmaAllocInfo,
     &m_swapchain.depthImage.image, &m_swapchain.depthImage.allocation, nullptr);
 
   VkImageViewCreateInfo depthViewInfo = cassidy::init::imageViewCreateInfo(m_swapchain.depthImage.image, format,
@@ -474,7 +463,7 @@ void cassidy::Renderer::initSwapchain()
   if (!m_swapchain.hasBeenBuilt)
   {
     m_deletionQueue.addFunction([&]() {
-      m_swapchain.release(m_device, m_allocator);
+      m_swapchain.release(m_device, getVmaAllocator());
     });
     m_swapchain.hasBeenBuilt = true;
   }
@@ -482,12 +471,12 @@ void cassidy::Renderer::initSwapchain()
   std::cout << "Created swapchain!\n" << std::endl;
 }
 
-void cassidy::Renderer::initAssetManager()
+void cassidy::Renderer::initResourceManager()
 {
-  cassidy::globals::g_assetManager.init(&m_allocator, this);
+  cassidy::globals::g_resourceManager.init(this, m_engineRef);
 
   m_deletionQueue.addFunction([=]() {
-    cassidy::globals::g_assetManager.release(m_device, m_allocator);
+    cassidy::globals::g_resourceManager.release(m_device);
     });
 }
 
@@ -527,7 +516,7 @@ void cassidy::Renderer::initEditorImages()
     VmaAllocationCreateInfo allocInfo = cassidy::init::vmaAllocationCreateInfo(
       VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
-    vmaCreateImage(m_allocator, &imageInfo, &allocInfo, &currentImage.image,
+    vmaCreateImage(getVmaAllocator(), &imageInfo, &allocInfo, &currentImage.image,
       &currentImage.allocation, nullptr);
 
     m_editorImages[i].format = editorFormat;
@@ -541,7 +530,7 @@ void cassidy::Renderer::initEditorImages()
   m_deletionQueue.addFunction([=]() {
     for (const auto& i : m_editorImages)
     {
-      vmaDestroyImage(m_allocator, i.image, i.allocation);
+      vmaDestroyImage(getVmaAllocator(), i.image, i.allocation);
       vkDestroyImageView(m_device, i.view, nullptr);
     }
     });
@@ -734,10 +723,14 @@ void cassidy::Renderer::initMeshes()
   cassidy::globals::g_descAllocator.init(m_device);
   cassidy::globals::g_descLayoutCache.init(m_device);
 
-  m_triangleMesh.setVertices(triangleVertices);
-  m_triangleMesh.setIndices(triangleIndices);
+  cassidy::Model triangleMesh;
+  triangleMesh.setVertices(triangleVertices);
+  triangleMesh.setIndices(triangleIndices);
 
-  m_backpackMesh.loadModel("Helmet/DamagedHelmet.gltf", m_allocator, this, aiProcess_FlipUVs);
+  constexpr cassidy::ModelManager& modelManager = 
+    cassidy::globals::g_resourceManager.modelManager;
+  modelManager.registerModel("Primitives/Triangle", triangleMesh);
+  modelManager.loadModel("Helmet/DamagedHelmet.gltf", this, aiProcess_FlipUVs);
 }
 
 void cassidy::Renderer::initDescriptorSets()
@@ -789,21 +782,25 @@ void cassidy::Renderer::initDescriptorSets()
 
 void cassidy::Renderer::initVertexBuffers()
 {
-  m_triangleMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
-  m_backpackMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
+  const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
+  m_triangleMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
+  m_backpackMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
 
   m_deletionQueue.addFunction([=]() {
-    m_triangleMesh.release(m_device, m_allocator);
-    m_backpackMesh.release(m_device, m_allocator);
-  });
+    const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
+    
+    m_triangleMesh.release(m_device, allocator);
+    m_backpackMesh.release(m_device, allocator);
+    });
 
   std::cout << "Created vertex buffers!\n" << std::endl;
 }
 
 void cassidy::Renderer::initIndexBuffers()
 {
-  m_backpackMesh.allocateIndexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
-  m_triangleMesh.allocateIndexBuffers(m_uploadContext.uploadCommandBuffer, m_allocator, this);
+  const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
+  m_backpackMesh.allocateIndexBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
+  m_triangleMesh.allocateIndexBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
 }
 
 void cassidy::Renderer::initUniformBuffers()
@@ -823,13 +820,14 @@ void cassidy::Renderer::initUniformBuffers()
   }
 
   m_deletionQueue.addFunction([=]() {
-    vmaDestroyBuffer(m_allocator, m_perObjectUniformBufferDynamic.buffer, m_perObjectUniformBufferDynamic.allocation);
+    const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
+    vmaDestroyBuffer(allocator, m_perObjectUniformBufferDynamic.buffer, m_perObjectUniformBufferDynamic.allocation);
 
     for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
     {
-      vmaDestroyBuffer(m_allocator, m_frameData[i].perPassMatrixUniformBuffer.buffer,
+      vmaDestroyBuffer(allocator, m_frameData[i].perPassMatrixUniformBuffer.buffer,
         m_frameData[i].perPassMatrixUniformBuffer.allocation);
-      vmaDestroyBuffer(m_allocator, m_frameData[i].perPassLightUniformBuffer.buffer,
+      vmaDestroyBuffer(allocator, m_frameData[i].perPassLightUniformBuffer.buffer,
         m_frameData[i].perPassLightUniformBuffer.allocation);
     }
   });
@@ -899,17 +897,19 @@ void cassidy::Renderer::initImGui()
   ImGui_ImplVulkan_DestroyFontUploadObjects();
 
   m_deletionQueue.addFunction([&, imGuiPool]() {
+    const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
+    
     for (auto fb : m_viewportFramebuffers)
       vkDestroyFramebuffer(m_device, fb, nullptr);
    
     for (uint32_t i = 0; i < m_viewportImages.size(); ++i)
     {
-      vmaDestroyImage(m_allocator, m_viewportImages[i].image, 
+      vmaDestroyImage(allocator, m_viewportImages[i].image,
         m_viewportImages[i].allocation);
       vkDestroyImageView(m_device, m_viewportImages[i].view, nullptr);
     }
 
-    vmaDestroyImage(m_allocator, m_viewportDepthImage.image,
+    vmaDestroyImage(allocator, m_viewportDepthImage.image,
       m_viewportDepthImage.allocation);
     vkDestroyImageView(m_device, m_viewportDepthImage.view, nullptr);
 
@@ -930,6 +930,7 @@ void cassidy::Renderer::initImGui()
 void cassidy::Renderer::initViewportImages()
 {
   m_viewportImages.resize(m_swapchain.images.size());
+  const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
 
   for (size_t i = 0; i < m_viewportImages.size(); ++i)
   {
@@ -958,7 +959,7 @@ void cassidy::Renderer::initViewportImages()
     VmaAllocationCreateInfo allocInfo = cassidy::init::vmaAllocationCreateInfo(
       VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
-    vmaCreateImage(m_allocator, &imageInfo, &allocInfo, &m_viewportImages[i].image,
+    vmaCreateImage(allocator, &imageInfo, &allocInfo, &m_viewportImages[i].image,
       &m_viewportImages[i].allocation, nullptr);
 
     m_viewportImages[i].format = format;
@@ -1005,11 +1006,11 @@ void cassidy::Renderer::initViewportImages()
     .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
   };
-  
+
   VmaAllocationCreateInfo vmaAllocInfo = cassidy::init::vmaAllocationCreateInfo(
     VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
-  vmaCreateImage(m_allocator, &depthImageInfo, &vmaAllocInfo,
+  vmaCreateImage(allocator, &depthImageInfo, &vmaAllocInfo,
     &m_viewportDepthImage.image, &m_viewportDepthImage.allocation, nullptr);
 
   VkImageViewCreateInfo depthViewInfo = {
@@ -1160,6 +1161,11 @@ void cassidy::Renderer::transitionSwapchainImages()
     });
 }
 
+VmaAllocator cassidy::Renderer::getVmaAllocator()
+{
+  return cassidy::globals::g_resourceManager.getVmaAllocator();
+}
+
 void cassidy::Renderer::rebuildSwapchain()
 {
   int width;
@@ -1167,16 +1173,17 @@ void cassidy::Renderer::rebuildSwapchain()
 
   SDL_Window* window = m_engineRef->getWindow();
   SDL_GetWindowSize(window, &width, &height);
+  const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
 
   vkWaitForFences(m_device,static_cast<uint32_t>(m_inFlightFences.size()), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
-  m_swapchain.release(m_device, m_allocator);
+  m_swapchain.release(m_device, allocator);
 
   // Release ImGui viewport resources:
   for (const auto& f : m_viewportFramebuffers)
     vkDestroyFramebuffer(m_device, f, nullptr);
   for (const auto& i : m_viewportImages)
-    vmaDestroyImage(m_allocator, i.image, i.allocation);
-  vmaDestroyImage(m_allocator, m_viewportDepthImage.image, m_viewportDepthImage.allocation);
+    vmaDestroyImage(allocator, i.image, i.allocation);
+  vmaDestroyImage(allocator, m_viewportDepthImage.image, m_viewportDepthImage.allocation);
   for (const auto& i : m_viewportImages)
     vkDestroyImageView(m_device, i.view, nullptr);
   vkDestroyImageView(m_device, m_viewportDepthImage.view, nullptr);

@@ -7,7 +7,7 @@ class MaterialLibrary
 public:
   MaterialLibrary() {}
 
-  inline void releaseAll(VkDevice device, VmaAllocator allocator) { m_materialCache.clear(); }
+  inline void releaseAll() { m_materialCache.clear(); }
 
   cassidy::Material* buildMaterial(const std::string& materialName, const cassidy::MaterialInfo& materialInfo);
 

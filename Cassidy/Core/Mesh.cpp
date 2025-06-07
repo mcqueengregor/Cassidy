@@ -1,7 +1,7 @@
 #include "Mesh.h"
 #include <Core/Renderer.h>
 #include <Core/Pipeline.h>
-#include <Core/AssetManager.h>
+#include <Core/ResourceManager.h>
 #include <Utils/Initialisers.h>
 
 #include <Vendor/assimp/include/assimp/Importer.hpp>
@@ -208,7 +208,7 @@ void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltM
 
     const aiMaterial* currentMat = scene->mMaterials[matIndex];
 
-    constexpr MaterialLibrary& matLibrary = cassidy::globals::g_assetManager.materialLibrary;
+    constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
     cassidy::Material* builtMaterial = matLibrary.buildMaterial(directory + std::string(currentMat->GetName().C_Str()), matInfo);
     m_meshes[i].setMaterial(builtMaterial);
     builtMaterials[matIndex] = builtMaterial;
@@ -356,7 +356,7 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
       const char* texName = texFilename.C_Str();
       std::cout << texType << ": " << texName;
 
-      constexpr TextureLibrary& texLibrary = cassidy::globals::g_assetManager.textureLibrary;
+      constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
       cassidy::Texture* loadedTexture = texLibrary.loadTexture(MESH_ABS_FILEPATH + texturesDirectory + texName, format, VK_TRUE);
 
       if (!loadedTexture)
@@ -383,8 +383,9 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
             sizeof(aiTexel) * extent.width * extent.height;
 
           cassidy::Texture engineTex;
+          VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
           if (engineTex.create(reinterpret_cast<unsigned char*>(embeddedTex->pcData), texSize, extent,
-            rendererRef->getAllocator(), rendererRef, VK_FORMAT_R8_UNORM, VK_TRUE))
+            allocator, rendererRef, VK_FORMAT_R8_UNORM, VK_TRUE))
           {
             const std::string& name = MESH_ABS_FILEPATH + texturesDirectory + texName;
 

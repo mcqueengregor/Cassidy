@@ -6,7 +6,7 @@
 #include <Vendor/imgui-docking/imgui_impl_sdl2.h>
 #include <Vendor/imgui-docking/imgui_impl_vulkan.h>
 
-#include <Core/AssetManager.h>
+#include <Core/ResourceManager.h>
 
 #include <vector>
 #include <set>
@@ -195,8 +195,8 @@ void cassidy::Engine::buildGUI()
       {
         ImGui::Text("Frametime: %fms", getDeltaTimeSecs() * 1000.0f);
 
-        constexpr TextureLibrary& texLibrary = cassidy::globals::g_assetManager.textureLibrary;
-        constexpr MaterialLibrary& matLibrary = cassidy::globals::g_assetManager.materialLibrary;
+        constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+        constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
         const std::string texLibraryHeaderText = "Texture library size: " + std::to_string(texLibrary.getNumLoadedTextures());
 
         if (ImGui::TreeNode(texLibraryHeaderText.c_str()))

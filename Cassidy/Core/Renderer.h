@@ -73,7 +73,6 @@ namespace cassidy
     inline Swapchain                  getSwapchain()            { return m_swapchain; }
     inline UploadContext&             getUploadContext()        { return m_uploadContext; }
     inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
-    inline VmaAllocator&              getAllocator()            { return m_allocator; }
     inline VkDescriptorSet&           getViewportDescSet()      { return m_viewportDescSets[m_swapchainImageIndex]; }
 
   private:
@@ -85,11 +84,10 @@ namespace cassidy
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
     AllocatedBuffer allocateBuffer(uint32_t allocSize, VkBufferUsageFlags usageFlags, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlagBits allocFlags);
 
-    void initMemoryAllocator();
     void initLogicalDevice();
     void initSwapchain();
 
-    void initAssetManager();
+    void initResourceManager();
 
     void initEditorImages();
     void initEditorRenderPass();
@@ -116,6 +114,8 @@ namespace cassidy
     void initViewportFramebuffers();
 
     void transitionSwapchainImages();
+
+    VmaAllocator getVmaAllocator();
 
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }
@@ -181,9 +181,6 @@ namespace cassidy
     std::vector<VkSemaphore>  m_imageAvailableSemaphores;
     std::vector<VkSemaphore>  m_renderFinishedSemaphores;
     std::vector<VkFence>      m_inFlightFences;
-
-    // Memory allocator and allocated objects:
-    VmaAllocator m_allocator;
 
     // Viewport rendering objects:
     std::vector<AllocatedImage>   m_viewportImages;

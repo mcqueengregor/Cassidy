@@ -91,7 +91,7 @@ cassidy::Material* MaterialLibrary::buildMaterial(const std::string& materialNam
 
   newMat.setTextureDescSet(matDescSet);
 
-  m_materialCache[std::string(materialInfo.debugName)] = newMat;
+  m_materialCache[materialInfo.debugName] = newMat;
 
-  return &m_materialCache.at(std::string(materialInfo.debugName));
+  return &m_materialCache.at(materialInfo.debugName);
 }

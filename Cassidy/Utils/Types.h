@@ -100,6 +100,12 @@ struct Vertex
   }
 };
 
+enum class LoadResult : uint8_t
+{
+  SUCCESS = 0b0000'0001,
+  NOT_FOUND = 0b000'0010,
+};
+
 // An image object allocated with Vulkan Memory Allocator
 struct AllocatedImage
 {
