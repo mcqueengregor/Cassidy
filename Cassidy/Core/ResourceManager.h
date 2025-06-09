@@ -29,6 +29,6 @@ namespace cassidy
 
 	namespace globals
 	{
-		ResourceManager g_resourceManager;
+		inline ResourceManager g_resourceManager;
 	}
 };
