@@ -137,6 +137,7 @@ namespace cassidy
     AllocatedBuffer m_perObjectUniformBufferDynamic;
 
     // Meshes:
+    Model* m_currentModel = nullptr;
     Model m_triangleMesh;
     Model m_backpackMesh;
     UploadContext m_uploadContext;

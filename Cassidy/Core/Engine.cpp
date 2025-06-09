@@ -197,6 +197,7 @@ void cassidy::Engine::buildGUI()
 
         constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
         constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
+        constexpr ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
         const std::string texLibraryHeaderText = "Texture library size: " + std::to_string(texLibrary.getNumLoadedTextures());
 
         if (ImGui::TreeNode(texLibraryHeaderText.c_str()))
@@ -226,6 +227,19 @@ void cassidy::Engine::buildGUI()
 
           // TODO: Restrict this to debug build?
           ImGui::Text("(Num duplicate materials prevented: %i)", matLibrary.getNumDuplicateMaterialBuildsPrevented());
+          ImGui::TreePop();
+        }
+
+        const std::string modManagerHeaderText = std::to_string(modelManager.getNumLoadedModels()) + " loaded models:";
+
+        if (ImGui::TreeNode(modManagerHeaderText.c_str()))
+        {
+          const auto& loadedModels = modelManager.getLoadedModels();
+          for (const auto& model : loadedModels)
+          {
+            std::string_view modelName = model.first;
+            ImGui::Text(modelName.data());
+          }
           ImGui::TreePop();
         }
       }

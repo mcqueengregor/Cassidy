@@ -1,7 +1,7 @@
 #include "ModelManager.h"
 #include <Core/ResourceManager.h>
 
-inline void cassidy::ModelManager::releaseAll(VkDevice device, VmaAllocator allocator)
+void cassidy::ModelManager::releaseAll(VkDevice device, VmaAllocator allocator)
 {
 	for (auto&& model : m_loadedModels)
 	{
@@ -23,10 +23,22 @@ void cassidy::ModelManager::loadModel(const std::string& filepath, cassidy::Rend
 
 void cassidy::ModelManager::registerModel(const std::string& name, const cassidy::Model& model)
 {
-	if (m_loadedModels.find(name) == m_loadedModels.end())
+	if (m_loadedModels.find(name) != m_loadedModels.end())
 	{
 		// TODO: Add verbose log here when logging is implemented!
 		return;
 	}
 	m_loadedModels[name] = model;
+}
+
+void cassidy::ModelManager::allocateBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)
+{
+	for (auto&& model : m_loadedModels)
+	{
+		if (model.second.getLoadResult() == LoadResult::NOT_FOUND)
+			continue;
+
+		model.second.allocateVertexBuffers(cmd, allocator, rendererRef);
+		model.second.allocateIndexBuffers(cmd, allocator, rendererRef);
+	}
 }

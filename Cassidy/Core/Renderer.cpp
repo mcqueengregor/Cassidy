@@ -25,14 +25,14 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   m_engineRef = engine;
 
   initLogicalDevice();
+  initSyncObjects();
+  initCommandPool();
+  initCommandBuffers();
   initResourceManager();
   initSwapchain();
   initEditorImages();
   initEditorRenderPass();
   initEditorFramebuffers();
-  initCommandPool();
-  initCommandBuffers();
-  initSyncObjects();
   transitionSwapchainImages();
   initMeshes();
   initDescriptorSets();
@@ -231,7 +231,8 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
       1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
     
-    m_backpackMesh.draw(cmd, &m_viewportPipeline);
+    constexpr ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
+    modelManager.getModel("Helmet/DamagedHelmet.gltf")->draw(cmd, &m_viewportPipeline);
   }
 
   vkCmdEndRenderPass(cmd);
@@ -731,6 +732,10 @@ void cassidy::Renderer::initMeshes()
     cassidy::globals::g_resourceManager.modelManager;
   modelManager.registerModel("Primitives/Triangle", triangleMesh);
   modelManager.loadModel("Helmet/DamagedHelmet.gltf", this, aiProcess_FlipUVs);
+  m_currentModel = modelManager.getModel("Helmet/DamagedHelmet.gltf");
+
+  const VmaAllocator& allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
+  modelManager.allocateBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
 }
 
 void cassidy::Renderer::initDescriptorSets()
