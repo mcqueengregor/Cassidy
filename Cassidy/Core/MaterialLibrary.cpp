@@ -1,10 +1,12 @@
 #include "MaterialLibrary.h"
-#include <Core/TextureLibrary.h>  // (contains global texture samplers)
+#include <Core/ResourceManager.h>   // (Texture library contains global texture samplers)
 #include <Utils/DescriptorBuilder.h>
 #include <Utils/Initialisers.h>
 #include <iostream>
 
-cassidy::Material* MaterialLibrary::buildMaterial(const std::string& materialName, const cassidy::MaterialInfo& materialInfo)
+#define ERROR_MAT_NAME std::string("Default/ErrorMat")
+
+cassidy::Material* cassidy::MaterialLibrary::buildMaterial(const std::string& materialName, cassidy::MaterialInfo& materialInfo)
 {
   // If material already exists, return reference to it:
   if (m_materialCache.find(materialName) != m_materialCache.end())
@@ -72,6 +74,14 @@ cassidy::Material* MaterialLibrary::buildMaterial(const std::string& materialNam
     v0.0.3: Just leave pipeline creation as-is for now, bind pipeline manually during draw recording and add material binds as Mesh::bindMaterial()
   */
 
+  constexpr cassidy::TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+  if (!materialInfo.hasTexture(cassidy::TextureType::ALBEDO))
+    materialInfo.attachTexture(texLibrary.getFallbackTexture(cassidy::TextureType::ALBEDO), cassidy::TextureType::ALBEDO);
+  if (!materialInfo.hasTexture(cassidy::TextureType::SPECULAR))
+    materialInfo.attachTexture(texLibrary.getFallbackTexture(cassidy::TextureType::SPECULAR), cassidy::TextureType::SPECULAR);
+  if (!materialInfo.hasTexture(cassidy::TextureType::NORMAL))
+    materialInfo.attachTexture(texLibrary.getFallbackTexture(cassidy::TextureType::NORMAL), cassidy::TextureType::NORMAL);
+
   cassidy::Material newMat;
   VkDescriptorSet matDescSet;
   newMat.setMatInfo(materialInfo);
@@ -94,4 +104,22 @@ cassidy::Material* MaterialLibrary::buildMaterial(const std::string& materialNam
   m_materialCache[materialInfo.debugName] = newMat;
 
   return &m_materialCache.at(materialInfo.debugName);
+}
+
+void cassidy::MaterialLibrary::createErrorMaterial()
+{
+  if (m_materialCache.find(ERROR_MAT_NAME) != m_materialCache.end())
+    return;
+
+  constexpr cassidy::TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+
+  cassidy::MaterialInfo errorMatInfo = cassidy::MaterialInfo();
+  errorMatInfo.debugName = ERROR_MAT_NAME;
+
+  buildMaterial(errorMatInfo.debugName, errorMatInfo);
+}
+
+cassidy::Material* cassidy::MaterialLibrary::getErrorMaterial()
+{
+  return &m_materialCache.at(ERROR_MAT_NAME);
 }

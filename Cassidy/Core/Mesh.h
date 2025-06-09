@@ -38,7 +38,7 @@ namespace cassidy
     inline uint32_t           const* getIndices()      const { return m_indices.data(); }
     inline AllocatedBuffer    const* getVertexBuffer() const { return &m_vertexBuffer; }
     inline AllocatedBuffer    const* getIndexBuffer()  const { return &m_indexBuffer; }
-    inline cassidy::Material  const* getMaterial()     const { return m_material; }
+    inline cassidy::Material*        getMaterial()     const { return m_material; }
 
     inline void setVertexBuffer(AllocatedBuffer newBuffer) { m_vertexBuffer = newBuffer; }
     inline void setIndexBuffer(AllocatedBuffer newBuffer) { m_indexBuffer = newBuffer; }

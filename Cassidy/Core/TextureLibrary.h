@@ -23,7 +23,7 @@ namespace cassidy
     void releaseAll(VkDevice device, VmaAllocator allocator);
 
     void generateFallbackTextures();
-    cassidy::Texture* retrieveFallbackTexture(cassidy::TextureType type);
+    cassidy::Texture* getFallbackTexture(cassidy::TextureType type);
 
     inline cassidy::Texture* getTexture(const std::string& name) { return &m_loadedTextures.at(name); }
     inline size_t getNumLoadedTextures() { return m_loadedTextures.size(); }

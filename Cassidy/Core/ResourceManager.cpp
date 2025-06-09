@@ -1,13 +1,18 @@
 #include "ResourceManager.h"
 #include <Core/Engine.h>
 #include <Core/Renderer.h>
+#include <Utils/DescriptorBuilder.h>
 
 void cassidy::ResourceManager::init(cassidy::Renderer* rendererRef, cassidy::Engine* engineRef)
 {
 	m_rendererRef = rendererRef;
 	initVmaAllocator(engineRef);
 
+	cassidy::globals::g_descAllocator.init(rendererRef->getLogicalDevice());
+	cassidy::globals::g_descLayoutCache.init(rendererRef->getLogicalDevice());
+
 	textureLibrary.init(&m_allocator, rendererRef);
+	materialLibrary.createErrorMaterial();
 }
 
 void cassidy::ResourceManager::release(VkDevice device)

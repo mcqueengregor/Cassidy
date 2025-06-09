@@ -12,10 +12,14 @@
 
 void cassidy::Model::draw(VkCommandBuffer cmd, const Pipeline* pipeline)
 {
+  constexpr cassidy::MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
   cassidy::Material* lastMaterial = nullptr;
 
   for (const auto& mesh : m_meshes)
   {
+    cassidy::Material* meshMaterial = mesh.getMaterial();
+    if (!meshMaterial) meshMaterial = matLibrary.getErrorMaterial();
+
     if (mesh.getMaterial() != lastMaterial)
     {
       VkDescriptorSet&& textureSet = mesh.getMaterial()->getTextureDescSet();
@@ -395,7 +399,7 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
         }
 
         // Fallback to default texture based on type:
-        cassidy::Texture* fallback = texLibrary.retrieveFallbackTexture(engineTexType);
+        cassidy::Texture* fallback = texLibrary.getFallbackTexture(engineTexType);
         std::cout << "\t(CASSIDY ERROR: could not load texture!)";
 
         matInfo.attachTexture(fallback, engineTexType);

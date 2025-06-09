@@ -94,7 +94,7 @@ void cassidy::TextureLibrary::generateFallbackTextures()
   m_loadedTextures[whiteKeyVal]   = whiteTex;
 }
 
-cassidy::Texture* cassidy::TextureLibrary::retrieveFallbackTexture(cassidy::TextureType type)
+cassidy::Texture* cassidy::TextureLibrary::getFallbackTexture(cassidy::TextureType type)
 {
   // Return default 1x1 white, black, magenta or (0.5, 0.5, 1.0) normal texture based on type:
   
