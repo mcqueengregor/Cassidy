@@ -62,6 +62,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
   }
 
   std::string directory = filepath.substr(0, filepath.find_last_of('/') + 1);
+  m_debugName = filepath;
 
   std::cout << "Found " << scene->mNumMaterials << " materials on model!" << std::endl;
 

@@ -66,7 +66,10 @@ namespace cassidy
     void allocateVertexBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef);
     void allocateIndexBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef);
 
+    inline void setDebugName(const std::string& name) { m_debugName = name; }
+    
     inline LoadResult getLoadResult() { return m_loadResult; }
+    inline std::string_view getDebugName() { return m_debugName; }
 
   private:
     typedef std::unordered_map<uint32_t, cassidy::Material*> BuiltMaterials;
@@ -75,5 +78,6 @@ namespace cassidy
 
     std::vector<Mesh> m_meshes;
     LoadResult m_loadResult;
+    std::string m_debugName;
   };
 };

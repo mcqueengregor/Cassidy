@@ -64,6 +64,9 @@ void cassidy::Renderer::draw()
   vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex]);
 
   const FrameData& currentFrameData = getCurrentFrameData();
+  const int32_t& currentModelIndex = m_engineRef->getUIContext().selectedModel;
+  constexpr ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
+  m_currentModel = modelManager.getModelsPtrTable()[currentModelIndex];
 
   updateBuffers(currentFrameData);
   recordViewportCommands(m_swapchainImageIndex);
@@ -729,6 +732,7 @@ void cassidy::Renderer::initMeshes()
   cassidy::Model triangleMesh;
   triangleMesh.setVertices(triangleVertices);
   triangleMesh.setIndices(triangleIndices);
+  triangleMesh.setDebugName("Primitives/Triangle");
 
   constexpr cassidy::ModelManager& modelManager = 
     cassidy::globals::g_resourceManager.modelManager;

@@ -60,7 +60,7 @@ namespace cassidy
     cassidy::Renderer m_renderer;
 
     struct UIContext {
-      int selectedModel = 0;
+      int32_t selectedModel = 0;
     } m_uiContext;
 
     DeletionQueue m_deletionQueue;
