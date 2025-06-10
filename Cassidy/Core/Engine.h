@@ -59,6 +59,10 @@ namespace cassidy
     cassidy::EventHandler m_eventHandler;
     cassidy::Renderer m_renderer;
 
+    struct UIContext {
+      int selectedModel = 0;
+    } m_uiContext;
+
     DeletionQueue m_deletionQueue;
 
     // Constant/static members and methods: ----------------------------------------------------------------------
@@ -91,5 +95,6 @@ namespace cassidy
     inline VkSurfaceKHR getSurface()    { return m_surface; }
     inline cassidy::Camera& getCamera() { return m_camera; }
     inline double getDeltaTimeSecs()    { return GlobalTimer::deltaTime(); }
+    inline UIContext getUIContext()     { return m_uiContext; }
   };
 }

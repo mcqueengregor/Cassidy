@@ -230,9 +230,9 @@ void cassidy::Engine::buildGUI()
           ImGui::TreePop();
         }
 
-        const std::string modManagerHeaderText = std::to_string(modelManager.getNumLoadedModels()) + " loaded models:";
+        const std::string modelManagerHeaderText = std::to_string(modelManager.getNumLoadedModels()) + " loaded models:";
 
-        if (ImGui::TreeNode(modManagerHeaderText.c_str()))
+        if (ImGui::TreeNode(modelManagerHeaderText.c_str()))
         {
           const auto& loadedModels = modelManager.getLoadedModels();
           for (const auto& model : loadedModels)
@@ -242,6 +242,25 @@ void cassidy::Engine::buildGUI()
           }
           ImGui::TreePop();
         }
+
+        if (ImGui::BeginListBox("Loaded models:"))
+        {
+          for (size_t i = 0; i < modelManager.getModelsPtrTable().size(); ++i)
+          {
+            const bool isCurrentlySelected = i == m_uiContext.selectedModel;
+
+            /* 
+              TODO: Finish implementing list box of available loaded models!
+              Ref: https://github.com/mcqueengregor/LearnOpenGL-Projects/blob/main/LearnOpenGL/LearnOpenGL/main.cpp#L1131
+              
+              - Need to somehow get key value from model? Could add debug name to model class to use as label
+              - Still need to use index retrieved from this list box to reference correct model
+              - Above can be used to index into models ptr table which Renderer::m_currentModel is set to before rendering
+              - Make Engine::m_uiContext accessible!
+            */
+          }
+        }
+
       }
 
       //ImGui::Text("Directional light:");

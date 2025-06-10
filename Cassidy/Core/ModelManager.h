@@ -7,6 +7,8 @@ namespace cassidy {
 	class ModelManager
 	{
 	public:
+		typedef std::unordered_map<std::string, cassidy::Model> LoadedModels;
+
 		ModelManager() {}
 
 		void releaseAll(VkDevice device, VmaAllocator allocator);
@@ -19,9 +21,11 @@ namespace cassidy {
 		inline Model* getModel(const std::string& name) { return m_loadedModels.find(name) != m_loadedModels.end() ? &m_loadedModels.at(name) : nullptr; }
 
 		inline size_t getNumLoadedModels() { return m_loadedModels.size(); }
-		inline auto& getLoadedModels() { return m_loadedModels; }
+		inline LoadedModels& getLoadedModels() { return m_loadedModels; }
+		inline std::vector<cassidy::Model*> getModelsPtrTable() { return m_modelsPtrTable; }
 
 	private:
-		std::unordered_map<std::string, cassidy::Model> m_loadedModels;
+		LoadedModels m_loadedModels;
+		std::vector<cassidy::Model*> m_modelsPtrTable;
 	};
 };

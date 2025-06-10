@@ -19,6 +19,7 @@ void cassidy::ModelManager::loadModel(const std::string& filepath, cassidy::Rend
 		return;
 
 	m_loadedModels[filepath] = newModel;
+	m_modelsPtrTable.emplace_back(&m_loadedModels.at(filepath));
 }
 
 void cassidy::ModelManager::registerModel(const std::string& name, const cassidy::Model& model)
@@ -29,6 +30,7 @@ void cassidy::ModelManager::registerModel(const std::string& name, const cassidy
 		return;
 	}
 	m_loadedModels[name] = model;
+	m_modelsPtrTable.emplace_back(m_loadedModels.find(name));
 }
 
 void cassidy::ModelManager::allocateBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)
