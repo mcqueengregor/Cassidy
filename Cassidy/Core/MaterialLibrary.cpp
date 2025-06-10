@@ -75,12 +75,13 @@ cassidy::Material* cassidy::MaterialLibrary::buildMaterial(const std::string& ma
   */
 
   constexpr cassidy::TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
-  if (!materialInfo.hasTexture(cassidy::TextureType::ALBEDO))
-    materialInfo.attachTexture(texLibrary.getFallbackTexture(cassidy::TextureType::ALBEDO), cassidy::TextureType::ALBEDO);
-  if (!materialInfo.hasTexture(cassidy::TextureType::SPECULAR))
-    materialInfo.attachTexture(texLibrary.getFallbackTexture(cassidy::TextureType::SPECULAR), cassidy::TextureType::SPECULAR);
-  if (!materialInfo.hasTexture(cassidy::TextureType::NORMAL))
-    materialInfo.attachTexture(texLibrary.getFallbackTexture(cassidy::TextureType::NORMAL), cassidy::TextureType::NORMAL);
+  
+  for (uint8_t i = 0; i <= (uint8_t)(cassidy::TextureType::SPECULAR); ++i)
+  {
+    const cassidy::TextureType type = static_cast<cassidy::TextureType>(i);
+    if (!materialInfo.hasTexture(type))
+      materialInfo.attachTexture(texLibrary.getFallbackTexture(type), type);
+  }
 
   cassidy::Material newMat;
   VkDescriptorSet matDescSet;

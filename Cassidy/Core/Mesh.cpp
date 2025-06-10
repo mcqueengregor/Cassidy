@@ -20,12 +20,13 @@ void cassidy::Model::draw(VkCommandBuffer cmd, const Pipeline* pipeline)
     cassidy::Material* meshMaterial = mesh.getMaterial();
     if (!meshMaterial) meshMaterial = matLibrary.getErrorMaterial();
 
-    if (mesh.getMaterial() != lastMaterial)
+    if (meshMaterial != lastMaterial)
     {
-      VkDescriptorSet&& textureSet = mesh.getMaterial()->getTextureDescSet();
+      VkDescriptorSet&& textureSet = meshMaterial->getTextureDescSet();
 
       vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getLayout(),
         2, 1, &textureSet, 0, nullptr);
+      lastMaterial = meshMaterial;
     }
 
     VkDeviceSize offset = 0;
@@ -397,14 +398,9 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
             matInfo.attachTexture(texLibrary.getTexture(name), engineTexType);
           }
         }
-
-        // Fallback to default texture based on type:
-        cassidy::Texture* fallback = texLibrary.getFallbackTexture(engineTexType);
         std::cout << "\t(CASSIDY ERROR: could not load texture!)";
-
-        matInfo.attachTexture(fallback, engineTexType);
       }
-      else if (matInfo.pbrTextures.find(engineTexType) == matInfo.pbrTextures.end())
+      else if (!matInfo.hasTexture(engineTexType))
       {
         matInfo.attachTexture(loadedTexture, engineTexType);
       }

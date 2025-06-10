@@ -734,7 +734,7 @@ void cassidy::Renderer::initMeshes()
     cassidy::globals::g_resourceManager.modelManager;
   modelManager.registerModel("Primitives/Triangle", triangleMesh);
   modelManager.loadModel("Helmet/DamagedHelmet.gltf", this, aiProcess_FlipUVs);
-  m_currentModel = modelManager.getModel("Primitives/Triangle");
+  m_currentModel = modelManager.getModel("Helmet/DamagedHelmet.gltf");
 
   const VmaAllocator& allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
   modelManager.allocateBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
