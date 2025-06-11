@@ -245,7 +245,7 @@ void cassidy::Engine::buildGUI()
 
         if (ImGui::BeginListBox("Loaded models"))
         {
-          for (size_t i = 0; i < modelManager.getModelsPtrTable().size(); ++i)
+          for (int8_t i = 0; i < (int8_t)modelManager.getModelsPtrTable().size(); ++i)
           {
             const bool isCurrentlySelected = i == m_uiContext.selectedModel;
 
@@ -255,6 +255,7 @@ void cassidy::Engine::buildGUI()
             if (isCurrentlySelected) ImGui::SetItemDefaultFocus();
           }
           ImGui::EndListBox();
+          ImGui::Text("Current model: %i", m_uiContext.selectedModel);
         }
       }
 

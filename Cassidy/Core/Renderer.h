@@ -204,9 +204,9 @@ namespace cassidy
     // TODO: Temp, tidy with mesh abstraction!
     const std::vector<Vertex> triangleVertices =
     {
-      {{ 0.0f,  0.5f, 0.0f},  {0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+      {{ 0.0f,  0.5f, 0.0f},  {0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
       {{-0.5f, -0.5f, 0.0f},  {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-      {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
+      {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
     };
 
     const std::vector<uint32_t> triangleIndices =
