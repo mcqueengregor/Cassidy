@@ -98,8 +98,6 @@ namespace cassidy
     void initCommandBuffers();
     void initSyncObjects();
 
-    void initMeshes();
-
     void initDescriptorSets();
 
     void initVertexBuffers();
@@ -200,18 +198,5 @@ namespace cassidy
     uint32_t m_currentFrameIndex;
     uint32_t m_swapchainImageIndex;
     VkPhysicalDeviceProperties m_physicalDeviceProperties;
-
-    // TODO: Temp, tidy with mesh abstraction!
-    const std::vector<Vertex> triangleVertices =
-    {
-      {{ 0.0f,  0.5f, 0.0f},  {0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-      {{-0.5f, -0.5f, 0.0f},  {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-      {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-    };
-
-    const std::vector<uint32_t> triangleIndices =
-    {
-      0, 1, 2,
-    };
   };
 }

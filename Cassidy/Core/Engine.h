@@ -32,6 +32,8 @@ namespace cassidy
     void initSurface();
     void initDebugMessenger();
 
+    void initDefaultModels();
+
     inline VkResult createDebugUtilsMessengerEXT(
       VkInstance                                instance,
       const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,

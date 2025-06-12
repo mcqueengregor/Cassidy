@@ -74,22 +74,22 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
 }
 
 // Used for single-mesh models which have their vertices directly set by an array.
-void cassidy::Model::setVertices(const std::vector<Vertex>& vertices)
+void cassidy::Model::setVertices(const Vertex* data, size_t size)
 {
   if (m_meshes.empty())
   {
     m_meshes.emplace_back(Mesh());
   }
-  m_meshes[0].setVertices(vertices);
+  m_meshes[0].setVertices(data, size);
 }
 
-void cassidy::Model::setIndices(const std::vector<uint32_t>& indices)
+void cassidy::Model::setIndices(const uint32_t* data, size_t size)
 {
   if (m_meshes.empty())
   {
     m_meshes.emplace_back(Mesh());
   }
-  m_meshes[0].setIndices(indices);
+  m_meshes[0].setIndices(data, size);
 }
 
 void cassidy::Model::allocateVertexBuffers(VkCommandBuffer uploadCmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)

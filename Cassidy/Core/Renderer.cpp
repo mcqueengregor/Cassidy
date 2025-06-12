@@ -34,7 +34,6 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initEditorRenderPass();
   initEditorFramebuffers();
   transitionSwapchainImages();
-  initMeshes();
   initDescriptorSets();
   initImGui();
   initPipelines();
@@ -725,23 +724,6 @@ void cassidy::Renderer::initSyncObjects()
   });
 
   std::cout << "Created synchronisation objects!\n" << std::endl;
-}
-
-void cassidy::Renderer::initMeshes()
-{
-  cassidy::Model triangleMesh;
-  triangleMesh.setVertices(triangleVertices);
-  triangleMesh.setIndices(triangleIndices);
-  triangleMesh.setDebugName("Primitives/Triangle");
-
-  constexpr cassidy::ModelManager& modelManager = 
-    cassidy::globals::g_resourceManager.modelManager;
-  modelManager.registerModel("Primitives/Triangle", triangleMesh);
-  modelManager.loadModel("Helmet/DamagedHelmet.gltf", this, aiProcess_FlipUVs);
-  m_currentModel = modelManager.getModel("Helmet/DamagedHelmet.gltf");
-
-  const VmaAllocator& allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
-  modelManager.allocateBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
 }
 
 void cassidy::Renderer::initDescriptorSets()

@@ -6,6 +6,8 @@
 #include <Vendor/imgui-docking/imgui_impl_sdl2.h>
 #include <Vendor/imgui-docking/imgui_impl_vulkan.h>
 
+#include <Core/PrimitiveMeshes.h>
+#include <Vendor/assimp/include/assimp/postprocess.h>
 #include <Core/ResourceManager.h>
 
 #include <vector>
@@ -13,7 +15,6 @@
 
 #include "Utils/Initialisers.h"
 #include "Utils/Helpers.h"
-#include <iomanip>
 
 cassidy::Engine::Engine() :
   m_windowDimensions(glm::vec2(1920, 1080))
@@ -41,6 +42,9 @@ void cassidy::Engine::init()
   m_camera.init(this);
   m_renderer.init(this);
   m_eventHandler.init();
+
+  initDefaultModels();
+  std::cout << "Initialised default models!\n" << std::endl;
 
   std::cout << "Initialised engine!\n" << std::endl;
 }
@@ -434,4 +438,20 @@ void cassidy::Engine::initDebugMessenger()
     if (func)
       func(m_instance, m_debugMessenger, nullptr);
     });
+}
+
+void cassidy::Engine::initDefaultModels()
+{
+  cassidy::Model triangleMesh;
+  triangleMesh.setVertices(TRIANGLE_VERTEX.data(), TRIANGLE_VERTEX.size());
+  triangleMesh.setIndices(TRIANGLE_INDEX.data(), TRIANGLE_INDEX.size());
+  triangleMesh.setDebugName("Primitives/Triangle");
+
+  constexpr cassidy::ModelManager& modelManager =
+    cassidy::globals::g_resourceManager.modelManager;
+  modelManager.registerModel("Primitives/Triangle", triangleMesh);
+  modelManager.loadModel("Helmet/DamagedHelmet.gltf", &m_renderer, aiProcess_FlipUVs);
+
+  const VmaAllocator& allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
+  modelManager.allocateBuffers(m_renderer.getUploadContext().uploadCommandBuffer, allocator, &m_renderer);
 }
