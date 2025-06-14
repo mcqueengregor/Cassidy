@@ -5,7 +5,7 @@
 
 #define FALLBACK_TEXTURE_PREFIX std::string("Fallback_")
 
-void cassidy::TextureLibrary::initImpl(VmaAllocator* allocatorRef, cassidy::Renderer* rendererRef)
+void cassidy::TextureLibrary::init(VmaAllocator* allocatorRef, cassidy::Renderer* rendererRef)
 {
   if (m_isInitialised) return;
 
@@ -17,12 +17,12 @@ void cassidy::TextureLibrary::initImpl(VmaAllocator* allocatorRef, cassidy::Rend
   cassidy::globals::m_nearestTextureSampler = cassidy::helper::createTextureSampler(m_rendererRef->getLogicalDevice(),
     m_rendererRef->getPhysDeviceProperties(), VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_TRUE);
 
-  generateFallbackTexturesImpl();
+  generateFallbackTextures();
 
   m_isInitialised = true;
 }
 
-cassidy::Texture* cassidy::TextureLibrary::loadTextureImpl(std::string filepath, VkFormat format, VkBool32 shouldGenMipmaps)
+cassidy::Texture* cassidy::TextureLibrary::loadTexture(const std::string& filepath, VkFormat format, VkBool32 shouldGenMipmaps)
 {
   // If the texture has already been loaded, return the already-existing version:
   if (m_loadedTextures.find(filepath) != m_loadedTextures.end())
@@ -42,7 +42,7 @@ cassidy::Texture* cassidy::TextureLibrary::loadTextureImpl(std::string filepath,
   return nullptr;
 }
 
-void cassidy::TextureLibrary::registerTextureImpl(const std::string& name, const cassidy::Texture& texture)
+void cassidy::TextureLibrary::registerTexture(const std::string& name, const cassidy::Texture& texture)
 {
   if (m_loadedTextures.find(name) != m_loadedTextures.end())
   {
@@ -54,7 +54,7 @@ void cassidy::TextureLibrary::registerTextureImpl(const std::string& name, const
   m_loadedTextures[name] = texture;
 }
 
-void cassidy::TextureLibrary::releaseAllImpl(VkDevice device, VmaAllocator allocator)
+void cassidy::TextureLibrary::releaseAll(VkDevice device, VmaAllocator allocator)
 {
   vkDestroySampler(device, cassidy::globals::m_linearTextureSampler, nullptr);
   vkDestroySampler(device, cassidy::globals::m_nearestTextureSampler, nullptr);
@@ -67,7 +67,7 @@ void cassidy::TextureLibrary::releaseAllImpl(VkDevice device, VmaAllocator alloc
   m_isInitialised = false;
 }
 
-void cassidy::TextureLibrary::generateFallbackTexturesImpl()
+void cassidy::TextureLibrary::generateFallbackTextures()
 {
   unsigned char magentaColour[] = { 1.0f * 255, 0.0f * 255, 1.0f * 255, 1.0f * 255 };
   unsigned char normalColour[]  = { 0.5f * 255, 0.5f * 255, 1.0f * 255, 1.0f * 255 };
@@ -94,7 +94,7 @@ void cassidy::TextureLibrary::generateFallbackTexturesImpl()
   m_loadedTextures[whiteKeyVal]   = whiteTex;
 }
 
-cassidy::Texture* cassidy::TextureLibrary::retrieveFallbackTextureImpl(cassidy::TextureType type)
+cassidy::Texture* cassidy::TextureLibrary::getFallbackTexture(cassidy::TextureType type)
 {
   // Return default 1x1 white, black, magenta or (0.5, 0.5, 1.0) normal texture based on type:
   

@@ -13,6 +13,7 @@ namespace cassidy
 
   struct MaterialInfo
   {
+  public:
     std::string debugName;
     PBRTextures pbrTextures;
 
@@ -39,6 +40,8 @@ namespace cassidy
         pbrTextures[type] = texture;
       }
     }
+
+    bool hasTexture(cassidy::TextureType type) { return pbrTextures.find(type) != pbrTextures.end(); }
   };
   struct MaterialInfoHash
   {

@@ -25,10 +25,14 @@ namespace cassidy
     void processInput();
     void update();
 
+    void buildGUI();
+
     void updateGlobalTimer();
     void initInstance();
     void initSurface();
     void initDebugMessenger();
+
+    void initDefaultModels();
 
     inline VkResult createDebugUtilsMessengerEXT(
       VkInstance                                instance,
@@ -56,6 +60,10 @@ namespace cassidy
 
     cassidy::EventHandler m_eventHandler;
     cassidy::Renderer m_renderer;
+
+    struct UIContext {
+      int32_t selectedModel = 0;
+    } m_uiContext;
 
     DeletionQueue m_deletionQueue;
 
@@ -89,5 +97,6 @@ namespace cassidy
     inline VkSurfaceKHR getSurface()    { return m_surface; }
     inline cassidy::Camera& getCamera() { return m_camera; }
     inline double getDeltaTimeSecs()    { return GlobalTimer::deltaTime(); }
+    inline UIContext getUIContext()     { return m_uiContext; }
   };
 }

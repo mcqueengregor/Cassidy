@@ -6,12 +6,15 @@
 #include <Vendor/imgui-docking/imgui_impl_sdl2.h>
 #include <Vendor/imgui-docking/imgui_impl_vulkan.h>
 
+#include <Core/PrimitiveMeshes.h>
+#include <Vendor/assimp/include/assimp/postprocess.h>
+#include <Core/ResourceManager.h>
+
 #include <vector>
 #include <set>
 
 #include "Utils/Initialisers.h"
 #include "Utils/Helpers.h"
-#include <iomanip>
 
 cassidy::Engine::Engine() :
   m_windowDimensions(glm::vec2(1920, 1080))
@@ -39,6 +42,9 @@ void cassidy::Engine::init()
   m_camera.init(this);
   m_renderer.init(this);
   m_eventHandler.init();
+
+  initDefaultModels();
+  std::cout << "Initialised default models!\n" << std::endl;
 
   std::cout << "Initialised engine!\n" << std::endl;
 }
@@ -88,6 +94,8 @@ void cassidy::Engine::run()
       ImGui_ImplVulkan_NewFrame();
       ImGui_ImplSDL2_NewFrame(m_window);
       ImGui::NewFrame();
+      
+      buildGUI();
 
       m_renderer.draw();
     }
@@ -178,6 +186,137 @@ void cassidy::Engine::update()
   m_camera.update();
 }
 
+void cassidy::Engine::buildGUI()
+{
+  ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+  {
+    ImGui::ShowDemoWindow();
+
+    ImGui::Begin("Cassidy main");
+    {
+      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+      ImGui::Text("Engine stats:");
+      {
+        ImGui::Text("Frametime: %fms", getDeltaTimeSecs() * 1000.0f);
+
+        constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+        constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
+        constexpr ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
+        const std::string texLibraryHeaderText = "Texture library size: " + std::to_string(texLibrary.getNumLoadedTextures());
+
+        if (ImGui::TreeNode(texLibraryHeaderText.c_str()))
+        {
+          const auto& textureLibrary = texLibrary.getTextureLibraryMap();
+          for (const auto& texture : textureLibrary)
+          {
+            std::string_view textureFilename = texture.first;
+            size_t lastBackSlash = textureFilename.find_last_of('/');
+            ++lastBackSlash;  // Advance one character forward to isolate the filename.
+            std::string_view textureFilenameSub = textureFilename.substr(lastBackSlash, textureFilename.size() - lastBackSlash);
+            ImGui::Text(textureFilenameSub.data());
+          }
+          ImGui::TreePop();
+        }
+
+        const std::string matLibraryHeaderText = "Material library size: " + std::to_string(matLibrary.getMaterialCache().size());
+
+        if (ImGui::TreeNode(matLibraryHeaderText.c_str()))
+        {
+          const auto& materialCache = matLibrary.getMaterialCache();
+          for (const auto& mat : materialCache)
+          {
+            std::string_view matName = mat.first;
+            ImGui::Text(matName.data());
+          }
+
+          // TODO: Restrict this to debug build?
+          ImGui::Text("(Num duplicate materials prevented: %i)", matLibrary.getNumDuplicateMaterialBuildsPrevented());
+          ImGui::TreePop();
+        }
+
+        const std::string modelManagerHeaderText = std::to_string(modelManager.getNumLoadedModels()) + " loaded models:";
+
+        if (ImGui::TreeNode(modelManagerHeaderText.c_str()))
+        {
+          const auto& loadedModels = modelManager.getLoadedModels();
+          for (const auto& model : loadedModels)
+          {
+            std::string_view modelName = model.first;
+            ImGui::Text(modelName.data());
+          }
+          ImGui::TreePop();
+        }
+
+        if (ImGui::BeginListBox("Loaded models"))
+        {
+          for (int8_t i = 0; i < (int8_t)modelManager.getModelsPtrTable().size(); ++i)
+          {
+            const bool isCurrentlySelected = i == m_uiContext.selectedModel;
+
+            if (ImGui::Selectable(modelManager.getModelsPtrTable()[i]->getDebugName().data(), &isCurrentlySelected))
+              m_uiContext.selectedModel = i;
+
+            if (isCurrentlySelected) ImGui::SetItemDefaultFocus();
+          }
+          ImGui::EndListBox();
+          ImGui::Text("Current model: %i", m_uiContext.selectedModel);
+        }
+      }
+
+      //ImGui::Text("Directional light:");
+      //ImGui::SliderInt("Current light index:", &m_currentLightIndex, 0, NUM_LIGHTS - 1);
+      //ImGui::SliderFloat("Light pitch", &m_lightRotation[m_currentLightIndex].x, 0.0f, 360.0f);
+      //ImGui::SliderFloat("Light yaw", &m_lightRotation[m_currentLightIndex].y, 0.0f, 360.0f);
+      //ImGui::SliderFloat("Light roll", &m_lightRotation[m_currentLightIndex].z, 0.0f, 360.0f);
+      //ImGui::SliderFloat("Ambient", &m_lightAmbient[m_currentLightIndex], 0.0f, 1.0f);
+
+      //ImGui::SliderInt("Num active lights: ", &m_numActiveLights, 0, NUM_LIGHTS);
+
+      //ImGui::Text("Object rotation:");
+      //ImGui::SliderFloat("Object pitch", &m_objectRotation.x, 0.0f, 360.0f);
+      //ImGui::SliderFloat("Object yaw", &m_objectRotation.y, 0.0f, 360.0f);
+      //ImGui::SliderFloat("Object roll", &m_objectRotation.z, 0.0f, 360.0f);
+    }
+    ImGui::End();
+
+    if (ImGui::Begin("Viewport"))
+    {
+      ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+      ImVec2 newViewportSize = viewportSize;
+
+      const cassidy::Swapchain& swapchain = m_renderer.getSwapchain();
+
+      float viewportAspect = viewportSize.y / viewportSize.x;
+      float swapchainAspect = static_cast<float>(swapchain.extent.height) / static_cast<float>(swapchain.extent.width);
+
+      // Force viewport aspect ratio to be equal to swapchain extent's aspect ratio:
+      if (viewportAspect > swapchainAspect)
+      {
+        newViewportSize.y = std::floor(viewportSize.x * swapchainAspect);
+      }
+
+      viewportAspect = viewportSize.x / viewportSize.y;
+      swapchainAspect = static_cast<float>(swapchain.extent.width) / static_cast<float>(swapchain.extent.height);
+
+      if (viewportAspect > swapchainAspect)
+      {
+        newViewportSize.x = std::floor(viewportSize.y * swapchainAspect);
+      }
+
+      // Centre viewport image in window:
+      ImVec2 cursorPos = ImGui::GetCursorPos();
+      cursorPos.x += (viewportSize.x - newViewportSize.x) * 0.5f;
+      cursorPos.y += (viewportSize.y - newViewportSize.y) * 0.5f;
+
+      ImGui::SetCursorPos(cursorPos);
+      ImGui::Image(m_renderer.getViewportDescSet(), newViewportSize);
+    }
+    ImGui::End();
+  }
+
+  ImGui::Render();
+}
+
 void cassidy::Engine::updateGlobalTimer()
 {
   uint64_t currentTimeMs = SDL_GetTicks64();
@@ -187,7 +326,7 @@ void cassidy::Engine::initInstance()
 {
   SDL_Init(SDL_INIT_VIDEO);
 
-  VkApplicationInfo appInfo = cassidy::init::applicationInfo("Cassidy v0.0.3", 0, 0, 3, 0, VK_API_VERSION_1_3);
+  VkApplicationInfo appInfo = cassidy::init::applicationInfo("Cassidy v0.0.4", 0, 0, 4, 0, VK_API_VERSION_1_3);
   m_window = SDL_CreateWindow(appInfo.pApplicationName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
     m_windowDimensions.x, m_windowDimensions.y, SDL_WindowFlags::SDL_WINDOW_VULKAN | SDL_WindowFlags::SDL_WINDOW_RESIZABLE);
 
@@ -299,4 +438,20 @@ void cassidy::Engine::initDebugMessenger()
     if (func)
       func(m_instance, m_debugMessenger, nullptr);
     });
+}
+
+void cassidy::Engine::initDefaultModels()
+{
+  cassidy::Model triangleMesh;
+  triangleMesh.setVertices(TRIANGLE_VERTEX.data(), TRIANGLE_VERTEX.size());
+  triangleMesh.setIndices(TRIANGLE_INDEX.data(), TRIANGLE_INDEX.size());
+  triangleMesh.setDebugName("Primitives/Triangle");
+
+  constexpr cassidy::ModelManager& modelManager =
+    cassidy::globals::g_resourceManager.modelManager;
+  modelManager.registerModel("Primitives/Triangle", triangleMesh);
+  modelManager.loadModel("Helmet/DamagedHelmet.gltf", &m_renderer, aiProcess_FlipUVs);
+
+  const VmaAllocator& allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
+  modelManager.allocateBuffers(m_renderer.getUploadContext().uploadCommandBuffer, allocator, &m_renderer);
 }

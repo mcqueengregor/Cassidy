@@ -2,38 +2,26 @@
 #include <Core/Material.h>
 #include <unordered_map>
 
-class MaterialLibrary
-{
-public:
-  MaterialLibrary(const MaterialLibrary&) = delete;
-
-  static MaterialLibrary& get()
+namespace cassidy {
+  class MaterialLibrary
   {
-    static MaterialLibrary s_instance;
-    return s_instance;
-  }
+  public:
+    MaterialLibrary() {}
 
-  static inline cassidy::Material* buildMaterial(const std::string& materialName, const cassidy::MaterialInfo& materialInfo) {
-    return MaterialLibrary::get().buildMaterialImpl(materialName, materialInfo);
-  }
+    inline void releaseAll() { m_materialCache.clear(); }
 
-  static inline const std::unordered_map<std::string, cassidy::Material>& getMaterialCache() {
-    return MaterialLibrary::get().getMaterialCacheImpl();
-  }
+    cassidy::Material* buildMaterial(const std::string& materialName, cassidy::MaterialInfo& materialInfo);
 
-  static inline uint32_t getNumDuplicateMaterialBuildsPrevented() {
-    return MaterialLibrary::get().getNumDuplicateMaterialBuildsPreventedImpl();
-  }
+    void createErrorMaterial();
+    cassidy::Material* getErrorMaterial();
 
-private:
-  MaterialLibrary() {}
+    inline const std::unordered_map<std::string, cassidy::Material>& getMaterialCache() { return m_materialCache; }
+    inline uint32_t getNumDuplicateMaterialBuildsPrevented() { return m_numDuplicateMaterialBuildsPrevented; }
 
-  cassidy::Material* buildMaterialImpl(const std::string& materialName, const cassidy::MaterialInfo& materialInfo);
-  const std::unordered_map<std::string, cassidy::Material>& getMaterialCacheImpl() { return m_materialCache;  }
-  uint32_t getNumDuplicateMaterialBuildsPreventedImpl() { return m_numDuplicateMaterialBuildsPrevented; }
+  private:
+    // TODO: Change string key value to texture hash (SHA-1?)
+    std::unordered_map<std::string, cassidy::Material> m_materialCache;
 
-  // TODO: Change string key value to texture hash (SHA-1?)
-  std::unordered_map<std::string, cassidy::Material> m_materialCache;
-
-  uint32_t m_numDuplicateMaterialBuildsPrevented = 0; // TODO: Restrict this to debug build?
+    uint32_t m_numDuplicateMaterialBuildsPrevented = 0; // TODO: Restrict this to debug build?
+  };
 };

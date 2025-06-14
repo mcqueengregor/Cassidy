@@ -17,12 +17,6 @@ namespace cassidy
     SPECULAR = 6,
   };
 
-  enum class LoadResult : uint8_t
-  {
-    SUCCESS = 0b0000'0001,
-    NOT_FOUND = 0b000'0010,
-  };
-
   class Texture
   {
   public:
@@ -35,6 +29,7 @@ namespace cassidy
     // Getters/setters: ------------------------------------------------------------------------------------------
     inline VkImage      getImage()      { return m_image.image; }
     inline VkImageView  getImageView()  { return m_image.view; }
+    inline LoadResult   getLoadResult() { return m_loadResult; }
 
   private:
     void transitionImageLayout(VkCommandBuffer cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint8_t mipLevels);

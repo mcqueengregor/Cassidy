@@ -1,8 +1,7 @@
 #include "Mesh.h"
 #include <Core/Renderer.h>
 #include <Core/Pipeline.h>
-#include <Core/TextureLibrary.h>
-#include <Core/MaterialLibrary.h>
+#include <Core/ResourceManager.h>
 #include <Utils/Initialisers.h>
 
 #include <Vendor/assimp/include/assimp/Importer.hpp>
@@ -13,16 +12,21 @@
 
 void cassidy::Model::draw(VkCommandBuffer cmd, const Pipeline* pipeline)
 {
+  constexpr cassidy::MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
   cassidy::Material* lastMaterial = nullptr;
 
   for (const auto& mesh : m_meshes)
   {
-    if (mesh.getMaterial() != lastMaterial)
+    cassidy::Material* meshMaterial = mesh.getMaterial();
+    if (!meshMaterial) meshMaterial = matLibrary.getErrorMaterial();
+
+    if (meshMaterial != lastMaterial)
     {
-      VkDescriptorSet&& textureSet = mesh.getMaterial()->getTextureDescSet();
+      VkDescriptorSet&& textureSet = meshMaterial->getTextureDescSet();
 
       vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getLayout(),
         2, 1, &textureSet, 0, nullptr);
+      lastMaterial = meshMaterial;
     }
 
     VkDeviceSize offset = 0;
@@ -58,6 +62,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
   }
 
   std::string directory = filepath.substr(0, filepath.find_last_of('/') + 1);
+  m_debugName = filepath;
 
   std::cout << "Found " << scene->mNumMaterials << " materials on model!" << std::endl;
 
@@ -69,22 +74,22 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
 }
 
 // Used for single-mesh models which have their vertices directly set by an array.
-void cassidy::Model::setVertices(const std::vector<Vertex>& vertices)
+void cassidy::Model::setVertices(const Vertex* data, size_t size)
 {
   if (m_meshes.empty())
   {
     m_meshes.emplace_back(Mesh());
   }
-  m_meshes[0].setVertices(vertices);
+  m_meshes[0].setVertices(data, size);
 }
 
-void cassidy::Model::setIndices(const std::vector<uint32_t>& indices)
+void cassidy::Model::setIndices(const uint32_t* data, size_t size)
 {
   if (m_meshes.empty())
   {
     m_meshes.emplace_back(Mesh());
   }
-  m_meshes[0].setIndices(indices);
+  m_meshes[0].setIndices(data, size);
 }
 
 void cassidy::Model::allocateVertexBuffers(VkCommandBuffer uploadCmd, VmaAllocator allocator, cassidy::Renderer* rendererRef)
@@ -209,7 +214,8 @@ void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltM
 
     const aiMaterial* currentMat = scene->mMaterials[matIndex];
 
-    cassidy::Material* builtMaterial = MaterialLibrary::buildMaterial(directory + std::string(currentMat->GetName().C_Str()), matInfo);
+    constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
+    cassidy::Material* builtMaterial = matLibrary.buildMaterial(directory + std::string(currentMat->GetName().C_Str()), matInfo);
     m_meshes[i].setMaterial(builtMaterial);
     builtMaterials[matIndex] = builtMaterial;
   }
@@ -356,7 +362,8 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
       const char* texName = texFilename.C_Str();
       std::cout << texType << ": " << texName;
 
-      cassidy::Texture* loadedTexture = TextureLibrary::loadTexture(MESH_ABS_FILEPATH + texturesDirectory + texName, format, VK_TRUE);
+      constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+      cassidy::Texture* loadedTexture = texLibrary.loadTexture(MESH_ABS_FILEPATH + texturesDirectory + texName, format, VK_TRUE);
 
       if (!loadedTexture)
       {
@@ -382,23 +389,19 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
             sizeof(aiTexel) * extent.width * extent.height;
 
           cassidy::Texture engineTex;
+          VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
           if (engineTex.create(reinterpret_cast<unsigned char*>(embeddedTex->pcData), texSize, extent,
-            rendererRef->getAllocator(), rendererRef, VK_FORMAT_R8_UNORM, VK_TRUE))
+            allocator, rendererRef, VK_FORMAT_R8_UNORM, VK_TRUE))
           {
             const std::string& name = MESH_ABS_FILEPATH + texturesDirectory + texName;
 
-            TextureLibrary::registerTexture(name, engineTex);
-            matInfo.attachTexture(TextureLibrary::getTexture(name), engineTexType);
+            texLibrary.registerTexture(name, engineTex);
+            matInfo.attachTexture(texLibrary.getTexture(name), engineTexType);
           }
         }
-
-        // Fallback to default texture based on type:
-        cassidy::Texture* fallback = TextureLibrary::retrieveFallbackTexture(engineTexType);
         std::cout << "\t(CASSIDY ERROR: could not load texture!)";
-
-        matInfo.attachTexture(fallback, engineTexType);
       }
-      else if (matInfo.pbrTextures.find(engineTexType) == matInfo.pbrTextures.end())
+      else if (!matInfo.hasTexture(engineTexType))
       {
         matInfo.attachTexture(loadedTexture, engineTexType);
       }

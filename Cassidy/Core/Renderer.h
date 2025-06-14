@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
-#include "Utils/Types.h"
-#include "Core/Pipeline.h"
+#include <Utils/Types.h>
+#include <Core/Pipeline.h>
 #include <Core/Mesh.h>
 #include <Core/Texture.h>
 
@@ -73,21 +73,21 @@ namespace cassidy
     inline Swapchain                  getSwapchain()            { return m_swapchain; }
     inline UploadContext&             getUploadContext()        { return m_uploadContext; }
     inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
-    inline VmaAllocator&              getAllocator()            { return m_allocator; }
+    inline VkDescriptorSet&           getViewportDescSet()      { return m_viewportDescSets[m_swapchainImageIndex]; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
     void recordEditorCommands(uint32_t imageIndex);
     void recordViewportCommands(uint32_t imageIndex);
-    void createImGuiCommands(uint32_t imageIndex);
     void submitCommandBuffers(uint32_t imageIndex);
 
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
     AllocatedBuffer allocateBuffer(uint32_t allocSize, VkBufferUsageFlags usageFlags, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlagBits allocFlags);
 
-    void initMemoryAllocator();
     void initLogicalDevice();
     void initSwapchain();
+
+    void initResourceManager();
 
     void initEditorImages();
     void initEditorRenderPass();
@@ -97,8 +97,6 @@ namespace cassidy
     void initCommandPool();
     void initCommandBuffers();
     void initSyncObjects();
-
-    void initMeshes();
 
     void initDescriptorSets();
 
@@ -114,6 +112,8 @@ namespace cassidy
     void initViewportFramebuffers();
 
     void transitionSwapchainImages();
+
+    VmaAllocator getVmaAllocator();
 
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }
@@ -135,6 +135,7 @@ namespace cassidy
     AllocatedBuffer m_perObjectUniformBufferDynamic;
 
     // Meshes:
+    Model* m_currentModel = nullptr;
     Model m_triangleMesh;
     Model m_backpackMesh;
     UploadContext m_uploadContext;
@@ -180,9 +181,6 @@ namespace cassidy
     std::vector<VkSemaphore>  m_renderFinishedSemaphores;
     std::vector<VkFence>      m_inFlightFences;
 
-    // Memory allocator and allocated objects:
-    VmaAllocator m_allocator;
-
     // Viewport rendering objects:
     std::vector<AllocatedImage>   m_viewportImages;
     AllocatedImage                m_viewportDepthImage;
@@ -198,19 +196,7 @@ namespace cassidy
     // Misc.:
     DeletionQueue m_deletionQueue;
     uint32_t m_currentFrameIndex;
+    uint32_t m_swapchainImageIndex;
     VkPhysicalDeviceProperties m_physicalDeviceProperties;
-
-    // TODO: Temp, tidy with mesh abstraction!
-    const std::vector<Vertex> triangleVertices =
-    {
-      {{ 0.0f,  0.5f, 0.0f},  {0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-      {{-0.5f, -0.5f, 0.0f},  {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-      {{ 0.5f, -0.5f, 0.0f},  {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
-    };
-
-    const std::vector<uint32_t> triangleIndices =
-    {
-      0, 1, 2,
-    };
   };
 }
