@@ -1,6 +1,8 @@
 #include "Renderer.h"
 #include <Core/Engine.h>
 #include <Core/ResourceManager.h>
+#include <Core/Logger.h>
+
 #include <Utils/DescriptorBuilder.h>
 #include <Utils/Helpers.h>
 #include <Utils/Initialisers.h>
@@ -81,7 +83,8 @@ void cassidy::Renderer::release()
   vkDeviceWaitIdle(m_device);
 
   m_deletionQueue.execute();
-  std::cout << "Renderer shut down!\n" << std::endl;
+  
+  CS_LOG_INFO("Renderer shut down!");
 }
 
 void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
@@ -361,7 +364,7 @@ void cassidy::Renderer::initLogicalDevice()
   m_physicalDevice = cassidy::helper::pickPhysicalDevice(m_engineRef->getInstance());
   if (m_physicalDevice == VK_NULL_HANDLE)
   {
-    std::cout << "ERROR: Failed to find physical device!\n" << std::endl;
+    CS_LOG_ERROR("Failed to find physical device!");
     return;
   }
   
@@ -400,7 +403,7 @@ void cassidy::Renderer::initLogicalDevice()
     vkDestroyDevice(m_device, nullptr);
   });
 
-  std::cout << "Created logical device!\n" << std::endl;
+  CS_LOG_INFO("Created logical device!");
 }
 
 void cassidy::Renderer::initSwapchain()
@@ -476,7 +479,7 @@ void cassidy::Renderer::initSwapchain()
     m_swapchain.hasBeenBuilt = true;
   }
 
-  std::cout << "Created swapchain!\n" << std::endl;
+  CS_LOG_INFO("Created swapchain!");
 }
 
 void cassidy::Renderer::initResourceManager()
@@ -594,7 +597,7 @@ void cassidy::Renderer::initEditorRenderPass()
     vkDestroyRenderPass(m_device, m_editorRenderPass, nullptr);
     });
 
-  std::cout << "Created editor render pass!" << std::endl;
+  CS_LOG_INFO("Created editor render pass!");
 }
 
 void cassidy::Renderer::initEditorFramebuffers()
@@ -648,7 +651,7 @@ void cassidy::Renderer::initSwapchainFramebuffers()
 
     VK_CHECK(vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapchain.framebuffers[i]));
   }
-  std::cout << "Created swapchain framebuffers!\n" << std::endl;
+  CS_LOG_INFO("Created swapchain framebuffers!");
 }
 
 void cassidy::Renderer::initCommandPool()
@@ -672,7 +675,7 @@ void cassidy::Renderer::initCommandPool()
     vkDestroyCommandPool(m_device, m_uploadContext.uploadCommandPool, nullptr);
   });
 
-  std::cout << "Created command pools!\n" << std::endl;
+  CS_LOG_INFO("Created command pools!");
 }
 
 void cassidy::Renderer::initCommandBuffers()
@@ -684,14 +687,15 @@ void cassidy::Renderer::initCommandBuffers()
     m_graphicsCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, FRAMES_IN_FLIGHT);
 
   vkAllocateCommandBuffers(m_device, &graphicsAllocInfo, m_commandBuffers.data());
-  std::cout << "Allocated " << std::to_string(FRAMES_IN_FLIGHT) << " graphics command buffers!\n";
+
+  CS_LOG_INFO("Created {0} graphics command buffers!", FRAMES_IN_FLIGHT);
 
   // Allocate command buffer for upload commands:
   VkCommandBufferAllocateInfo uploadAllocInfo = cassidy::init::commandBufferAllocInfo(
     m_uploadContext.uploadCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
 
   vkAllocateCommandBuffers(m_device, &uploadAllocInfo, &m_uploadContext.uploadCommandBuffer);
-  std::cout << "Allocated upload command buffer!\n" << std::endl;
+  CS_LOG_INFO("Created upload command buffer!");
 }
 
 void cassidy::Renderer::initSyncObjects()
@@ -723,7 +727,7 @@ void cassidy::Renderer::initSyncObjects()
     vkDestroyFence(m_device, m_uploadContext.uploadFence, nullptr);
   });
 
-  std::cout << "Created synchronisation objects!\n" << std::endl;
+  CS_LOG_INFO("Created synchronisation objects!");
 }
 
 void cassidy::Renderer::initDescriptorSets()
@@ -786,7 +790,7 @@ void cassidy::Renderer::initVertexBuffers()
     m_backpackMesh.release(m_device, allocator);
     });
 
-  std::cout << "Created vertex buffers!\n" << std::endl;
+  CS_LOG_INFO("Created vertex buffers!");
 }
 
 void cassidy::Renderer::initIndexBuffers()
@@ -917,7 +921,7 @@ void cassidy::Renderer::initImGui()
     ImGui::DestroyContext();
   });
 
-  std::cout << "ImGui initialised!\n" << std::endl;
+  CS_LOG_INFO("ImGui initialised!");
 }
 
 void cassidy::Renderer::initViewportImages()
@@ -1099,7 +1103,7 @@ void cassidy::Renderer::initViewportRenderPass()
 
   VK_CHECK(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_viewportRenderPass));
 
-  std::cout << "Created viewport render pass!" << std::endl;
+  CS_LOG_INFO("Created viewport render pass!");
 }
 
 void cassidy::Renderer::initViewportCommandPool()

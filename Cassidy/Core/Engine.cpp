@@ -10,6 +10,8 @@
 #include <Vendor/assimp/include/assimp/postprocess.h>
 #include <Core/ResourceManager.h>
 
+#include <Core/Logger.h>
+
 #include <vector>
 #include <set>
 
@@ -33,7 +35,7 @@ cassidy::Engine::Engine(glm::uvec2 windowDimensions) :
 
 void cassidy::Engine::init()
 {
-  std::cout << "Initialising engine..." << std::endl;
+  CS_LOG_INFO("Initialising engine...");
 
   initInstance();
   initSurface();
@@ -44,9 +46,8 @@ void cassidy::Engine::init()
   m_eventHandler.init();
 
   initDefaultModels();
-  std::cout << "Initialised default models!\n" << std::endl;
 
-  std::cout << "Initialised engine!\n" << std::endl;
+  CS_LOG_INFO("Initialised engine!");
 }
 
 void cassidy::Engine::run()
@@ -107,7 +108,7 @@ void cassidy::Engine::release()
   m_renderer.release();
   m_deletionQueue.execute();
 
-  std::cout << "Engine shut down!" << std::endl;
+  CS_LOG_INFO("Engine shut down!");
 }
 
 void cassidy::Engine::processInput()
@@ -338,7 +339,7 @@ void cassidy::Engine::initInstance()
   unsigned int numRequiredExtensions;
   if (SDL_Vulkan_GetInstanceExtensions(m_window, &numRequiredExtensions, NULL) != SDL_TRUE)
   {
-    std::cout << "ERROR: SDL couldn't find number of required extensions!\n";
+    CS_LOG_ERROR("SDL could not find number of required extensions!");
     return;
   }
 
@@ -347,14 +348,14 @@ void cassidy::Engine::initInstance()
 
   if (SDL_Vulkan_GetInstanceExtensions(m_window, &numRequiredExtensions, extensionNames.data()) == SDL_TRUE)
   {
-    std::cout << numRequiredExtensions << " required extensions for SDL: " << std::endl;
+    CS_LOG_INFO("{0} required extensions for SDL:", numRequiredExtensions);
     for (uint8_t i = 0; i < numRequiredExtensions; ++i)
     {
       std::cout << extensionNames[i] << std::endl;
     }
     std::cout << std::endl;
 
-    std::cout << cassidy::Renderer::INSTANCE_EXTENSIONS.size() << " required extensions for engine instance:" << std::endl;
+    CS_LOG_INFO("{0} required extensions for engine instance:", cassidy::Renderer::INSTANCE_EXTENSIONS.size());
     for (size_t i = 0; i < cassidy::Renderer::INSTANCE_EXTENSIONS.size(); ++i)
     {
       std::cout << cassidy::Renderer::INSTANCE_EXTENSIONS[i] << std::endl;
@@ -367,7 +368,7 @@ void cassidy::Engine::initInstance()
   }
   else
   {
-    std::cout << "ERROR: SDL could not return all required extensions!\n" << std::endl;
+    CS_LOG_ERROR("SDL could not return all required extensions!");
     return;
   }
 
@@ -389,10 +390,10 @@ void cassidy::Engine::initInstance()
   const VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_instance);
 
   if (result == VK_SUCCESS)
-    std::cout << "Successfully created Vulkan instance!\n" << std::endl;
+    CS_LOG_INFO("Successfully created Vulkan instance!");
   else
   {
-    std::cout << "ERROR: Failed to create Vulkan instance!\n" << std::endl;
+    CS_LOG_ERROR("Failed to create Vulkan instance!");
     return;
   }
 
@@ -454,4 +455,6 @@ void cassidy::Engine::initDefaultModels()
 
   const VmaAllocator& allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
   modelManager.allocateBuffers(m_renderer.getUploadContext().uploadCommandBuffer, allocator, &m_renderer);
+
+  CS_LOG_INFO("Initialised default models!");
 }
