@@ -7,8 +7,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <Vendor/stb/stb_image.h>
 
-#include <iostream>
-
 cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, 
   VkFormat format, VkBool32 shouldGenMipmaps)
 {

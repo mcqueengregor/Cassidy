@@ -2,13 +2,12 @@
 #include <Core/Renderer.h>
 #include <Core/Pipeline.h>
 #include <Core/ResourceManager.h>
+#include <Core/Logger.h>
 #include <Utils/Initialisers.h>
 
 #include <Vendor/assimp/include/assimp/Importer.hpp>
 #include <Vendor/assimp/include/assimp/scene.h>
 #include <Vendor/assimp/include/assimp/postprocess.h>
-
-#include <iostream>
 
 void cassidy::Model::draw(VkCommandBuffer cmd, const Pipeline* pipeline)
 {
@@ -47,6 +46,8 @@ void cassidy::Model::release(VkDevice device, VmaAllocator allocator)
 
 void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps)
 {
+  CS_LOG_INFO("Loading new model ({0})", filepath);
+
   Assimp::Importer importer;
 
   const aiScene* scene = importer.ReadFile(MESH_ABS_FILEPATH + filepath,
@@ -57,20 +58,21 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
 
   if (!scene)
   {
-    std::cout << "ASSIMP ERROR: " << importer.GetErrorString() << std::endl;
+    CS_LOG_ERROR("Assimp failed to load model!");
+    CS_LOG_CRITICAL("Assimp error: {0}", importer.GetErrorString());
     return;
   }
 
   std::string directory = filepath.substr(0, filepath.find_last_of('/') + 1);
   m_debugName = filepath;
 
-  std::cout << "Found " << scene->mNumMaterials << " materials on model!" << std::endl;
+  CS_LOG_INFO("Found {0} materials on model!", scene->mNumMaterials);
 
   BuiltMaterials builtMaterials;
 
   processSceneNode(scene->mRootNode, scene, builtMaterials, directory, rendererRef);
 
-  std::cout << "Successfully loaded mesh " << filepath << "!" << std::endl;
+  CS_LOG_INFO("Successfully loaded model {0}!", filepath);
 }
 
 // Used for single-mesh models which have their vertices directly set by an array.
@@ -283,7 +285,7 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
 {
   const aiMaterial* currentMat = scene->mMaterials[matIndex];
   std::string debugName = texturesDirectory + currentMat->GetName().C_Str();
-  std::cout << "\nMaterial: " << currentMat->GetName().C_Str() << std::endl;
+  CS_LOG_INFO("Material: {0}", currentMat->GetName().C_Str());
 
   cassidy::MaterialInfo matInfo;
 
@@ -360,7 +362,7 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
     if (scene->mMaterials[matIndex]->GetTexture(type, 0, &texFilename) == aiReturn::aiReturn_SUCCESS)
     {
       const char* texName = texFilename.C_Str();
-      std::cout << texType << ": " << texName;
+      CS_LOG_INFO("{0}: {1}", texType, texName);
 
       constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
       cassidy::Texture* loadedTexture = texLibrary.loadTexture(MESH_ABS_FILEPATH + texturesDirectory + texName, format, VK_TRUE);
@@ -399,14 +401,12 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
             matInfo.attachTexture(texLibrary.getTexture(name), engineTexType);
           }
         }
-        std::cout << "\t(CASSIDY ERROR: could not load texture!)";
+        CS_LOG_ERROR("Could not load texture!");
       }
       else if (!matInfo.hasTexture(engineTexType))
       {
         matInfo.attachTexture(loadedTexture, engineTexType);
       }
-
-      std::cout << std::endl;
     }
   }
   matInfo.debugName = debugName;

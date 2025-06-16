@@ -351,16 +351,14 @@ void cassidy::Engine::initInstance()
     CS_LOG_INFO("{0} required extensions for SDL:", numRequiredExtensions);
     for (uint8_t i = 0; i < numRequiredExtensions; ++i)
     {
-      std::cout << extensionNames[i] << std::endl;
+      CS_LOG_INFO("\t{0}", extensionNames[i]);
     }
-    std::cout << std::endl;
 
     CS_LOG_INFO("{0} required extensions for engine instance:", cassidy::Renderer::INSTANCE_EXTENSIONS.size());
     for (size_t i = 0; i < cassidy::Renderer::INSTANCE_EXTENSIONS.size(); ++i)
     {
-      std::cout << cassidy::Renderer::INSTANCE_EXTENSIONS[i] << std::endl;
+      CS_LOG_INFO("\t{0}", cassidy::Renderer::INSTANCE_EXTENSIONS[i]);
     }
-    std::cout << std::endl;
 
     memcpy(extensionNames.data() + numRequiredExtensions,
       cassidy::Renderer::INSTANCE_EXTENSIONS.data(),
@@ -427,10 +425,10 @@ void cassidy::Engine::initDebugMessenger()
 
   if (debugUtilsResult != VK_SUCCESS)
   {
-    std::cout << "ERROR: Failed to create debug messenger!\n" << std::endl;
+    CS_LOG_ERROR("Failed to create debug messenger!");
     return;
   }
-  std::cout << "Successfully created debug messenger!\n" << std::endl;
+  CS_LOG_INFO("Successfully created debug messenger!");
 
   m_deletionQueue.addFunction([=]() {
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(

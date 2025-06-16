@@ -1,7 +1,7 @@
 #include "TextureLibrary.h"
 #include <Core/Renderer.h>
+#include <Core/Logger.h>
 #include <Utils/Helpers.h>
-#include <iostream>
 
 #define FALLBACK_TEXTURE_PREFIX std::string("Fallback_")
 
@@ -27,7 +27,7 @@ cassidy::Texture* cassidy::TextureLibrary::loadTexture(const std::string& filepa
   // If the texture has already been loaded, return the already-existing version:
   if (m_loadedTextures.find(filepath) != m_loadedTextures.end())
   {
-    std::cout << "\n\tTexture \"" << filepath << "\" has already been loaded into memory!" << std::endl;
+    CS_LOG_WARN("Texture {0} has already been loaded into memory!", filepath);
     return &m_loadedTextures.at(filepath);
   }
 
@@ -46,8 +46,7 @@ void cassidy::TextureLibrary::registerTexture(const std::string& name, const cas
 {
   if (m_loadedTextures.find(name) != m_loadedTextures.end())
   {
-    std::cout << "CASSIDY ERROR: Attempted to register texture " << name << " into library when " <<
-      "a texture with this name already exists!" << std::endl;
+    CS_LOG_ERROR("Attempted to register texture {0} into library when a texture with this name already exists!", name);
     return;
   }
 
@@ -115,7 +114,6 @@ cassidy::Texture* cassidy::TextureLibrary::getFallbackTexture(cassidy::TextureTy
   case cassidy::TextureType::SPECULAR:
     return &m_loadedTextures.at(FALLBACK_TEXTURE_PREFIX + std::string("white"));
   }
-  std::cout << "\tCASSIDY ERROR: No suitable fallback texture for TextureType " <<
-    static_cast<uint8_t>(type) << ", defaulting to magenta." << std::endl;
+  CS_LOG_ERROR("No suitable fallback texture for TextureType {0}, defaulting to magenta", static_cast<uint8_t>(type));
   return &m_loadedTextures.at(FALLBACK_TEXTURE_PREFIX + std::string("magenta"));
 }

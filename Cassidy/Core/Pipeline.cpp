@@ -1,11 +1,11 @@
 #include "Pipeline.h"
-#include "Core/Renderer.h"
-#include "Utils/Initialisers.h"
-#include "Utils/Helpers.h"
-#include "Utils/Types.h"
+#include <Core/Renderer.h>
+#include <Core/Logger.h>
+#include <Utils/Initialisers.h>
+#include <Utils/Helpers.h>
+#include <Utils/Types.h>
 
 #include <fstream>
-#include <iostream>
 
 cassidy::Pipeline::Pipeline(cassidy::Renderer* renderer)
 {
@@ -124,7 +124,7 @@ void cassidy::Pipeline::buildGraphicsPipeline(const std::string& vertexFilepath,
   vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), vertexModule, nullptr);
   vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), fragmentModule, nullptr);
 
-  std::cout << "Created graphics pipeline!\n" << std::endl;
+  CS_LOG_INFO("Created graphics pipeline!");
 }
 
 SpirvShaderCode cassidy::Pipeline::loadSpirv(const std::string& filepath)
@@ -133,7 +133,7 @@ SpirvShaderCode cassidy::Pipeline::loadSpirv(const std::string& filepath)
 
   if (!file.is_open())
   {
-    std::cout << "ERROR: Could not load SPIR-V file! (" << filepath << ")\n" << std::endl;
+    CS_LOG_ERROR("Could not load SPIR-V file! ({0})", filepath.c_str());
     return { 0, nullptr };
   }
 
@@ -179,5 +179,5 @@ void cassidy::Pipeline::initRenderPass()
 
   vkCreateRenderPass(m_rendererRef->getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass);
 
-  std::cout << "Created pipeline render pass!" << std::endl;
+  CS_LOG_INFO("Created pipeline render pass!");
 }

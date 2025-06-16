@@ -10,7 +10,7 @@
 #endif
 
 #ifndef CS_LOG_WARN
-#define CS_LOG_WARN(...) spdlog::warning(__VA_ARGS__)
+#define CS_LOG_WARN(...) spdlog::warn(__VA_ARGS__)
 #endif
 
 #ifndef CS_LOG_CRITICAL

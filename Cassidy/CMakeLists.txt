@@ -83,6 +83,7 @@ add_library(CassidyUtils STATIC
 		stb_image 
 		assimp 
 		imgui
+		spdlog
 		)
 	target_link_libraries(CassidyUtils
 		##Vulkan::Vulkan

@@ -1,9 +1,9 @@
 #include "DescriptorBuilder.h"
 
+#include <Core/Logger.h>
 #include <Utils/Initialisers.h>
 
 #include <algorithm>
-#include <iostream>
 
 cassidy::DescriptorBuilder cassidy::DescriptorBuilder::begin(DescriptorAllocator* allocator, DescriptorLayoutCache* layoutCache)
 {
@@ -151,7 +151,7 @@ VkDescriptorPool cassidy::DescriptorAllocator::createPool(uint32_t count, VkDesc
   VkDescriptorPool newPool;
   vkCreateDescriptorPool(m_deviceRef, &poolInfo, nullptr, &newPool);
 
-  std::cout << "Descriptor allocator created a new descriptor pool!" << std::endl;
+  CS_LOG_CRITICAL("Descriptor allocator created a new descriptor pool!");
 
   return newPool;
 }
@@ -196,7 +196,7 @@ VkDescriptorSetLayout cassidy::DescriptorLayoutCache::createDescLayout(VkDescrip
   VkDescriptorSetLayout newLayout;
   vkCreateDescriptorSetLayout(m_deviceRef, layoutCreateInfo, nullptr, &newLayout);
 
-  std::cout << "Descriptor layout cache added new layout!" << std::endl;
+  CS_LOG_CRITICAL("Descriptor layout cache added new layout!");
 
   m_layoutCache[layoutInfo] = newLayout;
   return newLayout;

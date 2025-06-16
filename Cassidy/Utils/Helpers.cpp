@@ -1,12 +1,13 @@
 #include "Helpers.h"
 #include "Initialisers.h"
+#include <Core/Logger.h>
+
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
 #include <map>
 #include <vector>
 #include <algorithm>
-#include <iostream>
 
 // Assign a score to a physical device given its capabilities:
 int32_t cassidy::helper::ratePhysicalDevice(VkPhysicalDevice device)
@@ -26,7 +27,7 @@ int32_t cassidy::helper::ratePhysicalDevice(VkPhysicalDevice device)
 
   score *= static_cast<int>(features.geometryShader);
 
-  std::cout << properties.deviceName << " - " << score << " points" << std::endl;
+  CS_LOG_INFO("\t{0} - {1} points", properties.deviceName, score);
 
   return score;
 }
@@ -39,7 +40,7 @@ VkPhysicalDevice cassidy::helper::pickPhysicalDevice(VkInstance instance)
   
   if (deviceCount == 0)
   {
-    std::cout << "ERROR: No GPUs with Vulkan support found!\n" << std::endl;
+    CS_LOG_ERROR("No GPUs with Vulkan support found!");
     return VK_NULL_HANDLE;
   }
 
@@ -48,7 +49,7 @@ VkPhysicalDevice cassidy::helper::pickPhysicalDevice(VkInstance instance)
 
   std::multimap<int, VkPhysicalDevice> candidates;
 
-  std::cout << "Available devices: \n";
+  CS_LOG_INFO("Available devices:");
 
   // Build list of possible physical devices:
   for (const VkPhysicalDevice& d : devices)
@@ -62,12 +63,12 @@ VkPhysicalDevice cassidy::helper::pickPhysicalDevice(VkInstance instance)
     VkPhysicalDeviceProperties selectedDeviceProperties;
     vkGetPhysicalDeviceProperties(candidates.rbegin()->second, &selectedDeviceProperties);
 
-    std::cout << "Selected physical device: " << selectedDeviceProperties.deviceName << std::endl;
+    CS_LOG_INFO("Selected physical device: {0}", selectedDeviceProperties.deviceName);
     return candidates.rbegin()->second;
   }
   else
   {
-    std::cout << "ERROR: Failed to find a suitable GPU out of " << deviceCount << " candidates!\n" << std::endl;
+    CS_LOG_ERROR("Failed to find a suitable GPU out of {0} candidates", deviceCount);
     return VK_NULL_HANDLE;
   }
 }

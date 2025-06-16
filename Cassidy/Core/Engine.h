@@ -1,9 +1,11 @@
 #pragma once
-#include "Core/Renderer.h"
-#include "Core/EventHandler.h"
-#include "Core/Camera.h"
-#include "Utils/GlobalTimer.h"
-#include "Utils/Types.h"
+#include <Core/Renderer.h>
+#include <Core/EventHandler.h>
+#include <Core/Camera.h>
+#include <Core/Logger.h>
+
+#include <Utils/GlobalTimer.h>
+#include <Utils/Types.h>
 
 #include <vulkan/vulkan.h>
 #include <iostream>
@@ -26,6 +28,8 @@ namespace cassidy
     void update();
 
     void buildGUI();
+
+    void printValidationError(const char* message);
 
     void updateGlobalTimer();
     void initInstance();
@@ -72,20 +76,35 @@ namespace cassidy
       VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
       VkDebugUtilsMessageTypeFlagsEXT             messageType,
       const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-      void*                                       pUserData)
+      void* pUserData)
     {
-      std::cout << "Validation layer (";
-      
-      if ((messageType | VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) != 0)
-        std::cout << " GENERAL";
-      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0)
-        std::cout << " INFO";
-      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0)
-        std::cout << " WARNING";
-      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0)
-        std::cout << " ERROR";
+      enum MessageType {
+        INFO = 1,
+        WARNING = 2,
+        ERROR = 3
+      } type;
 
-      std::cout << " ): " << pCallbackData->pMessage << "\n" << std::endl;
+      if ((messageType | VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) != 0)
+        type = INFO;
+      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0)
+        type = INFO;
+      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0)
+        type = WARNING;
+      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0)
+        type = ERROR;
+
+      switch (type)
+      {
+      case INFO:
+        CS_LOG_INFO("Validation layer: {0}", pCallbackData->pMessage);
+        break;
+      case WARNING:
+        CS_LOG_WARN("Validation layer: {0}", pCallbackData->pMessage);
+        break;
+      case ERROR:
+        CS_LOG_ERROR("Validation layer: {0}", pCallbackData->pMessage);
+        break;
+      }
       return VK_FALSE;
     }
 
