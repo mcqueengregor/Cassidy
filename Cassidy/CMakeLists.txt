@@ -15,6 +15,8 @@ add_executable(Cassidy
 
 	Core/Mesh.h
 	Core/Mesh.cpp
+	Core/ModelManager.h
+	Core/ModelManager.cpp
 
 	Core/Material.h
 	Core/Material.cpp
@@ -25,6 +27,9 @@ add_executable(Cassidy
 	Core/Texture.cpp
 	Core/TextureLibrary.h
 	Core/TextureLibrary.cpp
+	
+	Core/ResourceManager.h
+	Core/ResourceManager.cpp
 
 	Core/Pipeline.h
 	Core/Pipeline.cpp
@@ -37,6 +42,7 @@ add_executable(Cassidy
 		${CMAKE_CURRENT_SOURCE_DIR}
 		${CMAKE_CURRENT_SOURCE_DIR}/Vendor	## Included to satisfy Assimp's #include <assimp/[file]> structure
 		${CMAKE_CURRENT_SOURCE_DIR}/Vendor/SDL/include	## Included because SDL2 adds include to bin/Vendor for some reason.
+		
 		)
 	target_link_libraries(Cassidy 
 		glm
@@ -44,6 +50,7 @@ add_executable(Cassidy
 		stb_image
 		assimp
 		imgui
+		spdlog
 		)
 		
 	target_link_libraries(Cassidy
@@ -76,6 +83,7 @@ add_library(CassidyUtils STATIC
 		stb_image 
 		assimp 
 		imgui
+		spdlog
 		)
 	target_link_libraries(CassidyUtils
 		##Vulkan::Vulkan
@@ -99,6 +107,13 @@ if (WIN32)
 		TARGET Cassidy POST_BUILD
 		COMMAND "${CMAKE_COMMAND}" -E copy_if_different
 		"$<TARGET_FILE:assimp>"
+		"$<TARGET_FILE_DIR:Cassidy>"
+		VERBATIM
+		)
+		add_custom_command(
+		TARGET Cassidy POST_BUILD
+		COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+		"$<TARGET_FILE:spdlog>"
 		"$<TARGET_FILE_DIR:Cassidy>"
 		VERBATIM
 		)

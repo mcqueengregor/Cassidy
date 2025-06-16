@@ -11,6 +11,7 @@ find_package(Vulkan REQUIRED)
 ## (EXCLUDE_FROM_ALL is specified to prevent SDL and ASSIMP from being included in ALL_BUILD)
 add_subdirectory(assimp EXCLUDE_FROM_ALL)
 add_subdirectory(SDL EXCLUDE_FROM_ALL)
+add_subdirectory(spdlog EXCLUDE_FROM_ALL)
 
 ## SDL2 link method copied from VkGuide:
 ##add_library(sdl2 INTERFACE)
