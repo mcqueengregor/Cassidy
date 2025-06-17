@@ -30,6 +30,8 @@ add_executable(Cassidy
 	
 	Core/ResourceManager.h
 	Core/ResourceManager.cpp
+	
+	Core/Logger.h
 
 	Core/Pipeline.h
 	Core/Pipeline.cpp

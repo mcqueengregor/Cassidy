@@ -29,8 +29,6 @@ namespace cassidy
 
     void buildGUI();
 
-    void printValidationError(const char* message);
-
     void updateGlobalTimer();
     void initInstance();
     void initSurface();
@@ -84,10 +82,8 @@ namespace cassidy
         ERROR = 3
       } type;
 
-      if ((messageType | VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) != 0)
-        type = INFO;
-      if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0)
-        type = INFO;
+      type = INFO;
+
       if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0)
         type = WARNING;
       if ((messageType | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0)
