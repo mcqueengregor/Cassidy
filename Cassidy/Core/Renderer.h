@@ -89,6 +89,7 @@ namespace cassidy
 
     void initResourceManager();
 
+    void initEditorResources();
     void initEditorImages();
     void initEditorRenderPass();
     void initEditorFramebuffers();

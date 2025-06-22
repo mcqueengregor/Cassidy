@@ -32,9 +32,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initCommandBuffers();
   initResourceManager();
   initSwapchain();
-  initEditorImages();
-  initEditorRenderPass();
-  initEditorFramebuffers();
+  initEditorResources();
   transitionSwapchainImages();
   initDescriptorSets();
   initImGui();
@@ -57,6 +55,7 @@ void cassidy::Renderer::draw()
 
     if (acquireImageResult == VK_ERROR_OUT_OF_DATE_KHR)
     {
+      CS_LOG_CRITICAL("Rebuilding swapchain (acquire image)");
       rebuildSwapchain();
       return;
     }
@@ -269,6 +268,7 @@ void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
 
   if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR) 
   {
+    CS_LOG_CRITICAL("Rebuilding swapchain (present)");
     rebuildSwapchain();
   }
 }
@@ -491,6 +491,24 @@ void cassidy::Renderer::initResourceManager()
     });
 }
 
+void cassidy::Renderer::initEditorResources()
+{
+  initEditorImages();
+  initEditorRenderPass();
+  initEditorFramebuffers();
+  
+  m_deletionQueue.addFunction([&]() {
+    for (const auto& i : m_editorImages)
+    {
+      vmaDestroyImage(getVmaAllocator(), i.image, i.allocation);
+      vkDestroyImageView(m_device, i.view, nullptr);
+    }
+    for (const auto& fb : m_editorFramebuffers)
+      vkDestroyFramebuffer(m_device, fb, nullptr);
+    vkDestroyRenderPass(m_device, m_editorRenderPass, nullptr);
+    });
+}
+
 void cassidy::Renderer::initEditorImages()
 {
   m_editorImages.resize(m_swapchain.images.size());
@@ -537,14 +555,7 @@ void cassidy::Renderer::initEditorImages()
 
     vkCreateImageView(m_device, &viewInfo, nullptr, &currentImage.view);
   }
-
-  m_deletionQueue.addFunction([=]() {
-    for (const auto& i : m_editorImages)
-    {
-      vmaDestroyImage(getVmaAllocator(), i.image, i.allocation);
-      vkDestroyImageView(m_device, i.view, nullptr);
-    }
-    });
+  CS_LOG_INFO("Created editor images!");
 }
 
 void cassidy::Renderer::initEditorRenderPass()
@@ -593,10 +604,6 @@ void cassidy::Renderer::initEditorRenderPass()
 
   VK_CHECK(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_editorRenderPass));
 
-  m_deletionQueue.addFunction([=]() {
-    vkDestroyRenderPass(m_device, m_editorRenderPass, nullptr);
-    });
-
   CS_LOG_INFO("Created editor render pass!");
 }
 
@@ -611,11 +618,6 @@ void cassidy::Renderer::initEditorFramebuffers()
 
     vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_editorFramebuffers[i]);
   }
-
-  m_deletionQueue.addFunction([=]() {
-    for (const auto& fb : m_editorFramebuffers)
-      vkDestroyFramebuffer(m_device, fb, nullptr);
-    });
 }
 
 void cassidy::Renderer::initPipelines()
@@ -1175,7 +1177,15 @@ void cassidy::Renderer::rebuildSwapchain()
   vkWaitForFences(m_device,static_cast<uint32_t>(m_inFlightFences.size()), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
   m_swapchain.release(m_device, allocator);
 
-  // Release ImGui viewport resources:
+  // Release ImGui editor resources:
+  for (const auto& f : m_editorFramebuffers)
+    vkDestroyFramebuffer(m_device, f, nullptr);
+  for (const auto& i : m_editorImages)
+    vmaDestroyImage(allocator, i.image, i.allocation);
+  for (const auto& i : m_editorImages)
+    vkDestroyImageView(m_device, i.view, nullptr);
+
+  // Release viewport resources:
   for (const auto& f : m_viewportFramebuffers)
     vkDestroyFramebuffer(m_device, f, nullptr);
   for (const auto& i : m_viewportImages)
@@ -1189,7 +1199,10 @@ void cassidy::Renderer::rebuildSwapchain()
     ImGui_ImplVulkan_RemoveTexture(m_viewportDescSets[i]);
 
   initSwapchain();
+  transitionSwapchainImages();
   initSwapchainFramebuffers();
+  initEditorImages();
+  initEditorFramebuffers();
   initViewportImages();
   initViewportFramebuffers();
 }

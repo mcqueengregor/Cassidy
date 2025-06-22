@@ -70,6 +70,7 @@ void cassidy::Engine::run()
       // If window was resized, get renderer to rebuild its swapchain:
       if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED)
       {
+        CS_LOG_CRITICAL("Rebuilding swapchain (window resize)");
         m_renderer.rebuildSwapchain();
         m_camera.updateProj();
       }
