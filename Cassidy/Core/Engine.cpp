@@ -190,6 +190,8 @@ void cassidy::Engine::buildGUI()
   ImGui_ImplSDL2_NewFrame(m_window);
   ImGui::NewFrame();
 
+  ImGui::FileBrowser& fileBrowser = m_renderer.getEditorFileBrowser();
+
   ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
   {
     ImGui::ShowDemoWindow();
@@ -280,11 +282,17 @@ void cassidy::Engine::buildGUI()
       //ImGui::SliderFloat("Object roll", &m_objectRotation.z, 0.0f, 360.0f);
 
       if (ImGui::Button("Load model"))
-        m_renderer.getEditorFileBrowser().Open();
+        fileBrowser.Open();
     }
     ImGui::End();
 
-    m_renderer.getEditorFileBrowser().Display();
+    fileBrowser.Display();
+
+    if (fileBrowser.HasSelected())
+    {
+      CS_LOG_CRITICAL("Selected file {0}", fileBrowser.GetSelected().generic_string());
+      fileBrowser.ClearSelected();
+    }
 
     if (ImGui::Begin("Viewport"))
     {
