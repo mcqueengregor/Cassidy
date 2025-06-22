@@ -93,10 +93,6 @@ void cassidy::Engine::run()
     const uint32_t windowFlags = SDL_GetWindowFlags(m_window);
     if ((windowFlags & SDL_WINDOW_MINIMIZED) == 0)
     {
-      ImGui_ImplVulkan_NewFrame();
-      ImGui_ImplSDL2_NewFrame(m_window);
-      ImGui::NewFrame();
-      
       buildGUI();
 
       m_renderer.draw();
@@ -190,6 +186,10 @@ void cassidy::Engine::update()
 
 void cassidy::Engine::buildGUI()
 {
+  ImGui_ImplVulkan_NewFrame();
+  ImGui_ImplSDL2_NewFrame(m_window);
+  ImGui::NewFrame();
+
   ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
   {
     ImGui::ShowDemoWindow();
@@ -278,8 +278,13 @@ void cassidy::Engine::buildGUI()
       //ImGui::SliderFloat("Object pitch", &m_objectRotation.x, 0.0f, 360.0f);
       //ImGui::SliderFloat("Object yaw", &m_objectRotation.y, 0.0f, 360.0f);
       //ImGui::SliderFloat("Object roll", &m_objectRotation.z, 0.0f, 360.0f);
+
+      if (ImGui::Button("Load model"))
+        m_renderer.getEditorFileBrowser().Open();
     }
     ImGui::End();
+
+    m_renderer.getEditorFileBrowser().Display();
 
     if (ImGui::Begin("Viewport"))
     {

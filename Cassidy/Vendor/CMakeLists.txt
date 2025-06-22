@@ -52,6 +52,8 @@ add_library(imgui STATIC)
 		
 		imgui-docking/imgui_impl_vulkan.cpp
 		imgui-docking/imgui_impl_sdl2.cpp
+		
+		imgui-docking/imfilebrowser.h
 		)
 	
 	target_link_libraries(imgui PUBLIC Vulkan::Vulkan SDL2)

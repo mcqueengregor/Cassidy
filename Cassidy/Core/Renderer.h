@@ -5,6 +5,9 @@
 #include <Core/Mesh.h>
 #include <Core/Texture.h>
 
+#include <Vendor/imgui-docking/imgui.h>
+#include <Vendor/imgui-docking/imfilebrowser.h>
+
 // Forward declarations:
 struct SDL_Window;
 
@@ -74,6 +77,7 @@ namespace cassidy
     inline UploadContext&             getUploadContext()        { return m_uploadContext; }
     inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
     inline VkDescriptorSet&           getViewportDescSet()      { return m_viewportDescSets[m_swapchainImageIndex]; }
+    inline ImGui::FileBrowser&        getEditorFileBrowser()    { return m_editorFilebrowser; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
@@ -173,6 +177,7 @@ namespace cassidy
     std::vector<VkCommandBuffer>  m_commandBuffers;
 
     // Engine editor images and render pass:
+    ImGui::FileBrowser          m_editorFilebrowser;
     std::vector<AllocatedImage> m_editorImages;
     VkRenderPass                m_editorRenderPass;
     std::vector<VkFramebuffer>  m_editorFramebuffers;
