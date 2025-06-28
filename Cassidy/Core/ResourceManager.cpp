@@ -1,6 +1,7 @@
 #include "ResourceManager.h"
 #include <Core/Engine.h>
 #include <Core/Renderer.h>
+#include <Core/Logger.h>
 #include <Utils/DescriptorBuilder.h>
 
 void cassidy::ResourceManager::init(cassidy::Renderer* rendererRef, cassidy::Engine* engineRef)
@@ -13,10 +14,13 @@ void cassidy::ResourceManager::init(cassidy::Renderer* rendererRef, cassidy::Eng
 
 	textureLibrary.init(&m_allocator, rendererRef);
 	materialLibrary.createErrorMaterial();
+
+	CS_LOG_INFO("Resource manager initialised!");
 }
 
 void cassidy::ResourceManager::release(VkDevice device)
 {
+	CS_LOG_INFO("Releasing resource manager...");
 	materialLibrary.releaseAll();
 	textureLibrary.releaseAll(device, m_allocator);
 	modelManager.releaseAll(device, m_allocator);
@@ -32,4 +36,6 @@ void cassidy::ResourceManager::initVmaAllocator(cassidy::Engine* engineRef)
 	info.instance = engineRef->getInstance();
 
 	vmaCreateAllocator(&info, &m_allocator);
+
+	CS_LOG_INFO("Created memory allocator!");
 }

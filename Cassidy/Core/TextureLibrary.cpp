@@ -58,6 +58,7 @@ void cassidy::TextureLibrary::releaseAll(VkDevice device, VmaAllocator allocator
   vkDestroySampler(device, cassidy::globals::m_linearTextureSampler, nullptr);
   vkDestroySampler(device, cassidy::globals::m_nearestTextureSampler, nullptr);
 
+  CS_LOG_INFO("Releasing {0} textures...", m_loadedTextures.size());
   for (auto& [key, val] : m_loadedTextures)
   {
     val.release(device, allocator);

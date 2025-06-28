@@ -1,5 +1,6 @@
 #include "MaterialLibrary.h"
 #include <Core/ResourceManager.h>   // (Texture library contains global texture samplers)
+#include <Core/Logger.h>
 #include <Utils/DescriptorBuilder.h>
 #include <Utils/Initialisers.h>
 #include <iostream>
@@ -11,6 +12,7 @@ cassidy::Material* cassidy::MaterialLibrary::buildMaterial(const std::string& ma
   // If material already exists, return reference to it:
   if (m_materialCache.find(materialName) != m_materialCache.end())
   {
+    CS_LOG_WARN("Using cached material {0}", materialName);
     ++m_numDuplicateMaterialBuildsPrevented;
     return &m_materialCache.at(materialName);
   }
@@ -118,6 +120,7 @@ void cassidy::MaterialLibrary::createErrorMaterial()
   errorMatInfo.debugName = ERROR_MAT_NAME;
 
   buildMaterial(errorMatInfo.debugName, errorMatInfo);
+  CS_LOG_INFO("Created debug error material!");
 }
 
 cassidy::Material* cassidy::MaterialLibrary::getErrorMaterial()
