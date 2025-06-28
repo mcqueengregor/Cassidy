@@ -93,10 +93,6 @@ void cassidy::Engine::run()
     const uint32_t windowFlags = SDL_GetWindowFlags(m_window);
     if ((windowFlags & SDL_WINDOW_MINIMIZED) == 0)
     {
-      ImGui_ImplVulkan_NewFrame();
-      ImGui_ImplSDL2_NewFrame(m_window);
-      ImGui::NewFrame();
-      
       buildGUI();
 
       m_renderer.draw();
@@ -190,6 +186,12 @@ void cassidy::Engine::update()
 
 void cassidy::Engine::buildGUI()
 {
+  ImGui_ImplVulkan_NewFrame();
+  ImGui_ImplSDL2_NewFrame(m_window);
+  ImGui::NewFrame();
+
+  ImGui::FileBrowser& fileBrowser = m_renderer.getEditorFileBrowser();
+
   ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
   {
     ImGui::ShowDemoWindow();
@@ -262,6 +264,7 @@ void cassidy::Engine::buildGUI()
           }
           ImGui::EndListBox();
           ImGui::Text("Current model: %i", m_uiContext.selectedModel);
+          ImGui::Text("Post process steps: %u", m_uiContext.importPostProcessSteps);
         }
       }
 
@@ -278,6 +281,33 @@ void cassidy::Engine::buildGUI()
       //ImGui::SliderFloat("Object pitch", &m_objectRotation.x, 0.0f, 360.0f);
       //ImGui::SliderFloat("Object yaw", &m_objectRotation.y, 0.0f, 360.0f);
       //ImGui::SliderFloat("Object roll", &m_objectRotation.z, 0.0f, 360.0f);
+
+      if (ImGui::Button("Load model"))
+        fileBrowser.Open();
+    }
+    ImGui::End();
+
+    fileBrowser.Display();
+
+    if (fileBrowser.HasSelected())
+    {
+      CS_LOG_CRITICAL("Selected file {0}", fileBrowser.GetSelected().generic_string());
+
+      constexpr cassidy::ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
+      const std::string& selectedString = fileBrowser.GetSelected().generic_string();
+      modelManager.loadModel(selectedString, &m_renderer, static_cast<aiPostProcessSteps>(m_uiContext.importPostProcessSteps));
+      
+      modelManager.getModel(selectedString)->allocateVertexBuffers(m_renderer.getUploadContext().uploadCommandBuffer, cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
+      modelManager.getModel(selectedString)->allocateIndexBuffers(m_renderer.getUploadContext().uploadCommandBuffer, cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
+
+      fileBrowser.ClearSelected();
+    }
+
+    if (ImGui::Begin("Import settings"))
+    {
+      bool flipUVs = (m_uiContext.importPostProcessSteps & aiProcess_FlipUVs) != (aiPostProcessSteps)0;
+      if (ImGui::Checkbox("Flip UVs", &flipUVs))
+        m_uiContext.importPostProcessSteps ^= aiProcess_FlipUVs;
     }
     ImGui::End();
 
@@ -450,7 +480,7 @@ void cassidy::Engine::initDefaultModels()
   constexpr cassidy::ModelManager& modelManager =
     cassidy::globals::g_resourceManager.modelManager;
   modelManager.registerModel("Primitives/Triangle", triangleMesh);
-  modelManager.loadModel("Helmet/DamagedHelmet.gltf", &m_renderer, aiProcess_FlipUVs);
+  modelManager.loadModel(MESH_ABS_FILEPATH + std::string("Helmet/DamagedHelmet.gltf"), &m_renderer, aiProcess_FlipUVs);
 
   const VmaAllocator& allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
   modelManager.allocateBuffers(m_renderer.getUploadContext().uploadCommandBuffer, allocator, &m_renderer);

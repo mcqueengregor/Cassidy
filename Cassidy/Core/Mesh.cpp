@@ -50,7 +50,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
 
   Assimp::Importer importer;
 
-  const aiScene* scene = importer.ReadFile(MESH_ABS_FILEPATH + filepath,
+  const aiScene* scene = importer.ReadFile(filepath,
     aiProcess_Triangulate |
     aiProcess_CalcTangentSpace |
     aiProcess_GenSmoothNormals |
@@ -218,7 +218,7 @@ void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltM
 
     constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
     cassidy::Material* builtMaterial = matLibrary.buildMaterial(directory + std::string(currentMat->GetName().C_Str()), matInfo);
-    m_meshes[i].setMaterial(builtMaterial);
+    m_meshes[m_meshes.size() - 1].setMaterial(builtMaterial);
     builtMaterials[matIndex] = builtMaterial;
   }
 
@@ -365,7 +365,7 @@ cassidy::MaterialInfo cassidy::Mesh::buildMaterialInfo(const aiScene* scene, uin
       CS_LOG_INFO("{0}: {1}", texType, texName);
 
       constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
-      cassidy::Texture* loadedTexture = texLibrary.loadTexture(MESH_ABS_FILEPATH + texturesDirectory + texName, format, VK_TRUE);
+      cassidy::Texture* loadedTexture = texLibrary.loadTexture(texturesDirectory + texName, format, VK_TRUE);
 
       if (!loadedTexture)
       {

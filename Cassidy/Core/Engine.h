@@ -65,6 +65,7 @@ namespace cassidy
 
     struct UIContext {
       int32_t selectedModel = 0;
+      uint32_t importPostProcessSteps = 0;
     } m_uiContext;
 
     DeletionQueue m_deletionQueue;

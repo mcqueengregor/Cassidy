@@ -13,7 +13,6 @@
 #define VMA_IMPLEMENTATION
 #include "Vendor/vma/vk_mem_alloc.h"
 
-#include <Vendor/imgui-docking/imgui.h>
 #include <Vendor/imgui-docking/imgui_impl_sdl2.h>
 #include <Vendor/imgui-docking/imgui_impl_vulkan.h>
 
@@ -880,6 +879,10 @@ void cassidy::Renderer::initImGui()
     [&](VkCommandBuffer cmd) {
     ImGui_ImplVulkan_CreateFontsTexture(cmd);
   });
+
+  //m_editorFilebrowser = ImGui::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection);
+  m_editorFilebrowser.SetTitle("File browser");
+  m_editorFilebrowser.SetTypeFilters({ ".obj", ".gltf", ".glb", ".fbx" });
 
   // Create sampler used for swapchain image in viewport:
   m_viewportSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties,
