@@ -218,7 +218,7 @@ void cassidy::Model::processSceneNode(aiNode* node, const aiScene* scene, BuiltM
 
     constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
     cassidy::Material* builtMaterial = matLibrary.buildMaterial(directory + std::string(currentMat->GetName().C_Str()), matInfo);
-    m_meshes[i].setMaterial(builtMaterial);
+    m_meshes[m_meshes.size() - 1].setMaterial(builtMaterial);
     builtMaterials[matIndex] = builtMaterial;
   }
 
