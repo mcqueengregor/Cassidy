@@ -264,6 +264,7 @@ void cassidy::Engine::buildGUI()
           }
           ImGui::EndListBox();
           ImGui::Text("Current model: %i", m_uiContext.selectedModel);
+          ImGui::Text("Post process steps: %u", m_uiContext.importPostProcessSteps);
         }
       }
 
@@ -291,8 +292,24 @@ void cassidy::Engine::buildGUI()
     if (fileBrowser.HasSelected())
     {
       CS_LOG_CRITICAL("Selected file {0}", fileBrowser.GetSelected().generic_string());
+
+      constexpr cassidy::ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
+      const std::string& selectedString = fileBrowser.GetSelected().generic_string();
+      modelManager.loadModel(selectedString, &m_renderer, static_cast<aiPostProcessSteps>(m_uiContext.importPostProcessSteps));
+      
+      modelManager.getModel(selectedString)->allocateVertexBuffers(m_renderer.getUploadContext().uploadCommandBuffer, cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
+      modelManager.getModel(selectedString)->allocateIndexBuffers(m_renderer.getUploadContext().uploadCommandBuffer, cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
+
       fileBrowser.ClearSelected();
     }
+
+    if (ImGui::Begin("Import settings"))
+    {
+      bool flipUVs = (m_uiContext.importPostProcessSteps & aiProcess_FlipUVs) != (aiPostProcessSteps)0;
+      if (ImGui::Checkbox("Flip UVs", &flipUVs))
+        m_uiContext.importPostProcessSteps ^= aiProcess_FlipUVs;
+    }
+    ImGui::End();
 
     if (ImGui::Begin("Viewport"))
     {
@@ -463,7 +480,7 @@ void cassidy::Engine::initDefaultModels()
   constexpr cassidy::ModelManager& modelManager =
     cassidy::globals::g_resourceManager.modelManager;
   modelManager.registerModel("Primitives/Triangle", triangleMesh);
-  modelManager.loadModel("Helmet/DamagedHelmet.gltf", &m_renderer, aiProcess_FlipUVs);
+  modelManager.loadModel(MESH_ABS_FILEPATH + std::string("Helmet/DamagedHelmet.gltf"), &m_renderer, aiProcess_FlipUVs);
 
   const VmaAllocator& allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
   modelManager.allocateBuffers(m_renderer.getUploadContext().uploadCommandBuffer, allocator, &m_renderer);
