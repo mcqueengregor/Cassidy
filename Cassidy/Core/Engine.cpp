@@ -291,14 +291,14 @@ void cassidy::Engine::buildGUI()
 
     if (fileBrowser.HasSelected())
     {
-      CS_LOG_CRITICAL("Selected file {0}", fileBrowser.GetSelected().generic_string());
-
       constexpr cassidy::ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
       const std::string& selectedString = fileBrowser.GetSelected().generic_string();
       modelManager.loadModel(selectedString, &m_renderer, static_cast<aiPostProcessSteps>(m_uiContext.importPostProcessSteps));
       
-      modelManager.getModel(selectedString)->allocateVertexBuffers(m_renderer.getUploadContext().uploadCommandBuffer, cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
-      modelManager.getModel(selectedString)->allocateIndexBuffers(m_renderer.getUploadContext().uploadCommandBuffer, cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
+      modelManager.getModel(selectedString)->allocateVertexBuffers(m_renderer.getUploadContext().uploadCommandBuffer,
+        cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
+      modelManager.getModel(selectedString)->allocateIndexBuffers(m_renderer.getUploadContext().uploadCommandBuffer,
+        cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
 
       fileBrowser.ClearSelected();
     }
