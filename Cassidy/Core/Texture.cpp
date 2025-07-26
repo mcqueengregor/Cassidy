@@ -49,6 +49,8 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkExtent2D textureDim, 
   VmaAllocator allocator, cassidy::Renderer* rendererRef, VkFormat format, VkBool32 shouldGenMipmaps)
 {
+  m_loadResult = LoadResult::UPLOADING;
+
   VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(static_cast<uint32_t>(size),
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
   VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
@@ -129,8 +131,7 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
 
 void cassidy::Texture::release(VkDevice device, VmaAllocator allocator)
 {
-  if (m_loadResult != LoadResult::SUCCESS)
-    return;
+  if (m_loadResult != LoadResult::SUCCESS) return;
 
   vmaDestroyImage(allocator, m_image.image, m_image.allocation);
   vkDestroyImageView(device, m_image.view, nullptr);

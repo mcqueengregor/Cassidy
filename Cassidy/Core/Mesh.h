@@ -77,7 +77,7 @@ namespace cassidy
     void processSceneNode(aiNode* node, const aiScene* scene, BuiltMaterials& builtMaterials, const std::string& directory, cassidy::Renderer* rendererRef);
 
     std::vector<Mesh> m_meshes;
-    LoadResult m_loadResult;
+    LoadResult m_loadResult = LoadResult::READY_TO_LOAD;
     std::string m_debugName;
   };
 };

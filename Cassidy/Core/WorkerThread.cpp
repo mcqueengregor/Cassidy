@@ -2,19 +2,73 @@
 
 void WorkerThread::init()
 {
-	m_thread = std::thread(&WorkerThread::tryAcquireJob);
+	m_thread = std::thread(&WorkerThread::tryAcquireJob, this);
 }
 
-void WorkerThread::pushJob(std::function<void> job, ...)
+void WorkerThread::release()
 {
+	m_isRunning = false;
+	m_condVar.notify_all();
+	m_thread.join();
+}
+
+void WorkerThread::pushJobLowPrio(std::function<void()> jobLambda)
+{
+	std::lock_guard<std::mutex> lowPrioLockGuard(m_emptyQueuesMutex);
+	m_lowPrioJobQueue.queue.push(jobLambda);
+	m_condVar.notify_one();
+}
+
+void WorkerThread::pushJobHighPrio(std::function<void()> jobLambda)
+{
+	std::lock_guard<std::mutex> highPrioLockGuard(m_emptyQueuesMutex);
+	m_highPrioJobQueue.queue.push(jobLambda);
+	m_condVar.notify_one();
 }
 
 void WorkerThread::tryAcquireJob()
 {
-	m_queueMutex.lock();
-
-	if (!m_highPrioJobQueue.empty())
+	while (m_isRunning)
 	{
-		m_highPrioJobQueue.front();
+		bool areBothQueuesEmpty = true;
+		/*
+			- Attempt to acquire a job if the job queue is empty
+			- Check high-priority queue first, if there are no high-
+				priority jobs then check low-priority job queue
+			- Shouldn't block other low- or high-priority jobs from
+				being added whilst a job is being executed
+		*/
+
+		if (!m_highPrioJobQueue.queue.empty())
+		{
+			areBothQueuesEmpty = false;
+
+			std::function<void()> highPrioFunc;
+			{
+				// Block new jobs from being pushed until acquired job is popped:
+				std::unique_lock highPrioLock(m_lowPrioJobQueue.blockAddToQueueMutex);
+				highPrioFunc = m_highPrioJobQueue.queue.front();
+				m_highPrioJobQueue.queue.pop();
+			}
+			highPrioFunc();
+		}
+		else if (!m_lowPrioJobQueue.queue.empty())
+		{
+			areBothQueuesEmpty = false;
+
+			std::function<void()> lowPrioFunc;
+			{
+				std::unique_lock lowPrioLock(m_highPrioJobQueue.blockAddToQueueMutex);
+				lowPrioFunc = m_lowPrioJobQueue.queue.front();
+				m_lowPrioJobQueue.queue.pop();
+			}
+			lowPrioFunc();
+		}
+
+		if (areBothQueuesEmpty)
+		{
+			std::unique_lock emptyQueuesLock(m_emptyQueuesMutex);
+			m_condVar.wait(emptyQueuesLock);
+		}
 	}
 }

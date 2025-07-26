@@ -37,6 +37,6 @@ namespace cassidy
     void generateMipmaps(VkCommandBuffer cmd, VkFormat format, uint32_t width, uint32_t height, uint8_t mipLevels);
 
     AllocatedImage m_image;
-    LoadResult m_loadResult;
+    LoadResult m_loadResult = LoadResult::READY_TO_LOAD;
   };
 }

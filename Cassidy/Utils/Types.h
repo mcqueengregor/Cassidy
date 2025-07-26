@@ -102,8 +102,10 @@ struct Vertex
 
 enum class LoadResult : uint8_t
 {
-  SUCCESS = 0b0000'0001,
-  NOT_FOUND = 0b000'0010,
+  READY_TO_LOAD = 1 << 0,
+  SUCCESS       = 1 << 1,
+  NOT_FOUND     = 1 << 2,
+  UPLOADING     = 1 << 3,
 };
 
 // An image object allocated with Vulkan Memory Allocator

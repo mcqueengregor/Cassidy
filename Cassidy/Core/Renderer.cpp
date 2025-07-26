@@ -40,6 +40,8 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initVertexBuffers();
   initIndexBuffers();
 
+  m_workerThread.init();
+
   m_currentFrameIndex = 0;
   m_swapchainImageIndex = 0;
 }
@@ -80,6 +82,7 @@ void cassidy::Renderer::release()
   // Wait on device idle to prevent in-use resources from being destroyed:
   vkDeviceWaitIdle(m_device);
 
+  m_workerThread.release();
   m_deletionQueue.execute();
   
   CS_LOG_INFO("Renderer shut down!");
