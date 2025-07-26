@@ -11,6 +11,8 @@
 
 void cassidy::Model::draw(VkCommandBuffer cmd, const Pipeline* pipeline)
 {
+  if (m_loadResult != LoadResult::SUCCESS) return;
+
   constexpr cassidy::MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
   cassidy::Material* lastMaterial = nullptr;
 
