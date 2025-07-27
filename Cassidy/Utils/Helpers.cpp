@@ -96,11 +96,27 @@ QueueFamilyIndices cassidy::helper::findQueueFamilies(VkPhysicalDevice device, V
     if (presentSupport)
       indices.presentFamily = i;
 
-    if (indices.isComplete())
+    if (indices.graphicsFamily.has_value() 
+      && indices.presentFamily.has_value())
       break;
 
     ++i;
   }
+
+  i = 0;
+  for (const VkQueueFamilyProperties& qf : queueFamilies)
+  {
+    if (qf.queueFlags & VK_QUEUE_TRANSFER_BIT
+      && !(qf.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+    {
+      indices.uploadFamily = i;
+      break;
+    }
+    ++i;
+  }
+
+  if (!indices.uploadFamily.has_value())
+    indices.uploadFamily = indices.graphicsFamily.value();
 
   return indices;
 }
@@ -262,7 +278,7 @@ void cassidy::helper::immediateSubmit(VkDevice device, UploadContext& uploadCont
   vkEndCommandBuffer(uploadContext.uploadCommandBuffer);
 
   VkSubmitInfo submitInfo = cassidy::init::submitInfo(0, nullptr, 0, 0, nullptr, 1, &uploadContext.uploadCommandBuffer);
-  vkQueueSubmit(uploadContext.graphicsQueueRef, 1, &submitInfo, uploadContext.uploadFence);
+  vkQueueSubmit(uploadContext.uploadQueue, 1, &submitInfo, uploadContext.uploadFence);
 
   vkWaitForFences(device, 1, &uploadContext.uploadFence, VK_TRUE, UINT64_MAX);
   vkResetFences(device, 1, &uploadContext.uploadFence);

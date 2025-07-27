@@ -39,7 +39,11 @@ struct QueueFamilyIndices
 {
   std::optional<uint32_t> graphicsFamily;
   std::optional<uint32_t> presentFamily;
-  bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
+  std::optional<uint32_t> uploadFamily;
+  bool isComplete() { 
+    return graphicsFamily.has_value() 
+    && presentFamily.has_value() 
+    && uploadFamily.has_value(); }
 };
 
 struct SwapchainSupportDetails
@@ -189,5 +193,6 @@ struct UploadContext
   VkCommandPool uploadCommandPool;
   VkCommandBuffer uploadCommandBuffer;
   VkFence uploadFence;
+  VkQueue uploadQueue;
   VkQueue graphicsQueueRef;
 };
