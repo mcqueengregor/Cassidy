@@ -107,7 +107,7 @@ QueueFamilyIndices cassidy::helper::findQueueFamilies(VkPhysicalDevice device, V
   for (const VkQueueFamilyProperties& qf : queueFamilies)
   {
     if (qf.queueFlags & VK_QUEUE_TRANSFER_BIT
-      && !(qf.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+      && i != indices.graphicsFamily.value())
     {
       indices.uploadFamily = i;
       break;

@@ -80,6 +80,7 @@ namespace cassidy
     inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
     inline VkDescriptorSet&           getViewportDescSet()      { return m_viewportDescSets[m_swapchainImageIndex]; }
     inline ImGui::FileBrowser&        getEditorFileBrowser()    { return m_editorFilebrowser; }
+    inline WorkerThread&              getWorkerThread()         { return m_workerThread; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);

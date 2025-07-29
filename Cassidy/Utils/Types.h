@@ -192,6 +192,7 @@ struct UploadContext
 {
   VkCommandPool uploadCommandPool;
   VkCommandBuffer uploadCommandBuffer;
+  VkCommandBuffer mipmapBlitCommandBuffer;
   VkFence uploadFence;
   VkQueue uploadQueue;
   VkQueue graphicsQueueRef;

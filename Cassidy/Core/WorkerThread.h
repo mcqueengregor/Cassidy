@@ -1,4 +1,6 @@
 #pragma once
+#include <Utils/Types.h>
+
 #include <thread>
 #include <mutex>
 #include <condition_variable>

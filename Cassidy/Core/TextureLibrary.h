@@ -34,5 +34,11 @@ namespace cassidy
     VmaAllocator* m_allocatorRef;
     cassidy::Renderer* m_rendererRef;
     bool m_isInitialised = false;
+
+    struct BlitCommandsList {
+      VkCommandBuffer cmd;
+      std::mutex recordingMutex;
+      volatile uint8_t numTextureCommandsRecorded;  // TODO: Volatile necessary?
+    } m_blitCommandsList;
   };
 }

@@ -388,6 +388,11 @@ void cassidy::Renderer::initLogicalDevice()
   VkPhysicalDeviceFeatures deviceFeatures = {};
   deviceFeatures.samplerAnisotropy = VK_TRUE;
 
+  // TODO: Add synchronisation between texture data transfers and blitting for mipmap generation
+  // https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples#transfer-dependencies
+  // https://www.reddit.com/r/vulkan/comments/cbg3k5/problems_synchronizing_between_transfer_queue_and/
+  // https://stackoverflow.com/questions/48081352/vulkan-queue-synchronization-in-multithreading
+
   VkDeviceCreateInfo deviceInfo = cassidy::init::deviceCreateInfo(
     static_cast<uint32_t>(queueInfos.size()), queueInfos.data(), &deviceFeatures,
     static_cast<uint32_t>(DEVICE_EXTENSIONS.size()), DEVICE_EXTENSIONS.data(), 
@@ -402,6 +407,7 @@ void cassidy::Renderer::initLogicalDevice()
   vkGetDeviceQueue(m_device, indices.uploadFamily.value(), 0, &m_uploadContext.uploadQueue);
 
   m_uploadContext.graphicsQueueRef = m_graphicsQueue;
+  m_uploadContext.uploadQueue = m_graphicsQueue;
 
   m_deletionQueue.addFunction([=]() {
     vkDestroyDevice(m_device, nullptr);
@@ -678,7 +684,7 @@ void cassidy::Renderer::initCommandPool()
 
   // Create command pool for upload commands:
   VkCommandPoolCreateInfo uploadPoolInfo = cassidy::init::commandPoolCreateInfo(
-    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, indices.uploadFamily.value());
+    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, indices.graphicsFamily.value());
 
   VK_CHECK(vkCreateCommandPool(m_device, &uploadPoolInfo, nullptr, &m_uploadContext.uploadCommandPool));
 
@@ -702,6 +708,14 @@ void cassidy::Renderer::initCommandBuffers()
   vkAllocateCommandBuffers(m_device, &graphicsAllocInfo, m_commandBuffers.data());
 
   CS_LOG_INFO("Created {0} graphics command buffers!", FRAMES_IN_FLIGHT);
+
+  // Allocate command buffer for blit commands to generate mipmaps:
+  VkCommandBufferAllocateInfo blitAllocInfo = cassidy::init::commandBufferAllocInfo(
+    m_graphicsCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+
+  vkAllocateCommandBuffers(m_device, &blitAllocInfo, &m_uploadContext.mipmapBlitCommandBuffer);
+
+  CS_LOG_INFO("Created mipmap blit command buffer!");
 
   // Allocate command buffer for upload commands:
   VkCommandBufferAllocateInfo uploadAllocInfo = cassidy::init::commandBufferAllocInfo(

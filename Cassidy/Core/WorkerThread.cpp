@@ -1,4 +1,5 @@
 #include "WorkerThread.h"
+#include <Core/Logger.h>
 
 void WorkerThread::init()
 {
@@ -10,6 +11,7 @@ void WorkerThread::release()
 	m_isRunning = false;
 	m_condVar.notify_all();
 	m_thread.join();
+	CS_LOG_INFO("Worker thread joined!");
 }
 
 void WorkerThread::pushJobLowPrio(std::function<void()> jobLambda)
@@ -67,8 +69,10 @@ void WorkerThread::tryAcquireJob()
 
 		if (areBothQueuesEmpty)
 		{
+			CS_LOG_WARN("Worker thread going to sleep!");
 			std::unique_lock emptyQueuesLock(m_emptyQueuesMutex);
 			m_condVar.wait(emptyQueuesLock);
 		}
 	}
+	CS_LOG_INFO("Worker thread exiting aquireJob function!");
 }

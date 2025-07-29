@@ -98,6 +98,8 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
 
   vmaCreateImage(allocator, &imageInfo, &imageAllocInfo, &m_image.image, &m_image.allocation, nullptr);
 
+  m_dimensions = VkExtent2D(textureDim.width, textureDim.height);
+
   cassidy::helper::immediateSubmit(rendererRef->getLogicalDevice(),
     rendererRef->getUploadContext(), [=](VkCommandBuffer cmd)
     {
@@ -109,9 +111,7 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
 
       copyBufferToImage(cmd, stagingBuffer.buffer, textureDim.width, textureDim.height);
 
-      if (shouldGenMipmaps == VK_TRUE)
-        generateMipmaps(cmd, format, textureDim.width, textureDim.height, mipLevels);
-      else
+      if (shouldGenMipmaps != VK_TRUE)
         cassidy::helper::transitionImageLayout(cmd, m_image.image, format,
           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
           VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
