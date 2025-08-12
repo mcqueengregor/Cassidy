@@ -59,7 +59,7 @@ namespace cassidy
 
     void release(VkDevice device, VmaAllocator allocator);
 
-    void loadModel(const std::string& filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps = (aiPostProcessSteps)0);
+    bool loadModel(const std::string& filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps = (aiPostProcessSteps)0);
     void setVertices(const Vertex* data, size_t size);
     void setIndices(const uint32_t* data, size_t size);
 

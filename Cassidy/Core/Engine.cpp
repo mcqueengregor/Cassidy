@@ -37,6 +37,8 @@ void cassidy::Engine::init()
 {
   CS_LOG_INFO("Initialising engine...");
 
+  m_workerThread.init();
+
   initInstance();
   initSurface();
   initDebugMessenger();
@@ -102,6 +104,7 @@ void cassidy::Engine::run()
 
 void cassidy::Engine::release()
 {
+  m_workerThread.release();
   m_renderer.release();
   m_deletionQueue.execute();
 
@@ -291,15 +294,18 @@ void cassidy::Engine::buildGUI()
 
     if (fileBrowser.HasSelected())
     {
-      constexpr cassidy::ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
       const std::string& selectedString = fileBrowser.GetSelected().generic_string();
-      modelManager.loadModel(selectedString, &m_renderer, static_cast<aiPostProcessSteps>(m_uiContext.importPostProcessSteps));
-      
-      modelManager.getModel(selectedString)->allocateVertexBuffers(m_renderer.getUploadContext().uploadCommandBuffer,
-        cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
-      modelManager.getModel(selectedString)->allocateIndexBuffers(m_renderer.getUploadContext().uploadCommandBuffer,
-        cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
 
+      m_workerThread.pushJobHighPrio([selectedString, this]() {
+        constexpr cassidy::ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
+        if (modelManager.loadModel(selectedString, &m_renderer, static_cast<aiPostProcessSteps>(m_uiContext.importPostProcessSteps)))
+        {
+          modelManager.getModel(selectedString)->allocateVertexBuffers(m_renderer.getUploadContext().uploadCommandBuffer,
+            cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
+          modelManager.getModel(selectedString)->allocateIndexBuffers(m_renderer.getUploadContext().uploadCommandBuffer,
+            cassidy::globals::g_resourceManager.getVmaAllocator(), &m_renderer);
+        }
+        });
       fileBrowser.ClearSelected();
     }
 

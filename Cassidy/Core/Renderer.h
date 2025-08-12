@@ -80,7 +80,7 @@ namespace cassidy
     inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
     inline VkDescriptorSet&           getViewportDescSet()      { return m_viewportDescSets[m_swapchainImageIndex]; }
     inline ImGui::FileBrowser&        getEditorFileBrowser()    { return m_editorFilebrowser; }
-    inline WorkerThread&              getWorkerThread()         { return m_workerThread; }
+    inline cassidy::Engine*           getEngineRef()            { return m_engineRef; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
@@ -134,9 +134,6 @@ namespace cassidy
     VkDevice m_device;
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
-
-    // Worker threads:
-    WorkerThread m_workerThread; 
 
     // Pipelines:
     Pipeline m_helloTrianglePipeline;

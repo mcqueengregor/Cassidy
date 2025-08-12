@@ -40,8 +40,6 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initVertexBuffers();
   initIndexBuffers();
 
-  m_workerThread.init();
-
   m_currentFrameIndex = 0;
   m_swapchainImageIndex = 0;
 }
@@ -82,7 +80,6 @@ void cassidy::Renderer::release()
   // Wait on device idle to prevent in-use resources from being destroyed:
   vkDeviceWaitIdle(m_device);
 
-  m_workerThread.release();
   m_deletionQueue.execute();
   
   CS_LOG_INFO("Renderer shut down!");
@@ -252,14 +249,32 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
 
 void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
 {
+  cassidy::TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+
   VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
   VkCommandBuffer submitBuffers[] = {
     m_viewportCommandBuffers[m_currentFrameIndex],
     m_commandBuffers[m_currentFrameIndex],
+    texLibrary.getBlitCommandsList().cmd,
   };
 
+  uint32_t numCmdBuffers = 2;
+  if (texLibrary.getBlitCommandsList().numTextureCommandsRecorded > 0)
+  {
+    cassidy::TextureLibrary::BlitCommandsList& blitCommandsList = texLibrary.getBlitCommandsList();
+    std::unique_lock<std::mutex> lock(blitCommandsList.recordingMutex, std::defer_lock);
+
+    if (lock.try_lock())
+    {
+      CS_LOG_INFO("Merged {0} blit commands into render loop command submission!", blitCommandsList.numTextureCommandsRecorded);
+      numCmdBuffers = 3;
+      vkEndCommandBuffer(blitCommandsList.cmd);
+      blitCommandsList.numTextureCommandsRecorded = 0;
+    }
+  }
+
   VkSubmitInfo submitInfo = cassidy::init::submitInfo(1, &m_imageAvailableSemaphores[m_currentFrameIndex], waitStages, 
-    1, &m_renderFinishedSemaphores[m_currentFrameIndex], 2, submitBuffers);
+    1, &m_renderFinishedSemaphores[m_currentFrameIndex], numCmdBuffers, submitBuffers);
 
   VK_CHECK(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrameIndex]));
 
@@ -407,7 +422,6 @@ void cassidy::Renderer::initLogicalDevice()
   vkGetDeviceQueue(m_device, indices.uploadFamily.value(), 0, &m_uploadContext.uploadQueue);
 
   m_uploadContext.graphicsQueueRef = m_graphicsQueue;
-  m_uploadContext.uploadQueue = m_graphicsQueue;
 
   m_deletionQueue.addFunction([=]() {
     vkDestroyDevice(m_device, nullptr);
@@ -684,7 +698,7 @@ void cassidy::Renderer::initCommandPool()
 
   // Create command pool for upload commands:
   VkCommandPoolCreateInfo uploadPoolInfo = cassidy::init::commandPoolCreateInfo(
-    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, indices.graphicsFamily.value());
+    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, indices.uploadFamily.value());
 
   VK_CHECK(vkCreateCommandPool(m_device, &uploadPoolInfo, nullptr, &m_uploadContext.uploadCommandPool));
 
@@ -713,7 +727,8 @@ void cassidy::Renderer::initCommandBuffers()
   VkCommandBufferAllocateInfo blitAllocInfo = cassidy::init::commandBufferAllocInfo(
     m_graphicsCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
 
-  vkAllocateCommandBuffers(m_device, &blitAllocInfo, &m_uploadContext.mipmapBlitCommandBuffer);
+  cassidy::TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+  vkAllocateCommandBuffers(m_device, &blitAllocInfo, &texLibrary.getBlitCommandsList().cmd);
 
   CS_LOG_INFO("Created mipmap blit command buffer!");
 

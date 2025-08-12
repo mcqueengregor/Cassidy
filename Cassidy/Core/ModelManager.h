@@ -13,7 +13,7 @@ namespace cassidy {
 
 		void releaseAll(VkDevice device, VmaAllocator allocator);
 
-		void loadModel(const std::string& filepath, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps = (aiPostProcessSteps)0);
+		bool loadModel(const std::string& filepath, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps = (aiPostProcessSteps)0);
 		void registerModel(const std::string& name, const cassidy::Model& model);
 
 		void allocateBuffers(VkCommandBuffer cmd, VmaAllocator allocator, cassidy::Renderer* rendererRef);

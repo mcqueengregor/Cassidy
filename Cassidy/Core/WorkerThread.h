@@ -34,10 +34,12 @@ private:
 	JobQueue m_lowPrioJobQueue;
 	JobQueue m_highPrioJobQueue;
 
-  bool m_isRunning = true;
+  volatile bool m_isRunning = true;
 };
 
 /*
+  https://wickedengine.net/2018/11/simple-job-system-using-standard-c/
+  
   MULTITHREADING BRAINDUMP:
   - Create some kind of async commands system for worker thread:
     - Decide which tasks should be done asynchronously

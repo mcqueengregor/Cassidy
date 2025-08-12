@@ -47,7 +47,7 @@ void cassidy::Model::release(VkDevice device, VmaAllocator allocator)
   }
 }
 
-void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps)
+bool cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocator, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps)
 {
   CS_LOG_INFO("Loading new model ({0})", filepath);
 
@@ -63,7 +63,8 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
   {
     CS_LOG_ERROR("Assimp failed to load model!");
     CS_LOG_CRITICAL("Assimp error: {0}", importer.GetErrorString());
-    return;
+    m_loadResult = LoadResult::NOT_FOUND;
+    return false;
   }
 
   std::string directory = filepath.substr(0, filepath.find_last_of('/') + 1);
@@ -77,6 +78,7 @@ void cassidy::Model::loadModel(const std::string& filepath, VmaAllocator allocat
 
   m_loadResult = LoadResult::SUCCESS;
   CS_LOG_INFO("Successfully loaded model {0}!", filepath);
+  return true;
 }
 
 // Used for single-mesh models which have their vertices directly set by an array.
