@@ -1,9 +1,11 @@
 #pragma once
 #include <vector>
+#include <thread>
 #include <Utils/Types.h>
 #include <Core/Pipeline.h>
 #include <Core/Mesh.h>
 #include <Core/Texture.h>
+#include <Core/WorkerThread.h>
 
 #include <Vendor/imgui-docking/imgui.h>
 #include <Vendor/imgui-docking/imfilebrowser.h>
@@ -78,6 +80,7 @@ namespace cassidy
     inline VkPhysicalDeviceProperties getPhysDeviceProperties() { return m_physicalDeviceProperties; }
     inline VkDescriptorSet&           getViewportDescSet()      { return m_viewportDescSets[m_swapchainImageIndex]; }
     inline ImGui::FileBrowser&        getEditorFileBrowser()    { return m_editorFilebrowser; }
+    inline cassidy::Engine*           getEngineRef()            { return m_engineRef; }
 
   private:
     void updateBuffers(const FrameData& currentFrameData);

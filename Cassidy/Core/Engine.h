@@ -3,6 +3,7 @@
 #include <Core/EventHandler.h>
 #include <Core/Camera.h>
 #include <Core/Logger.h>
+#include <Core/WorkerThread.h>
 
 #include <Utils/GlobalTimer.h>
 #include <Utils/Types.h>
@@ -63,6 +64,8 @@ namespace cassidy
     cassidy::EventHandler m_eventHandler;
     cassidy::Renderer m_renderer;
 
+    WorkerThread m_workerThread;
+
     struct UIContext {
       int32_t selectedModel = 0;
       uint32_t importPostProcessSteps = 0;
@@ -107,12 +110,13 @@ namespace cassidy
 
   public:
     // Getters and setters: --------------------------------------------------------------------------------------
-    inline SDL_Window* getWindow()      { return m_window; }
-    inline glm::uvec2 getWindowDim()    { return m_windowDimensions; }
-    inline VkInstance getInstance()     { return m_instance; }
-    inline VkSurfaceKHR getSurface()    { return m_surface; }
-    inline cassidy::Camera& getCamera() { return m_camera; }
-    inline double getDeltaTimeSecs()    { return GlobalTimer::deltaTime(); }
-    inline UIContext getUIContext()     { return m_uiContext; }
+    inline SDL_Window*      getWindow()         { return m_window; }
+    inline glm::uvec2       getWindowDim()      { return m_windowDimensions; }
+    inline VkInstance       getInstance()       { return m_instance; }
+    inline VkSurfaceKHR     getSurface()        { return m_surface; }
+    inline cassidy::Camera& getCamera()         { return m_camera; }
+    inline double           getDeltaTimeSecs()  { return GlobalTimer::deltaTime(); }
+    inline UIContext        getUIContext()      { return m_uiContext; }
+    inline WorkerThread&    getWorkerThread()   { return m_workerThread; }
   };
 }

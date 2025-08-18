@@ -11,17 +11,22 @@ void cassidy::ModelManager::releaseAll(VkDevice device, VmaAllocator allocator)
 	}
 }
 
-void cassidy::ModelManager::loadModel(const std::string& filepath, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps)
+bool cassidy::ModelManager::loadModel(const std::string& filepath, cassidy::Renderer* rendererRef, aiPostProcessSteps additionalSteps)
 {
+	if (m_loadedModels.find(filepath) != m_loadedModels.end()) 
+	{
+		CS_LOG_INFO("Model already loaded! ({0})", filepath);
+		return true;
+	}
+
 	Model newModel;
 	const VmaAllocator& alloc = cassidy::globals::g_resourceManager.getVmaAllocator();
-	newModel.loadModel(filepath, alloc, rendererRef, additionalSteps);
-
-	if (newModel.getLoadResult() == LoadResult::NOT_FOUND)
-		return;
+	if (!newModel.loadModel(filepath, alloc, rendererRef, additionalSteps))
+		return false;
 
 	m_loadedModels[filepath] = newModel;
 	m_modelsPtrTable.emplace_back(&m_loadedModels.at(filepath));
+	return true;
 }
 
 void cassidy::ModelManager::registerModel(const std::string& name, const cassidy::Model& model)

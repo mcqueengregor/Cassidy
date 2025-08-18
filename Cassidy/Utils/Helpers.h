@@ -43,7 +43,9 @@ namespace cassidy::helper
   void immediateSubmit(VkDevice device, UploadContext& uploadContext, std::function<void(VkCommandBuffer cmd)>&& function);
   void transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
     VkImageLayout oldLayout, VkImageLayout newLayout,
-    VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, 
+    VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
     VkPipelineStageFlags srcStageFlags, VkPipelineStageFlags dstStageFlags,
     uint8_t mipLevels);
+
+  void generateMipmaps(VkImage image, VkCommandBuffer cmd, VkFormat format, uint32_t width, uint32_t height, uint8_t mipLevels);
 }

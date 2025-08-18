@@ -1,7 +1,9 @@
 #include "TextureLibrary.h"
 #include <Core/Renderer.h>
+#include <Core/Engine.h>
 #include <Core/Logger.h>
 #include <Utils/Helpers.h>
+#include <Utils/Initialisers.h>
 
 #define FALLBACK_TEXTURE_PREFIX std::string("Fallback_")
 
@@ -36,6 +38,28 @@ cassidy::Texture* cassidy::TextureLibrary::loadTexture(const std::string& filepa
   if (newTexture.load(filepath, *m_allocatorRef, m_rendererRef, format, shouldGenMipmaps))
   {
     m_loadedTextures[filepath] = newTexture;
+    if (shouldGenMipmaps == VK_TRUE)
+    {
+      const VkExtent2D dimensions = newTexture.getDimensions();
+      const uint32_t mipLevels = std::min(static_cast<uint32_t>(
+        std::floor(std::log2(std::max(dimensions.width, dimensions.height)))), 16U) + 1;
+
+      std::string stringCopy = filepath;
+      m_rendererRef->getEngineRef()->getWorkerThread().pushJobLowPrio([&, dimensions, mipLevels, stringCopy]() {
+        std::unique_lock<std::mutex> recordCommandsLock(m_blitCommandsList.recordingMutex);
+        if (m_blitCommandsList.numTextureCommandsRecorded == 0)
+        {
+          VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(
+            VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
+          vkBeginCommandBuffer(m_blitCommandsList.cmd, &beginInfo);
+        }
+        cassidy::helper::generateMipmaps(m_loadedTextures[stringCopy].getImage(), m_blitCommandsList.cmd,
+          format, dimensions.width, dimensions.height, mipLevels);
+
+        ++m_blitCommandsList.numTextureCommandsRecorded;
+        });
+    }
+
     return &m_loadedTextures.at(filepath);
   }
 

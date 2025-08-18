@@ -249,14 +249,32 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
 
 void cassidy::Renderer::submitCommandBuffers(uint32_t imageIndex)
 {
+  cassidy::TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+
   VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
   VkCommandBuffer submitBuffers[] = {
     m_viewportCommandBuffers[m_currentFrameIndex],
     m_commandBuffers[m_currentFrameIndex],
+    texLibrary.getBlitCommandsList().cmd,
   };
 
+  uint32_t numCmdBuffers = 2;
+  if (texLibrary.getBlitCommandsList().numTextureCommandsRecorded > 0)
+  {
+    cassidy::TextureLibrary::BlitCommandsList& blitCommandsList = texLibrary.getBlitCommandsList();
+    std::unique_lock<std::mutex> lock(blitCommandsList.recordingMutex, std::defer_lock);
+
+    if (lock.try_lock())
+    {
+      CS_LOG_INFO("Merged {0} blit commands into render loop command submission!", blitCommandsList.numTextureCommandsRecorded);
+      numCmdBuffers = 3;
+      vkEndCommandBuffer(blitCommandsList.cmd);
+      blitCommandsList.numTextureCommandsRecorded = 0;
+    }
+  }
+
   VkSubmitInfo submitInfo = cassidy::init::submitInfo(1, &m_imageAvailableSemaphores[m_currentFrameIndex], waitStages, 
-    1, &m_renderFinishedSemaphores[m_currentFrameIndex], 2, submitBuffers);
+    1, &m_renderFinishedSemaphores[m_currentFrameIndex], numCmdBuffers, submitBuffers);
 
   VK_CHECK(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrameIndex]));
 
@@ -360,20 +378,20 @@ void cassidy::Renderer::immediateSubmit(std::function<void(VkCommandBuffer cmd)>
 
 void cassidy::Renderer::initLogicalDevice()
 {
+  CS_LOG_INFO("Picking physical device...");
   m_physicalDevice = cassidy::helper::pickPhysicalDevice(m_engineRef->getInstance());
   if (m_physicalDevice == VK_NULL_HANDLE)
   {
     CS_LOG_ERROR("Failed to find physical device!");
     return;
   }
-  
   // Log chosen physical device's properties:
   vkGetPhysicalDeviceProperties(m_physicalDevice, &m_physicalDeviceProperties);
 
   QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
 
   std::vector<VkDeviceQueueCreateInfo> queueInfos;
-  std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+  std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value(), indices.uploadFamily.value() };
 
   float queuePriority = 1.0f;
   for (uint32_t queueFamily : uniqueQueueFamilies)
@@ -385,16 +403,23 @@ void cassidy::Renderer::initLogicalDevice()
   VkPhysicalDeviceFeatures deviceFeatures = {};
   deviceFeatures.samplerAnisotropy = VK_TRUE;
 
+  // TODO: Add synchronisation between texture data transfers and blitting for mipmap generation
+  // https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples#transfer-dependencies
+  // https://www.reddit.com/r/vulkan/comments/cbg3k5/problems_synchronizing_between_transfer_queue_and/
+  // https://stackoverflow.com/questions/48081352/vulkan-queue-synchronization-in-multithreading
+
   VkDeviceCreateInfo deviceInfo = cassidy::init::deviceCreateInfo(
     static_cast<uint32_t>(queueInfos.size()), queueInfos.data(), &deviceFeatures,
     static_cast<uint32_t>(DEVICE_EXTENSIONS.size()), DEVICE_EXTENSIONS.data(), 
     static_cast<uint32_t>(VALIDATION_LAYERS.size()), VALIDATION_LAYERS.data());
 
+  CS_LOG_INFO("Creating logical device...");
   const VkResult deviceCreateResult = vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device);
   VK_CHECK(deviceCreateResult);
 
   vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
   vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &m_presentQueue);
+  vkGetDeviceQueue(m_device, indices.uploadFamily.value(), 0, &m_uploadContext.uploadQueue);
 
   m_uploadContext.graphicsQueueRef = m_graphicsQueue;
 
@@ -483,6 +508,7 @@ void cassidy::Renderer::initSwapchain()
 
 void cassidy::Renderer::initResourceManager()
 {
+  CS_LOG_INFO("Initialising resource manager...");
   cassidy::globals::g_resourceManager.init(this, m_engineRef);
 
   m_deletionQueue.addFunction([=]() {
@@ -510,6 +536,7 @@ void cassidy::Renderer::initEditorResources()
 
 void cassidy::Renderer::initEditorImages()
 {
+  CS_LOG_INFO("Creating editor image objects...");
   m_editorImages.resize(m_swapchain.images.size());
 
   for (size_t i = 0; i < m_editorImages.size(); ++i)
@@ -559,6 +586,7 @@ void cassidy::Renderer::initEditorImages()
 
 void cassidy::Renderer::initEditorRenderPass()
 {
+  CS_LOG_INFO("Creating editor render pass...");
   VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(
     m_swapchain.imageFormat, VK_SAMPLE_COUNT_1_BIT, 
     VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
@@ -608,6 +636,7 @@ void cassidy::Renderer::initEditorRenderPass()
 
 void cassidy::Renderer::initEditorFramebuffers()
 {
+  CS_LOG_INFO("Creating editor framebuffers...");
   m_editorFramebuffers.resize(m_swapchain.images.size());
 
   for (size_t i = 0; i < m_editorFramebuffers.size(); ++i)
@@ -621,6 +650,7 @@ void cassidy::Renderer::initEditorFramebuffers()
 
 void cassidy::Renderer::initPipelines()
 {
+  CS_LOG_INFO("Creating pipelines...");
   m_helloTrianglePipeline.init(this)
     .setRenderPass(m_editorRenderPass)
     .addDescriptorSetLayout(m_perPassSetLayout)
@@ -657,6 +687,7 @@ void cassidy::Renderer::initSwapchainFramebuffers()
 
 void cassidy::Renderer::initCommandPool()
 {
+  CS_LOG_INFO("Creating command pools...");
   QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
 
   // Create command pool for graphics commands:
@@ -667,7 +698,7 @@ void cassidy::Renderer::initCommandPool()
 
   // Create command pool for upload commands:
   VkCommandPoolCreateInfo uploadPoolInfo = cassidy::init::commandPoolCreateInfo(
-    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, indices.graphicsFamily.value());
+    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, indices.uploadFamily.value());
 
   VK_CHECK(vkCreateCommandPool(m_device, &uploadPoolInfo, nullptr, &m_uploadContext.uploadCommandPool));
 
@@ -681,6 +712,7 @@ void cassidy::Renderer::initCommandPool()
 
 void cassidy::Renderer::initCommandBuffers()
 {
+  CS_LOG_INFO("Allocating command buffers...");
   m_commandBuffers.resize(FRAMES_IN_FLIGHT);
 
   // Allocate command buffers for graphics commands:
@@ -690,6 +722,15 @@ void cassidy::Renderer::initCommandBuffers()
   vkAllocateCommandBuffers(m_device, &graphicsAllocInfo, m_commandBuffers.data());
 
   CS_LOG_INFO("Created {0} graphics command buffers!", FRAMES_IN_FLIGHT);
+
+  // Allocate command buffer for blit commands to generate mipmaps:
+  VkCommandBufferAllocateInfo blitAllocInfo = cassidy::init::commandBufferAllocInfo(
+    m_graphicsCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+
+  cassidy::TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
+  vkAllocateCommandBuffers(m_device, &blitAllocInfo, &texLibrary.getBlitCommandsList().cmd);
+
+  CS_LOG_INFO("Created mipmap blit command buffer!");
 
   // Allocate command buffer for upload commands:
   VkCommandBufferAllocateInfo uploadAllocInfo = cassidy::init::commandBufferAllocInfo(
@@ -701,6 +742,7 @@ void cassidy::Renderer::initCommandBuffers()
 
 void cassidy::Renderer::initSyncObjects()
 {
+  CS_LOG_INFO("Creating synchonisation objects...");
   m_imageAvailableSemaphores.resize(FRAMES_IN_FLIGHT);
   m_renderFinishedSemaphores.resize(FRAMES_IN_FLIGHT);
   m_inFlightFences.resize(FRAMES_IN_FLIGHT);
@@ -735,6 +777,7 @@ void cassidy::Renderer::initDescriptorSets()
 {
   initUniformBuffers();
   
+  CS_LOG_INFO("Building descriptor sets...");
   constexpr uint32_t NUM_BINDINGS = 3;
   VkDescriptorSetLayoutBinding bindings[NUM_BINDINGS];
   for (uint32_t i = 0; i < 3; ++i)
@@ -776,10 +819,12 @@ void cassidy::Renderer::initDescriptorSets()
     cassidy::globals::g_descLayoutCache.release();
     cassidy::globals::g_descAllocator.release();
     });
+  CS_LOG_INFO("Built descriptor sets!");
 }
 
 void cassidy::Renderer::initVertexBuffers()
 {
+  CS_LOG_INFO("Creating vertex buffers...");
   const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
   m_triangleMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
   m_backpackMesh.allocateVertexBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
@@ -796,13 +841,16 @@ void cassidy::Renderer::initVertexBuffers()
 
 void cassidy::Renderer::initIndexBuffers()
 {
+  CS_LOG_INFO("Creating index buffers...");
   const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
   m_backpackMesh.allocateIndexBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
   m_triangleMesh.allocateIndexBuffers(m_uploadContext.uploadCommandBuffer, allocator, this);
+  CS_LOG_INFO("Created index buffers!");
 }
 
 void cassidy::Renderer::initUniformBuffers()
 {
+  CS_LOG_INFO("Allocating uniform buffers...");
   const uint32_t objectBufferSize = FRAMES_IN_FLIGHT * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData),
     m_physicalDeviceProperties);
   m_perObjectUniformBufferDynamic = allocateBuffer(objectBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -829,10 +877,12 @@ void cassidy::Renderer::initUniformBuffers()
         m_frameData[i].perPassLightUniformBuffer.allocation);
     }
   });
+  CS_LOG_INFO("Allocated uniform buffers!");
 }
 
 void cassidy::Renderer::initImGui()
 {
+  CS_LOG_INFO("Initialising ImGui...");
   const uint32_t NUM_SIZES = 11;
   VkDescriptorPoolSize poolSizes[NUM_SIZES] =
   {
@@ -875,10 +925,20 @@ void cassidy::Renderer::initImGui()
 
   ImGui_ImplVulkan_Init(&initInfo, m_editorRenderPass);
 
-  cassidy::helper::immediateSubmit(m_device, m_uploadContext,
+  // Hacky fix for ImGui font upload requiring queue w/ graphics support:
+  UploadContext imguiUploadContext =
+  {
+    .uploadCommandPool = m_graphicsCommandPool,
+    .uploadCommandBuffer = m_commandBuffers[0],
+    .uploadFence = m_uploadContext.uploadFence,
+    .uploadQueue = m_graphicsQueue,
+  };
+
+  cassidy::helper::immediateSubmit(m_device, imguiUploadContext,
     [&](VkCommandBuffer cmd) {
     ImGui_ImplVulkan_CreateFontsTexture(cmd);
   });
+  CS_LOG_INFO("Initialised ImGui Vulkan backend!");
 
   //m_editorFilebrowser = ImGui::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection);
   m_editorFilebrowser.SetTitle("File browser");
@@ -931,6 +991,7 @@ void cassidy::Renderer::initImGui()
 
 void cassidy::Renderer::initViewportImages()
 {
+  CS_LOG_INFO("Creating viewport image objects...");
   m_viewportImages.resize(m_swapchain.images.size());
   const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
 
@@ -1032,12 +1093,14 @@ void cassidy::Renderer::initViewportImages()
     m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
       m_viewportImages[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   }
+  CS_LOG_INFO("Created viewport images!");
 
   // (Deletion of viewport resources is handled in ImGui deletion queue function)
 }
 
 void cassidy::Renderer::initViewportRenderPass()
 {
+  CS_LOG_INFO("Creating viewport render pass...");
   VkAttachmentDescription colourAttachment = {
     .format = m_swapchain.imageFormat,
     .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -1107,32 +1170,36 @@ void cassidy::Renderer::initViewportRenderPass()
   };
 
   VK_CHECK(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_viewportRenderPass));
-
   CS_LOG_INFO("Created viewport render pass!");
 }
 
 void cassidy::Renderer::initViewportCommandPool()
 {
+  CS_LOG_INFO("Creating viewport command pool...");
   QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
 
   VkCommandPoolCreateInfo info = cassidy::init::commandPoolCreateInfo(
     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, indices.graphicsFamily.value());
 
   VK_CHECK(vkCreateCommandPool(m_device, &info, nullptr, &m_viewportCommandPool));
+  CS_LOG_INFO("Created viewport command pool!");
 }
 
 void cassidy::Renderer::initViewportCommandBuffers()
 {
+  CS_LOG_INFO("Allocating viewport command buffers...");
   m_viewportCommandBuffers.resize(FRAMES_IN_FLIGHT);
 
   VkCommandBufferAllocateInfo allocInfo = cassidy::init::commandBufferAllocInfo(
     m_viewportCommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, FRAMES_IN_FLIGHT);
 
   vkAllocateCommandBuffers(m_device, &allocInfo, m_viewportCommandBuffers.data());
+  CS_LOG_INFO("Allocated {0} viewport commmand buffers!", m_viewportCommandBuffers.size());
 }
 
 void cassidy::Renderer::initViewportFramebuffers()
 {
+  CS_LOG_INFO("Creating viewport framebuffers...");
   m_viewportFramebuffers.resize(m_swapchain.imageViews.size());
 
   for (size_t i = 0; i < m_viewportFramebuffers.size(); ++i)
@@ -1147,10 +1214,12 @@ void cassidy::Renderer::initViewportFramebuffers()
 
     VK_CHECK(vkCreateFramebuffer(m_device, &info, nullptr, &m_viewportFramebuffers[i]));
   }
+  CS_LOG_INFO("Created viewport framebuffers!");
 }
 
 void cassidy::Renderer::transitionSwapchainImages()
 {
+  CS_LOG_INFO("Transitioning swapchain images to PRESENT_SRC_KHR...");
   // Manually transition swapchain images to PRESENT_SRC_KHR since there's no render pass 
   // with implicit layout transition anymore:
   cassidy::helper::immediateSubmit(m_device, m_uploadContext, [=](VkCommandBuffer cmd) {
@@ -1161,6 +1230,7 @@ void cassidy::Renderer::transitionSwapchainImages()
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         1);
     });
+  CS_LOG_INFO("Transitioned swapchain images!");
 }
 
 VmaAllocator cassidy::Renderer::getVmaAllocator()

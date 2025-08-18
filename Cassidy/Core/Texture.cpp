@@ -49,6 +49,8 @@ cassidy::Texture* cassidy::Texture::load(std::string filepath, VmaAllocator allo
 cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkExtent2D textureDim, 
   VmaAllocator allocator, cassidy::Renderer* rendererRef, VkFormat format, VkBool32 shouldGenMipmaps)
 {
+  m_loadResult = LoadResult::UPLOADING;
+
   VkBufferCreateInfo stagingBufferInfo = cassidy::init::bufferCreateInfo(static_cast<uint32_t>(size),
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
   VmaAllocationCreateInfo bufferAllocInfo = cassidy::init::vmaAllocationCreateInfo(VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
@@ -96,6 +98,8 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
 
   vmaCreateImage(allocator, &imageInfo, &imageAllocInfo, &m_image.image, &m_image.allocation, nullptr);
 
+  m_dimensions = VkExtent2D(textureDim.width, textureDim.height);
+
   cassidy::helper::immediateSubmit(rendererRef->getLogicalDevice(),
     rendererRef->getUploadContext(), [=](VkCommandBuffer cmd)
     {
@@ -107,13 +111,11 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
 
       copyBufferToImage(cmd, stagingBuffer.buffer, textureDim.width, textureDim.height);
 
-      if (shouldGenMipmaps == VK_TRUE)
-        generateMipmaps(cmd, format, textureDim.width, textureDim.height, mipLevels);
-      else
+      if (shouldGenMipmaps != VK_TRUE)
         cassidy::helper::transitionImageLayout(cmd, m_image.image, format,
           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-          VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-          VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+          VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+          VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
           mipLevels);
     });
 
@@ -129,8 +131,7 @@ cassidy::Texture* cassidy::Texture::create(unsigned char* data, size_t size, VkE
 
 void cassidy::Texture::release(VkDevice device, VmaAllocator allocator)
 {
-  if (m_loadResult != LoadResult::SUCCESS)
-    return;
+  if (m_loadResult != LoadResult::SUCCESS) return;
 
   vmaDestroyImage(allocator, m_image.image, m_image.allocation);
   vkDestroyImageView(device, m_image.view, nullptr);

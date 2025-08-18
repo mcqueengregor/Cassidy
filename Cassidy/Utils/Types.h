@@ -39,7 +39,11 @@ struct QueueFamilyIndices
 {
   std::optional<uint32_t> graphicsFamily;
   std::optional<uint32_t> presentFamily;
-  bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
+  std::optional<uint32_t> uploadFamily;
+  bool isComplete() { 
+    return graphicsFamily.has_value() 
+    && presentFamily.has_value() 
+    && uploadFamily.has_value(); }
 };
 
 struct SwapchainSupportDetails
@@ -102,8 +106,10 @@ struct Vertex
 
 enum class LoadResult : uint8_t
 {
-  SUCCESS = 0b0000'0001,
-  NOT_FOUND = 0b000'0010,
+  READY_TO_LOAD = 1 << 0,
+  SUCCESS       = 1 << 1,
+  NOT_FOUND     = 1 << 2,
+  UPLOADING     = 1 << 3,
 };
 
 // An image object allocated with Vulkan Memory Allocator
@@ -186,6 +192,8 @@ struct UploadContext
 {
   VkCommandPool uploadCommandPool;
   VkCommandBuffer uploadCommandBuffer;
+  VkCommandBuffer mipmapBlitCommandBuffer;
   VkFence uploadFence;
+  VkQueue uploadQueue;
   VkQueue graphicsQueueRef;
 };
