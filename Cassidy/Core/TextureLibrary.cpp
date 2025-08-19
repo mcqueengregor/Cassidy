@@ -58,6 +58,7 @@ cassidy::Texture* cassidy::TextureLibrary::loadTexture(const std::string& filepa
 
         ++m_blitCommandsList.numTextureCommandsRecorded;
         });
+      CS_LOG_INFO("Pushed blit command job to worker thread!");
     }
 
     return &m_loadedTextures.at(filepath);

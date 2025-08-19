@@ -134,6 +134,7 @@ namespace cassidy
     VkDevice m_device;
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
+    UploadContext m_uploadContext;
 
     // Pipelines:
     Pipeline m_helloTrianglePipeline;
@@ -146,7 +147,6 @@ namespace cassidy
     Model* m_currentModel = nullptr;
     Model m_triangleMesh;
     Model m_backpackMesh;
-    UploadContext m_uploadContext;
 
     // Object data:
     glm::vec3 m_objectRotation = glm::vec3(0.0f);
@@ -199,8 +199,6 @@ namespace cassidy
     std::vector<VkFramebuffer>    m_viewportFramebuffers;
     std::vector<VkCommandBuffer>  m_viewportCommandBuffers;
     std::vector<VkDescriptorSet>  m_viewportDescSets;
-
-    VkRenderPass                  m_imguiRenderPass;
 
     // Misc.:
     DeletionQueue m_deletionQueue;

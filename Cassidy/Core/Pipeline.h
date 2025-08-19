@@ -12,27 +12,16 @@ namespace cassidy
   {
   public:
     Pipeline() {};
-    Pipeline(cassidy::Renderer* rendererh);
 
-    Pipeline& init(cassidy::Renderer* renderer);
+    Pipeline& init(cassidy::Renderer* rendererRef);
     void release();
 
     // Pipeline layout dependencies binding:
     Pipeline& addPushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
     Pipeline& addDescriptorSetLayout(VkDescriptorSetLayout setLayout);
     Pipeline& setRenderPass(VkRenderPass renderPass);
-
+    
     void buildGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath);
-
-    SpirvShaderCode loadSpirv(const std::string& filepath);
-
-    enum class ShaderType
-    {
-      VERTEX    = 0,
-      FRAGMENT  = 1,
-      COMPUTE   = 2,
-      GEOMETRY  = 3,
-    };
 
     // Getters/setters: ------------------------------------------------------------------------------------------
     VkPipeline        getGraphicsPipeline() const  { return m_graphicsPipeline; }
@@ -40,7 +29,7 @@ namespace cassidy
     VkRenderPass      getRenderPass()       const  { return m_renderPass; }
 
   private:
-    void initRenderPass();
+    SpirvShaderCode loadSpirv(const std::string& filepath);
 
     VkPipeline m_graphicsPipeline;
     VkPipelineLayout m_pipelineLayout;

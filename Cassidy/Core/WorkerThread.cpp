@@ -33,13 +33,6 @@ void WorkerThread::tryAcquireJob()
 	while (m_isRunning)
 	{
 		bool areBothQueuesEmpty = true;
-		/*
-			- Attempt to acquire a job if the job queue is empty
-			- Check high-priority queue first, if there are no high-
-				priority jobs then check low-priority job queue
-			- Shouldn't block other low- or high-priority jobs from
-				being added whilst a job is being executed
-		*/
 
 		if (!m_highPrioJobQueue.queue.empty())
 		{

@@ -7,11 +7,6 @@
 
 #include <fstream>
 
-cassidy::Pipeline::Pipeline(cassidy::Renderer* renderer)
-{
-  init(renderer);
-}
-
 cassidy::Pipeline& cassidy::Pipeline::init(cassidy::Renderer* renderer)
 {
   m_rendererRef = renderer;
@@ -145,39 +140,4 @@ SpirvShaderCode cassidy::Pipeline::loadSpirv(const std::string& filepath)
   file.close();
 
   return { fileSize, reinterpret_cast<uint32_t*>(buffer) };
-}
-
-void cassidy::Pipeline::initRenderPass()
-{
-  VkAttachmentDescription colourAttachment = cassidy::init::attachmentDescription(m_rendererRef->getSwapchain().imageFormat,
-    VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-  VkFormat depthFormatCandidates[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-  const VkFormat depthFormat = cassidy::helper::findSupportedFormat(m_rendererRef->getPhysicalDevice(), 3, depthFormatCandidates,
-    VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-  VkAttachmentDescription depthAttachment = cassidy::init::attachmentDescription(depthFormat, VK_SAMPLE_COUNT_1_BIT,
-    VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED,
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-  VkAttachmentReference colourAttachmentRef = cassidy::init::attachmentReference(0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-  VkAttachmentReference depthAttachmentRef = cassidy::init::attachmentReference(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-  VkSubpassDescription subpass = cassidy::init::subpassDescription(VK_PIPELINE_BIND_POINT_GRAPHICS, 1, 
-    &colourAttachmentRef, &depthAttachmentRef);
-
-  VkSubpassDependency dependency = cassidy::init::subpassDependency(VK_SUBPASS_EXTERNAL, 0, 
-    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 
-    VK_ACCESS_NONE,
-    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 
-    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
-
-  VkAttachmentDescription attachments[] = { colourAttachment, depthAttachment };
-
-  VkRenderPassCreateInfo renderPassInfo = cassidy::init::renderPassCreateInfo(2, attachments, 1, &subpass, 1, &dependency);
-
-  vkCreateRenderPass(m_rendererRef->getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass);
-
-  CS_LOG_INFO("Created pipeline render pass!");
 }
