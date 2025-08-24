@@ -651,23 +651,25 @@ void cassidy::Renderer::initEditorFramebuffers()
 void cassidy::Renderer::initPipelines()
 {
   CS_LOG_INFO("Creating pipelines...");
-  m_helloTrianglePipeline.init(this)
+
+  m_helloTrianglePipeline.setDebugName("helloTrianglePipeline");
+  m_viewportPipeline.setDebugName("viewportPipeline");
+
+  PipelineBuilder pipelineBuilder(this);
+  pipelineBuilder.addShaderStage(VK_SHADER_STAGE_VERTEX_BIT, "helloTriangleVert.spv")
+    .addShaderStage(VK_SHADER_STAGE_FRAGMENT_BIT, "phongLightingFrag.spv")
     .setRenderPass(m_editorRenderPass)
     .addDescriptorSetLayout(m_perPassSetLayout)
     .addDescriptorSetLayout(m_perObjectSetLayout)
     .addDescriptorSetLayout(m_perMaterialSetLayout)
-    .buildGraphicsPipeline("helloTriangleVert.spv", "phongLightingFrag.spv");
+    .buildGraphicsPipeline(m_helloTrianglePipeline);
 
-  m_viewportPipeline.init(this)
-    .setRenderPass(m_viewportRenderPass)
-    .addDescriptorSetLayout(m_perPassSetLayout)
-    .addDescriptorSetLayout(m_perObjectSetLayout)
-    .addDescriptorSetLayout(m_perMaterialSetLayout)
-    .buildGraphicsPipeline("helloTriangleVert.spv", "phongLightingFrag.spv");
+  pipelineBuilder.setRenderPass(m_viewportRenderPass)
+    .buildGraphicsPipeline(m_viewportPipeline);
 
   m_deletionQueue.addFunction([=]() {
-    m_helloTrianglePipeline.release();
-    m_viewportPipeline.release();
+    m_helloTrianglePipeline.release(m_device);
+    m_viewportPipeline.release(m_device);
   });
 }
 

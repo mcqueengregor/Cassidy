@@ -57,8 +57,6 @@ struct SpirvShaderCode
 {
   size_t codeSize;
   uint32_t* codeBuffer;
-
-  ~SpirvShaderCode() { delete[] codeBuffer; }
 };
 
 struct Vertex

@@ -11,17 +11,9 @@ namespace cassidy
   class Pipeline
   {
   public:
-    Pipeline() {};
+    Pipeline() : m_graphicsPipeline(VK_NULL_HANDLE), m_pipelineLayout(VK_NULL_HANDLE), m_debugName("") {};
+    void release(VkDevice device);
 
-    Pipeline& init(cassidy::Renderer* rendererRef, const std::string& debugName = std::string(""));
-    void release();
-
-    // Pipeline layout dependencies binding:
-    Pipeline& addPushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
-    Pipeline& addDescriptorSetLayout(VkDescriptorSetLayout setLayout);
-    Pipeline& setRenderPass(VkRenderPass renderPass);
-
-    void buildGraphicsPipeline(const std::string& vertexFilepath, const std::string& fragmentFilepath);
     void buildGraphicsPipeline(
       uint32_t numDescSetLayouts, VkDescriptorSetLayout* descSetLayouts,
       uint32_t numPushConstantRanges, VkPushConstantRange* pushConstantRanges,
@@ -34,35 +26,28 @@ namespace cassidy
       VkPipelineDepthStencilStateCreateInfo* depthStencilStateInfo,
       VkPipelineColorBlendAttachmentState* colourBlendAttachState,
       VkPipelineDynamicStateCreateInfo* dynamicStateInfo,
-      VkRenderPass* renderPass, uint32_t subpass,
+      VkRenderPass renderPass, uint32_t subpass,
       cassidy::Renderer* rendererRef);
 
     // Getters/setters: ------------------------------------------------------------------------------------------
     inline VkPipeline         getGraphicsPipeline()     const { return m_graphicsPipeline; }
     inline VkPipelineLayout   getLayout()               const { return m_pipelineLayout; }
-    inline VkRenderPass       getRenderPass()           const { return m_renderPass; }
     inline std::string_view   getDebugName()            const { return m_debugName; }
 
-  private:
-    SpirvShaderCode loadSpirv(const std::string& filepath);
+    void setDebugName(const std::string& name) { m_debugName = name; }
 
+  private:
     VkPipeline m_graphicsPipeline;
     VkPipelineLayout m_pipelineLayout;
-
-    VkRenderPass m_renderPass;
-
-    // Pipeline layout dependencies (push constant ranges, descriptor sets):
-    std::vector<VkPushConstantRange> m_pushConstantRanges;
-    std::vector<VkDescriptorSetLayout> m_descSetLayouts;
-
-    cassidy::Renderer* m_rendererRef;
     std::string m_debugName;
   };
 
   class PipelineBuilder
   {
   public:
-    PipelineBuilder(cassidy::Renderer* rendererRef) : m_rendererRef(rendererRef), m_currentRenderPass(VK_NULL_HANDLE) {}
+    PipelineBuilder(cassidy::Renderer* rendererRef) :
+      m_rendererRef(rendererRef), m_currentRenderPass(VK_NULL_HANDLE) { resetToDefaults(); }
+    ~PipelineBuilder();
 
     PipelineBuilder& setVertexInputStateInfo(VkPipelineVertexInputStateCreateInfo vertexInputStateInfo)         { m_vertexInputStateInfo = vertexInputStateInfo; return *this; }
     PipelineBuilder& setInputAssemblyStateInfo(VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo)   { m_inputAssemblyStateInfo = inputAssemblyStateInfo; return *this; }
@@ -72,7 +57,7 @@ namespace cassidy
     PipelineBuilder& setDepthStencilState(VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo)          { m_depthStencilStateInfo = depthStencilStateInfo; return *this; }
 
     PipelineBuilder& addShaderStage(VkShaderStageFlagBits stage, const std::string& filepath);
-    PipelineBuilder& addDescSetLayout(VkDescriptorSetLayout descSetLayout) { m_descSetLayouts.push_back(descSetLayout); return *this; }
+    PipelineBuilder& addDescriptorSetLayout(VkDescriptorSetLayout descSetLayout) { m_descSetLayouts.push_back(descSetLayout); return *this; }
     PipelineBuilder& addPushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
     PipelineBuilder& setRenderPass(VkRenderPass renderPass) { m_currentRenderPass = renderPass; return *this; }
 
