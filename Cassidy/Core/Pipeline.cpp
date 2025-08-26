@@ -13,7 +13,7 @@ void cassidy::Pipeline::release(VkDevice device)
   vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
 }
 
-void cassidy::Pipeline::buildGraphicsPipeline(
+void cassidy::GraphicsPipeline::buildGraphicsPipeline(
   uint32_t numDescSetLayouts, VkDescriptorSetLayout* descSetLayouts, 
   uint32_t numPushConstantRanges, VkPushConstantRange* pushConstantRanges, 
   uint32_t numShaderStages, VkPipelineShaderStageCreateInfo* shaderStages, 
@@ -42,7 +42,26 @@ void cassidy::Pipeline::buildGraphicsPipeline(
     &colourBlendState, dynamicStateInfo,
     m_pipelineLayout, renderPass, 0);
 
-  vkCreateGraphicsPipelines(rendererRef->getLogicalDevice(), VK_NULL_HANDLE, 1, &graphicsPipelineInfo, nullptr, &m_graphicsPipeline);
+  vkCreateGraphicsPipelines(rendererRef->getLogicalDevice(), VK_NULL_HANDLE, 1, &graphicsPipelineInfo, nullptr, &m_pipeline);
+}
+
+void cassidy::ComputePipeline::buildComputePipeline(
+  uint32_t numDescSetLayouts, VkDescriptorSetLayout* descSetLayouts, 
+  uint32_t numPushConstantRanges, VkPushConstantRange* pushConstantRanges, 
+  VkPipelineShaderStageCreateInfo* computeShaderStage, 
+  cassidy::Renderer* rendererRef)
+{
+  CS_LOG_INFO("Building compute pipeline ({0})...", m_debugName);
+
+  VkPipelineLayoutCreateInfo pipelineLayoutInfo = cassidy::init::pipelineLayoutCreateInfo(
+    numDescSetLayouts, descSetLayouts, numPushConstantRanges, pushConstantRanges);
+
+  vkCreatePipelineLayout(rendererRef->getLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
+
+  VkComputePipelineCreateInfo computePipelineInfo = cassidy::init::computePipelineCreateInfo(
+    computeShaderStage, m_pipelineLayout);
+
+  vkCreateComputePipelines(rendererRef->getLogicalDevice(), VK_NULL_HANDLE, 1, &computePipelineInfo, nullptr, &m_pipeline);
 }
 
 cassidy::PipelineBuilder::~PipelineBuilder()
@@ -53,13 +72,30 @@ cassidy::PipelineBuilder::~PipelineBuilder()
 
 cassidy::PipelineBuilder& cassidy::PipelineBuilder::addShaderStage(VkShaderStageFlagBits stage, const std::string& filepath)
 {
-  // Remove existing shader stage code if 
+  const char* stageName = "";
+  switch (stage)
+  {
+  case VK_SHADER_STAGE_VERTEX_BIT:
+    stageName = "VERTEX";
+    break;
+  case VK_SHADER_STAGE_FRAGMENT_BIT:
+    stageName = "FRAGMENT";
+    break;
+  case VK_SHADER_STAGE_COMPUTE_BIT:
+    stageName = "COMPUTE";
+    break;
+  }
+
+  // Remove existing shader stage code if one already exists:
   if (m_shaderStages.find(stage) != m_shaderStages.end())
-    m_shaderStages.erase(stage);
+    delete[] m_shaderStages[stage].codeBuffer;
 
   SpirvShaderCode shaderCode = loadSpirv(SHADER_ABS_FILEPATH + filepath);
   if (shaderCode.codeBuffer)
+  {
     m_shaderStages[stage] = shaderCode;
+    CS_LOG_INFO("Updated pipeline builder shader stage ({0}: {1}", stageName, filepath);
+  }
 
   return *this;
 }
@@ -70,12 +106,12 @@ cassidy::PipelineBuilder& cassidy::PipelineBuilder::addPushConstantRange(VkShade
   return *this;
 }
 
-bool cassidy::PipelineBuilder::buildGraphicsPipeline(Pipeline& pipeline)
+bool cassidy::PipelineBuilder::buildGraphicsPipeline(GraphicsPipeline& pipeline)
 {
   bool wasBuildSuccessful = true;
   const std::string_view name = pipeline.getDebugName();
 
-  if (m_shaderStages.find(VK_SHADER_STAGE_VERTEX_BIT) == m_shaderStages.end()) 
+  if (m_shaderStages.find(VK_SHADER_STAGE_VERTEX_BIT) == m_shaderStages.end())
   {
     CS_LOG_ERROR("Pipeline \"{0}\" doesn't possess a vertex shader stage module!", name);
     wasBuildSuccessful = false;
@@ -93,62 +129,91 @@ bool cassidy::PipelineBuilder::buildGraphicsPipeline(Pipeline& pipeline)
     wasBuildSuccessful = false;
   }
 
-  if (wasBuildSuccessful)
+  if (!wasBuildSuccessful) return false;
+
+  VkShaderModuleCreateInfo vertexModuleInfo = cassidy::init::shaderModuleCreateInfo(m_shaderStages.at(VK_SHADER_STAGE_VERTEX_BIT));
+  VkShaderModuleCreateInfo fragmentModuleInfo = cassidy::init::shaderModuleCreateInfo(m_shaderStages.at(VK_SHADER_STAGE_FRAGMENT_BIT));
+
+  VkShaderModule vertexModule;
+  VkShaderModule fragmentModule;
+
+  vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &vertexModuleInfo, nullptr, &vertexModule);
+  vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &fragmentModuleInfo, nullptr, &fragmentModule);
+
+  VkPipelineShaderStageCreateInfo shaderStages[] = {
+    cassidy::init::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexModule),
+    cassidy::init::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentModule),
+  };
+
+  VkViewport viewport = {
+    .x = 0.0f,
+    .y = 0.0f,
+    .width = static_cast<float>(m_rendererRef->getSwapchain().extent.width),
+    .height = static_cast<float>(m_rendererRef->getSwapchain().extent.height),
+    .minDepth = 0.0f,
+    .maxDepth = 1.0f,
+  };
+
+  VkRect2D scissor = {
+    .offset = { 0, 0 },
+    .extent = m_rendererRef->getSwapchain().extent,
+  };
+
+  VkPipelineViewportStateCreateInfo viewportInfo = cassidy::init::pipelineViewportStateCreateInfo(1, &viewport, 1, &scissor);
+
+  VkPipelineDynamicStateCreateInfo dynamicStateInfo = cassidy::init::pipelineDynamicStateCreateinfo(
+    static_cast<uint32_t>(cassidy::Renderer::DYNAMIC_STATES.size()), cassidy::Renderer::DYNAMIC_STATES.data());
+
+  auto bindingDescription = Vertex::getBindingDesc();
+  auto attributeDescriptions = Vertex::getAttributeDescs();
+
+  m_vertexInputStateInfo = cassidy::init::pipelineVertexInputStateCreateInfo(
+    1, &bindingDescription, static_cast<uint32_t>(attributeDescriptions.size()), attributeDescriptions.data());
+
+  pipeline.buildGraphicsPipeline(
+    static_cast<uint32_t>(m_descSetLayouts.size()), m_descSetLayouts.data(),
+    static_cast<uint32_t>(m_pushConstantRanges.size()), m_pushConstantRanges.data(),
+    2, shaderStages,
+    &m_vertexInputStateInfo, &m_inputAssemblyStateInfo,
+    &viewportInfo, &m_rasterisationStateInfo,
+    &m_multisampleStateInfo, &m_depthStencilStateInfo,
+    &m_colourBlendAttachState, &dynamicStateInfo,
+    m_currentRenderPass, 0, m_rendererRef);
+
+  vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), vertexModule, nullptr);
+  vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), fragmentModule, nullptr);
+
+  return true;
+}
+
+bool cassidy::PipelineBuilder::buildComputePipeline(ComputePipeline& pipeline)
+{
+  bool wasBuildSuccessful = true;
+  const std::string_view name = pipeline.getDebugName();
+
+  if (m_shaderStages.find(VK_SHADER_STAGE_COMPUTE_BIT) == m_shaderStages.end())
   {
-    VkShaderModuleCreateInfo vertexModuleInfo = cassidy::init::shaderModuleCreateInfo(m_shaderStages.at(VK_SHADER_STAGE_VERTEX_BIT));
-    VkShaderModuleCreateInfo fragmentModuleInfo = cassidy::init::shaderModuleCreateInfo(m_shaderStages.at(VK_SHADER_STAGE_FRAGMENT_BIT));
-
-    VkShaderModule vertexModule;
-    VkShaderModule fragmentModule;
-
-    vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &vertexModuleInfo, nullptr, &vertexModule);
-    vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &fragmentModuleInfo, nullptr, &fragmentModule);
-
-    VkPipelineShaderStageCreateInfo shaderStages[] = {
-      cassidy::init::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexModule),
-      cassidy::init::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentModule),
-    };
-
-    VkViewport viewport = {
-      .x = 0.0f,
-      .y = 0.0f,
-      .width = static_cast<float>(m_rendererRef->getSwapchain().extent.width),
-      .height = static_cast<float>(m_rendererRef->getSwapchain().extent.height),
-      .minDepth = 0.0f,
-      .maxDepth = 1.0f,
-    };
-
-    VkRect2D scissor = {
-      .offset = { 0, 0 },
-      .extent = m_rendererRef->getSwapchain().extent,
-    };
-
-    VkPipelineViewportStateCreateInfo viewportInfo = cassidy::init::pipelineViewportStateCreateInfo(1, &viewport, 1, &scissor);
-
-    VkPipelineDynamicStateCreateInfo dynamicStateInfo = cassidy::init::pipelineDynamicStateCreateinfo(
-      static_cast<uint32_t>(cassidy::Renderer::DYNAMIC_STATES.size()), cassidy::Renderer::DYNAMIC_STATES.data());
-
-    auto bindingDescription = Vertex::getBindingDesc();
-    auto attributeDescriptions = Vertex::getAttributeDescs();
-
-    m_vertexInputStateInfo = cassidy::init::pipelineVertexInputStateCreateInfo(
-      1, &bindingDescription, static_cast<uint32_t>(attributeDescriptions.size()), attributeDescriptions.data());
-
-    pipeline.buildGraphicsPipeline(
-      static_cast<uint32_t>(m_descSetLayouts.size()), m_descSetLayouts.data(),
-      static_cast<uint32_t>(m_pushConstantRanges.size()), m_pushConstantRanges.data(),
-      2, shaderStages,
-      &m_vertexInputStateInfo, &m_inputAssemblyStateInfo,
-      &viewportInfo, &m_rasterisationStateInfo,
-      &m_multisampleStateInfo, &m_depthStencilStateInfo,
-      &m_colourBlendAttachState, &dynamicStateInfo,
-      m_currentRenderPass, 0, m_rendererRef);
-
-    vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), vertexModule, nullptr);
-    vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), fragmentModule, nullptr);
+    CS_LOG_ERROR("Pipeline \"{0}\" doesn't possess a compute shader stage module!", name);
+    wasBuildSuccessful = false;
   }
 
-  return wasBuildSuccessful;
+  if (!wasBuildSuccessful) return false;
+
+  VkShaderModuleCreateInfo computeModuleInfo = cassidy::init::shaderModuleCreateInfo(m_shaderStages.at(VK_SHADER_STAGE_COMPUTE_BIT));
+
+  VkShaderModule computeModule;
+
+  vkCreateShaderModule(m_rendererRef->getLogicalDevice(), &computeModuleInfo, nullptr, &computeModule);
+
+  VkPipelineShaderStageCreateInfo stageInfo = cassidy::init::pipelineShaderStageCreateInfo(
+    VK_SHADER_STAGE_COMPUTE_BIT, computeModule);
+
+  pipeline.buildComputePipeline(
+    static_cast<uint32_t>(m_descSetLayouts.size()), m_descSetLayouts.data(),
+    static_cast<uint32_t>(m_pushConstantRanges.size()), m_pushConstantRanges.data(),
+    &stageInfo, m_rendererRef);
+
+  return true;
 }
 
 cassidy::PipelineBuilder& cassidy::PipelineBuilder::resetToDefaults()

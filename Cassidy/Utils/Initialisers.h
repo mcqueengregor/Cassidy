@@ -173,6 +173,10 @@ namespace cassidy::init
     VkRenderPass renderPass,
     uint32_t subpass
   );
+  VkComputePipelineCreateInfo computePipelineCreateInfo(
+    VkPipelineShaderStageCreateInfo* computeShaderStage,
+    VkPipelineLayout pipelineLayout
+  );
 
   // Push constant range:
   VkPushConstantRange pushConstantRange(

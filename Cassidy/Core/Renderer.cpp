@@ -31,8 +31,9 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initCommandBuffers();
   initResourceManager();
   initSwapchain();
-  initEditorResources();
   transitionSwapchainImages();
+  initEditorResources();
+  initPostProcessResources();
   initDescriptorSets();
   initImGui();
   initPipelines();
@@ -131,6 +132,62 @@ void cassidy::Renderer::updateBuffers(const FrameData& currentFrameData)
   memcpy(perObjectDataPtr, &perObjectData, sizeof(PerObjectData));
   vmaUnmapMemory(allocator, m_perObjectUniformBufferDynamic.allocation);
 }
+ 
+void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
+{
+  const VkCommandBuffer& cmd = m_viewportCommandBuffers[m_currentFrameIndex];
+
+  VK_CHECK(vkResetCommandBuffer(cmd, 0));
+
+  VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
+  vkBeginCommandBuffer(cmd, &beginInfo);
+
+  VkClearValue clearValues[2];
+  clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
+  clearValues[1].depthStencil = { 1.0f, 0 };
+
+  VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_viewportRenderPass,
+    m_viewportFramebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
+
+  vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+  {
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getPipeline());
+
+    VkViewport viewport = cassidy::init::viewport(0.0f, 0.0f, m_swapchain.extent.width, m_swapchain.extent.height);
+    vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+    VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, m_swapchain.extent);
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+    // Bind per-pass descriptor set to slot 0:
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
+      0, 1, &getCurrentFrameData().perPassSet, 0, nullptr);
+
+    // Bind per-object dynamic descriptor set to slot 1:
+    const uint32_t dynamicUniformOffset = m_currentFrameIndex * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData), m_physicalDeviceProperties);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
+      1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
+    
+    if (!m_currentModel)
+    {
+      constexpr ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
+      modelManager.getModel("Helmet/DamagedHelmet.gltf")->draw(cmd, &m_viewportPipeline);
+    }
+    else
+      m_currentModel->draw(cmd, &m_viewportPipeline);
+  }
+  vkCmdEndRenderPass(cmd);
+
+  // Record post process dispatch commands:
+  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_gammaCorrectPipeline.getPipeline());
+
+  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_gammaCorrectPipeline.getLayout(),
+    0, 1, )
+
+  vkCmdDispatch(cmd, )
+
+  VK_CHECK(vkEndCommandBuffer(cmd));
+}
 
 void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
 {
@@ -196,54 +253,6 @@ void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
     VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
     1);
 
-  VK_CHECK(vkEndCommandBuffer(cmd));
-}
- 
-void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
-{
-  const VkCommandBuffer& cmd = m_viewportCommandBuffers[m_currentFrameIndex];
-
-  VK_CHECK(vkResetCommandBuffer(cmd, 0));
-
-  VkCommandBufferBeginInfo beginInfo = cassidy::init::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
-  vkBeginCommandBuffer(cmd, &beginInfo);
-
-  VkClearValue clearValues[2];
-  clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
-  clearValues[1].depthStencil = { 1.0f, 0 };
-
-  VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_viewportRenderPass,
-    m_viewportFramebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
-
-  vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-  {
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getGraphicsPipeline());
-
-    VkViewport viewport = cassidy::init::viewport(0.0f, 0.0f, m_swapchain.extent.width, m_swapchain.extent.height);
-    vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-    VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, m_swapchain.extent);
-    vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-    // Bind per-pass descriptor set to slot 0:
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
-      0, 1, &getCurrentFrameData().perPassSet, 0, nullptr);
-
-    // Bind per-object dynamic descriptor set to slot 1:
-    const uint32_t dynamicUniformOffset = m_currentFrameIndex * cassidy::helper::padUniformBufferSize(sizeof(PerObjectData), m_physicalDeviceProperties);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getLayout(),
-      1, 1, &getCurrentFrameData().perObjectSet, 1, &dynamicUniformOffset);
-    
-    if (!m_currentModel)
-    {
-      constexpr ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
-      modelManager.getModel("Helmet/DamagedHelmet.gltf")->draw(cmd, &m_viewportPipeline);
-    }
-    else
-      m_currentModel->draw(cmd, &m_viewportPipeline);
-  }
-
-  vkCmdEndRenderPass(cmd);
   VK_CHECK(vkEndCommandBuffer(cmd));
 }
 
@@ -654,6 +663,7 @@ void cassidy::Renderer::initPipelines()
 
   m_helloTrianglePipeline.setDebugName("helloTrianglePipeline");
   m_viewportPipeline.setDebugName("viewportPipeline");
+  m_gammaCorrectPipeline.setDebugName("gammaCorrectPipeline");
 
   PipelineBuilder pipelineBuilder(this);
   pipelineBuilder.addShaderStage(VK_SHADER_STAGE_VERTEX_BIT, "helloTriangleVert.spv")
@@ -667,9 +677,14 @@ void cassidy::Renderer::initPipelines()
   pipelineBuilder.setRenderPass(m_viewportRenderPass)
     .buildGraphicsPipeline(m_viewportPipeline);
 
+  pipelineBuilder.resetToDefaults()
+    .addShaderStage(VK_SHADER_STAGE_COMPUTE_BIT, "gammaCorrectComp.spv")
+    .buildComputePipeline(m_gammaCorrectPipeline);
+
   m_deletionQueue.addFunction([=]() {
     m_helloTrianglePipeline.release(m_device);
     m_viewportPipeline.release(m_device);
+    m_gammaCorrectPipeline.release(m_device);
   });
 }
 
@@ -796,6 +811,8 @@ void cassidy::Renderer::initDescriptorSets()
 
   VkDescriptorSetLayoutCreateInfo materialLayoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(NUM_BINDINGS, bindings);
   m_perMaterialSetLayout = cassidy::globals::g_descLayoutCache.createDescLayout(&materialLayoutInfo);
+
+  VkDescriptorSetLayoutCreateInfo postProcessLayoutInfo = cassidy::init::descriptorSetLayoutCreateInfo()
 
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
@@ -1217,6 +1234,40 @@ void cassidy::Renderer::initViewportFramebuffers()
     VK_CHECK(vkCreateFramebuffer(m_device, &info, nullptr, &m_viewportFramebuffers[i]));
   }
   CS_LOG_INFO("Created viewport framebuffers!");
+}
+
+void cassidy::Renderer::initPostProcessResources()
+{
+  initPostProcessImages();
+  initPostProcessRenderPass();
+  initPostProcessFramebuffers();
+  initPostProcessPipelines();
+
+  m_deletionQueue.addFunction([=]() {
+
+    });
+}
+
+void cassidy::Renderer::initPostProcessImages()
+{
+
+}
+
+void cassidy::Renderer::initPostProcessRenderPass()
+{
+}
+
+void cassidy::Renderer::initPostProcessFramebuffers()
+{
+}
+
+void cassidy::Renderer::initPostProcessDescSets()
+{
+
+}
+
+void cassidy::Renderer::initPostProcessPipelines()
+{
 }
 
 void cassidy::Renderer::transitionSwapchainImages()

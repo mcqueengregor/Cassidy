@@ -11,9 +11,25 @@ namespace cassidy
   class Pipeline
   {
   public:
-    Pipeline() : m_graphicsPipeline(VK_NULL_HANDLE), m_pipelineLayout(VK_NULL_HANDLE), m_debugName("") {};
+    Pipeline() : m_pipeline(VK_NULL_HANDLE), m_pipelineLayout(VK_NULL_HANDLE), m_debugName("") {}
     void release(VkDevice device);
 
+    // Getters/setters: ------------------------------------------------------------------------------------------
+    inline VkPipeline         getPipeline()     const { return m_pipeline; }
+    inline VkPipelineLayout   getLayout()               const { return m_pipelineLayout; }
+    inline std::string_view   getDebugName()            const { return m_debugName; }
+
+    void setDebugName(const std::string& name) { m_debugName = name; }
+
+  protected:
+    VkPipeline m_pipeline;
+    VkPipelineLayout m_pipelineLayout;
+    std::string m_debugName;
+  };
+
+  class GraphicsPipeline : public Pipeline
+  {
+  public:
     void buildGraphicsPipeline(
       uint32_t numDescSetLayouts, VkDescriptorSetLayout* descSetLayouts,
       uint32_t numPushConstantRanges, VkPushConstantRange* pushConstantRanges,
@@ -29,17 +45,21 @@ namespace cassidy
       VkRenderPass renderPass, uint32_t subpass,
       cassidy::Renderer* rendererRef);
 
-    // Getters/setters: ------------------------------------------------------------------------------------------
-    inline VkPipeline         getGraphicsPipeline()     const { return m_graphicsPipeline; }
-    inline VkPipelineLayout   getLayout()               const { return m_pipelineLayout; }
-    inline std::string_view   getDebugName()            const { return m_debugName; }
+  private:
 
-    void setDebugName(const std::string& name) { m_debugName = name; }
+  };
+
+  class ComputePipeline : public Pipeline
+  {
+  public:
+    void buildComputePipeline(
+      uint32_t numDescSetLayouts, VkDescriptorSetLayout* descSetLayouts,
+      uint32_t numPushConstantRanges, VkPushConstantRange* pushConstantRanges,
+      VkPipelineShaderStageCreateInfo* computeShaderStage,
+      cassidy::Renderer* rendererRef);
 
   private:
-    VkPipeline m_graphicsPipeline;
-    VkPipelineLayout m_pipelineLayout;
-    std::string m_debugName;
+
   };
 
   class PipelineBuilder
@@ -61,7 +81,8 @@ namespace cassidy
     PipelineBuilder& addPushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
     PipelineBuilder& setRenderPass(VkRenderPass renderPass) { m_currentRenderPass = renderPass; return *this; }
 
-    bool buildGraphicsPipeline(Pipeline& pipeline);
+    bool buildGraphicsPipeline(GraphicsPipeline& pipeline);
+    bool buildComputePipeline(ComputePipeline& pipeline);
 
     PipelineBuilder& resetToDefaults();
 

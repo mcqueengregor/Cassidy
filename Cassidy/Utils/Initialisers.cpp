@@ -408,6 +408,15 @@ VkGraphicsPipelineCreateInfo cassidy::init::graphicsPipelineCreateInfo(uint32_t 
   return info;
 }
 
+VkComputePipelineCreateInfo cassidy::init::computePipelineCreateInfo(VkPipelineShaderStageCreateInfo* computeShaderStage, VkPipelineLayout pipelineLayout)
+{
+  VkComputePipelineCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+  info.stage = *computeShaderStage;
+  
+  return info;
+}
+
 VkPushConstantRange cassidy::init::pushConstantRange(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size)
 {
   VkPushConstantRange range = {};

@@ -84,8 +84,8 @@ namespace cassidy
 
   private:
     void updateBuffers(const FrameData& currentFrameData);
-    void recordEditorCommands(uint32_t imageIndex);
-    void recordViewportCommands(uint32_t imageIndex);
+    void recordViewportCommands(uint32_t imageIndex); // Record model rendering and post processing commands
+    void recordEditorCommands(uint32_t imageIndex);   // Record ImGui and swapchain blit commands
     void submitCommandBuffers(uint32_t imageIndex);
 
     AllocatedBuffer allocateVertexBuffer(const std::vector<Vertex>& vertices);
@@ -119,6 +119,13 @@ namespace cassidy
     void initViewportCommandBuffers();
     void initViewportFramebuffers();
 
+    void initPostProcessResources();
+    void initPostProcessImages();
+    void initPostProcessRenderPass();
+    void initPostProcessFramebuffers();
+    void initPostProcessDescSets();
+    void initPostProcessPipelines();
+
     void transitionSwapchainImages();
 
     VmaAllocator getVmaAllocator();
@@ -137,7 +144,8 @@ namespace cassidy
     UploadContext m_uploadContext;
 
     // Pipelines:
-    Pipeline m_helloTrianglePipeline;
+    GraphicsPipeline m_helloTrianglePipeline;
+    ComputePipeline m_gammaCorrectPipeline;
 
     // Rendering data (buffers and descriptor sets):
     FrameData m_frameData[FRAMES_IN_FLIGHT];
@@ -193,7 +201,7 @@ namespace cassidy
     // Viewport rendering objects:
     std::vector<AllocatedImage>   m_viewportImages;
     AllocatedImage                m_viewportDepthImage;
-    Pipeline                      m_viewportPipeline;
+    GraphicsPipeline              m_viewportPipeline;
     VkRenderPass                  m_viewportRenderPass;
     VkCommandPool                 m_viewportCommandPool;
     std::vector<VkFramebuffer>    m_viewportFramebuffers;
