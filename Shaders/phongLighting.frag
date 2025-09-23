@@ -62,6 +62,7 @@ void main()
 	}
 
 	lighting *= albedoColour;
-	
-	outColour = vec4(pow(lighting.rgb, vec3(1.0 / 2.2)), 1.0);
+	vec3 gammaCorrect = pow(lighting, vec3(1.0 / 2.2));	
+
+	outColour = vec4(lighting, 1.0);
 }

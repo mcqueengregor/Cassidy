@@ -27,6 +27,8 @@ namespace cassidy {
 
 		void recordCommands(VkCommandBuffer cmd, uint32_t frameIndex);
 
+		const PostProcessResources& get(size_t index) { return m_postProcessStack[index]; }
+
 	private:
 		std::vector<PostProcessResources> m_postProcessStack;
 		cassidy::Renderer* m_rendererRef;

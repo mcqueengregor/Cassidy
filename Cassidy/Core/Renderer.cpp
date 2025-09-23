@@ -43,6 +43,7 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
 
   m_currentFrameIndex = 0;
   m_swapchainImageIndex = 0;
+  m_currentFrame = 0;
 }
 
 void cassidy::Renderer::draw()
@@ -73,6 +74,7 @@ void cassidy::Renderer::draw()
   submitCommandBuffers(m_swapchainImageIndex);
 
   m_currentFrameIndex = (m_currentFrameIndex + 1) % FRAMES_IN_FLIGHT;
+  ++m_currentFrame;
 }
 
 void cassidy::Renderer::release()
@@ -142,7 +144,7 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
   vkBeginCommandBuffer(cmd, &beginInfo);
 
   VkClearValue clearValues[2];
-  clearValues[0].color = { 0.2f, 0.3f, 0.3f, 1.0f };
+  clearValues[0].color = { std::powf(0.2f, 2.2f), std::powf(0.3f, 2.2f), std::powf(0.3f, 2.2f), 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_viewportRenderPass,
@@ -177,22 +179,8 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
   }
   vkCmdEndRenderPass(cmd);
   
-  cassidy::helper::transitionImageLayout(cmd,
-    m_viewportImages[imageIndex].image, m_swapchain.imageFormat,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
-    VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-    1);
-
   // Record post process dispatch commands:
   m_postProcessStack.recordCommands(cmd, m_currentFrameIndex);
-
-  cassidy::helper::transitionImageLayout(cmd,
-    m_viewportImages[imageIndex].image, m_swapchain.imageFormat,
-    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-    1);
 
   VK_CHECK(vkEndCommandBuffer(cmd));
 }
@@ -965,7 +953,7 @@ void cassidy::Renderer::initImGui()
 
   // Create sampler used for swapchain image in viewport:
   m_viewportSampler = cassidy::helper::createTextureSampler(m_device, m_physicalDeviceProperties,
-    VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_FALSE);
+    VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_FALSE);
 
   initViewportCommandPool();
   initViewportCommandBuffers();
@@ -1259,16 +1247,25 @@ void cassidy::Renderer::initPostProcessResources()
     {
       res.resultsImages[j] = createPostProcessImage();
 
-      VkDescriptorImageInfo viewportImageInfo = cassidy::init::descriptorImageInfo(
+      VkDescriptorImageInfo resultsImageInfo = cassidy::init::descriptorImageInfo(
         VK_IMAGE_LAYOUT_GENERAL, res.resultsImages[j].view, cassidy::globals::m_linearTextureSampler);
+      VkDescriptorImageInfo viewportImageInfo = cassidy::init::descriptorImageInfo(
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_viewportImages[j].view, cassidy::globals::m_linearTextureSampler);
 
       cassidy::DescriptorBuilder::begin(&alloc, &cache)
-        .bindImage(0, &viewportImageInfo, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT)
+        .bindImage(0, &resultsImageInfo, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT)
+        .bindImage(1, &viewportImageInfo, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT)
         .build(res.descriptorSets[j]);
     }
     res.pipeline = pipelines[i];
 
     m_postProcessStack.push(res);
+  }
+
+  for (uint32_t i = 0; i < m_viewportDescSets.size(); ++i)
+  {
+    m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
+      m_postProcessStack.get(0).resultsImages[i].view, VK_IMAGE_LAYOUT_GENERAL);
   }
 
   m_deletionQueue.addFunction([=]() {
@@ -1342,9 +1339,17 @@ void cassidy::Renderer::initPostProcessPipelines()
 {
   constexpr DescriptorLayoutCache& cache = cassidy::globals::g_descLayoutCache;
 
-  VkDescriptorSetLayoutBinding binding = cassidy::init::descriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, 
+  VkDescriptorSetLayoutBinding resultsImageBinding = cassidy::init::descriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1,
     VK_SHADER_STAGE_COMPUTE_BIT, &cassidy::globals::m_linearTextureSampler);
-  VkDescriptorSetLayoutCreateInfo layoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(1, &binding);
+  VkDescriptorSetLayoutBinding viewportImageBinding = cassidy::init::descriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+    VK_SHADER_STAGE_COMPUTE_BIT, &cassidy::globals::m_linearTextureSampler);
+
+  VkDescriptorSetLayoutBinding bindings[] = {
+    resultsImageBinding,
+    viewportImageBinding,
+  };
+
+  VkDescriptorSetLayoutCreateInfo layoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(2, bindings);
 
   VkDescriptorSetLayout gammaCorrectLayout = cache.createDescLayout(&layoutInfo);
 

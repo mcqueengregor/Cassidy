@@ -214,6 +214,7 @@ namespace cassidy
     DeletionQueue m_deletionQueue;
     uint32_t m_currentFrameIndex;
     uint32_t m_swapchainImageIndex;
+    uint64_t m_currentFrame;
     VkPhysicalDeviceProperties m_physicalDeviceProperties;
   };
 }
