@@ -413,6 +413,7 @@ VkComputePipelineCreateInfo cassidy::init::computePipelineCreateInfo(VkPipelineS
   VkComputePipelineCreateInfo info = {};
   info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
   info.stage = *computeShaderStage;
+  info.layout = pipelineLayout;
   
   return info;
 }

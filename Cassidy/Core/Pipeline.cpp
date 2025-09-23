@@ -9,7 +9,7 @@
 
 void cassidy::Pipeline::release(VkDevice device)
 {
-  vkDestroyPipeline(device, m_graphicsPipeline, nullptr);
+  vkDestroyPipeline(device, m_pipeline, nullptr);
   vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
 }
 
@@ -94,7 +94,7 @@ cassidy::PipelineBuilder& cassidy::PipelineBuilder::addShaderStage(VkShaderStage
   if (shaderCode.codeBuffer)
   {
     m_shaderStages[stage] = shaderCode;
-    CS_LOG_INFO("Updated pipeline builder shader stage ({0}: {1}", stageName, filepath);
+    CS_LOG_INFO("Updated pipeline builder shader stage ({0}: {1})", stageName, filepath);
   }
 
   return *this;
@@ -212,6 +212,8 @@ bool cassidy::PipelineBuilder::buildComputePipeline(ComputePipeline& pipeline)
     static_cast<uint32_t>(m_descSetLayouts.size()), m_descSetLayouts.data(),
     static_cast<uint32_t>(m_pushConstantRanges.size()), m_pushConstantRanges.data(),
     &stageInfo, m_rendererRef);
+
+  vkDestroyShaderModule(m_rendererRef->getLogicalDevice(), computeModule, nullptr);
 
   return true;
 }

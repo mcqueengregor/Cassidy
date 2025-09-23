@@ -33,9 +33,9 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
   initSwapchain();
   transitionSwapchainImages();
   initEditorResources();
-  initPostProcessResources();
   initDescriptorSets();
   initImGui();
+  initPostProcessResources();
   initPipelines();
   initSwapchainFramebuffers();  // (swapchain framebuffers are dependent on back buffer pipeline's render pass)
   initVertexBuffers();
@@ -48,7 +48,6 @@ void cassidy::Renderer::init(cassidy::Engine* engine)
 void cassidy::Renderer::draw()
 {
   vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrameIndex], VK_TRUE, UINT64_MAX);
-
   {
     const VkResult acquireImageResult = vkAcquireNextImageKHR(m_device, m_swapchain.swapchain, UINT64_MAX,
       m_imageAvailableSemaphores[m_currentFrameIndex], VK_NULL_HANDLE, &m_swapchainImageIndex);
@@ -177,14 +176,23 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
       m_currentModel->draw(cmd, &m_viewportPipeline);
   }
   vkCmdEndRenderPass(cmd);
+  
+  cassidy::helper::transitionImageLayout(cmd,
+    m_viewportImages[imageIndex].image, m_swapchain.imageFormat,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+    VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    1);
 
   // Record post process dispatch commands:
-  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_gammaCorrectPipeline.getPipeline());
+  m_postProcessStack.recordCommands(cmd, m_currentFrameIndex);
 
-  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_gammaCorrectPipeline.getLayout(),
-    0, 1, )
-
-  vkCmdDispatch(cmd, )
+  cassidy::helper::transitionImageLayout(cmd,
+    m_viewportImages[imageIndex].image, m_swapchain.imageFormat,
+    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    1);
 
   VK_CHECK(vkEndCommandBuffer(cmd));
 }
@@ -663,7 +671,6 @@ void cassidy::Renderer::initPipelines()
 
   m_helloTrianglePipeline.setDebugName("helloTrianglePipeline");
   m_viewportPipeline.setDebugName("viewportPipeline");
-  m_gammaCorrectPipeline.setDebugName("gammaCorrectPipeline");
 
   PipelineBuilder pipelineBuilder(this);
   pipelineBuilder.addShaderStage(VK_SHADER_STAGE_VERTEX_BIT, "helloTriangleVert.spv")
@@ -677,14 +684,9 @@ void cassidy::Renderer::initPipelines()
   pipelineBuilder.setRenderPass(m_viewportRenderPass)
     .buildGraphicsPipeline(m_viewportPipeline);
 
-  pipelineBuilder.resetToDefaults()
-    .addShaderStage(VK_SHADER_STAGE_COMPUTE_BIT, "gammaCorrectComp.spv")
-    .buildComputePipeline(m_gammaCorrectPipeline);
-
   m_deletionQueue.addFunction([=]() {
     m_helloTrianglePipeline.release(m_device);
     m_viewportPipeline.release(m_device);
-    m_gammaCorrectPipeline.release(m_device);
   });
 }
 
@@ -811,8 +813,6 @@ void cassidy::Renderer::initDescriptorSets()
 
   VkDescriptorSetLayoutCreateInfo materialLayoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(NUM_BINDINGS, bindings);
   m_perMaterialSetLayout = cassidy::globals::g_descLayoutCache.createDescLayout(&materialLayoutInfo);
-
-  VkDescriptorSetLayoutCreateInfo postProcessLayoutInfo = cassidy::init::descriptorSetLayoutCreateInfo()
 
   for (uint8_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
   {
@@ -1033,7 +1033,7 @@ void cassidy::Renderer::initViewportImages()
       .arrayLayers = 1,
       .samples = VK_SAMPLE_COUNT_1_BIT,
       .tiling = VK_IMAGE_TILING_OPTIMAL,
-      .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+      .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
@@ -1238,36 +1238,123 @@ void cassidy::Renderer::initViewportFramebuffers()
 
 void cassidy::Renderer::initPostProcessResources()
 {
-  initPostProcessImages();
-  initPostProcessRenderPass();
-  initPostProcessFramebuffers();
+  constexpr size_t NUM_DEFAULT_EFFECTS = 1;
+  constexpr DescriptorAllocator& alloc = cassidy::globals::g_descAllocator;
+  constexpr DescriptorLayoutCache& cache = cassidy::globals::g_descLayoutCache;
+  m_postProcessStack.init(NUM_DEFAULT_EFFECTS, this);
+
   initPostProcessPipelines();
 
-  m_deletionQueue.addFunction([=]() {
+  const cassidy::ComputePipeline pipelines[NUM_DEFAULT_EFFECTS] = {
+    m_gammaCorrectPipeline,
+  };
 
+  for (size_t i = 0; i < NUM_DEFAULT_EFFECTS; ++i)
+  {
+    PostProcessResources res = {};
+    res.resultsImages.resize(m_swapchain.images.size());
+    res.descriptorSets.resize(m_swapchain.images.size());
+
+    for (uint8_t j = 0; j < m_swapchain.images.size(); ++j)
+    {
+      res.resultsImages[j] = createPostProcessImage();
+
+      VkDescriptorImageInfo viewportImageInfo = cassidy::init::descriptorImageInfo(
+        VK_IMAGE_LAYOUT_GENERAL, res.resultsImages[j].view, cassidy::globals::m_linearTextureSampler);
+
+      cassidy::DescriptorBuilder::begin(&alloc, &cache)
+        .bindImage(0, &viewportImageInfo, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT)
+        .build(res.descriptorSets[j]);
+    }
+    res.pipeline = pipelines[i];
+
+    m_postProcessStack.push(res);
+  }
+
+  m_deletionQueue.addFunction([=]() {
+    m_postProcessStack.release();
     });
 }
 
-void cassidy::Renderer::initPostProcessImages()
+AllocatedImage cassidy::Renderer::createPostProcessImage()
 {
+  CS_LOG_INFO("Creating post process image...");
+  AllocatedImage newImage;
+  const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
 
-}
+  const VkFormat format = m_swapchain.imageFormat;
+  const VkExtent3D imageExtent = {
+    m_swapchain.extent.width,
+    m_swapchain.extent.height,
+    1,
+  };
 
-void cassidy::Renderer::initPostProcessRenderPass()
-{
-}
+  VkImageCreateInfo imageInfo = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+    .pNext = nullptr,
+    .imageType = VK_IMAGE_TYPE_2D,
+    .format = format,
+    .extent = imageExtent,
+    .mipLevels = 1,
+    .arrayLayers = 1,
+    .samples = VK_SAMPLE_COUNT_1_BIT,
+    .tiling = VK_IMAGE_TILING_OPTIMAL,
+    .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+  };
 
-void cassidy::Renderer::initPostProcessFramebuffers()
-{
-}
+  VmaAllocationCreateInfo allocInfo = cassidy::init::vmaAllocationCreateInfo(
+    VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
-void cassidy::Renderer::initPostProcessDescSets()
-{
+  vmaCreateImage(allocator, &imageInfo, &allocInfo, &newImage.image,
+    &newImage.allocation, nullptr);
 
+  newImage.format = format;
+
+  // Transition viewport image layout to IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+  cassidy::helper::immediateSubmit(m_device, m_uploadContext,
+    [=](VkCommandBuffer cmd) {
+      cassidy::helper::transitionImageLayout(m_uploadContext.uploadCommandBuffer,
+        newImage.image, format,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+        VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_READ_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        1);
+    });
+
+  VkImageViewCreateInfo viewInfo = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+    .pNext = nullptr,
+    .image = newImage.image,
+    .viewType = VK_IMAGE_VIEW_TYPE_2D,
+    .format = format,
+    .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1, },
+  };
+
+  VK_CHECK(vkCreateImageView(m_device, &viewInfo, nullptr, &newImage.view));
+
+  CS_LOG_INFO("Created post process image!");
+  return newImage;
 }
 
 void cassidy::Renderer::initPostProcessPipelines()
 {
+  constexpr DescriptorLayoutCache& cache = cassidy::globals::g_descLayoutCache;
+
+  VkDescriptorSetLayoutBinding binding = cassidy::init::descriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, 
+    VK_SHADER_STAGE_COMPUTE_BIT, &cassidy::globals::m_linearTextureSampler);
+  VkDescriptorSetLayoutCreateInfo layoutInfo = cassidy::init::descriptorSetLayoutCreateInfo(1, &binding);
+
+  VkDescriptorSetLayout gammaCorrectLayout = cache.createDescLayout(&layoutInfo);
+
+  m_gammaCorrectPipeline.setDebugName("gammaCorrectPipeline");
+
+  cassidy::PipelineBuilder pipelineBuilder(this);
+
+  pipelineBuilder.addShaderStage(VK_SHADER_STAGE_COMPUTE_BIT, "gammaCorrectComp.spv")
+    .addDescriptorSetLayout(gammaCorrectLayout)
+    .buildComputePipeline(m_gammaCorrectPipeline);
 }
 
 void cassidy::Renderer::transitionSwapchainImages()

@@ -4,28 +4,28 @@
 
 namespace cassidy {
 
+	struct PostProcessResources
+	{
+		cassidy::Pipeline pipeline;
+		std::vector<AllocatedImage> resultsImages;
+		std::vector<VkDescriptorSet> descriptorSets;
+		VkClearValue clearColour;
+
+		bool isActive = true;
+	};
+
 	class PostProcessStack
 	{
 	public:
-		struct PostProcessResources
-		{
-			cassidy::Pipeline pipeline;
-			std::vector<AllocatedImage> resultsImages;
-			std::vector<VkDescriptorSet> descriptorSets;
-			std::vector<VkFramebuffer> framebuffers;
-			VkRenderPass renderPass;
-			VkClearValue clearColour;
 
-			bool isActive = true;
-		};
-
-		inline void init(cassidy::Renderer* rendererRef) { m_rendererRef = rendererRef; }
+		inline void init(size_t startingSize, cassidy::Renderer* rendererRef) { m_postProcessStack.reserve(startingSize);  m_rendererRef = rendererRef; }
+		void release();
 
 		inline void push(const PostProcessResources& resources) { m_postProcessStack.emplace_back(resources); }
-		inline void pop()																				{ m_postProcessStack.pop_back(); }
+		inline void pop() { m_postProcessStack.pop_back(); }
 		void swap(size_t firstIndex, size_t secondIndex);
 
-		void recordCommands(VkCommandBuffer cmd, uint32_t imageIndex);
+		void recordCommands(VkCommandBuffer cmd, uint32_t frameIndex);
 
 	private:
 		std::vector<PostProcessResources> m_postProcessStack;

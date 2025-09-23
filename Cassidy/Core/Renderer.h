@@ -6,6 +6,7 @@
 #include <Core/Mesh.h>
 #include <Core/Texture.h>
 #include <Core/WorkerThread.h>
+#include <Core/PostProcessStack.h>
 
 #include <Vendor/imgui-docking/imgui.h>
 #include <Vendor/imgui-docking/imfilebrowser.h>
@@ -120,11 +121,8 @@ namespace cassidy
     void initViewportFramebuffers();
 
     void initPostProcessResources();
-    void initPostProcessImages();
-    void initPostProcessRenderPass();
-    void initPostProcessFramebuffers();
-    void initPostProcessDescSets();
     void initPostProcessPipelines();
+    AllocatedImage createPostProcessImage();
 
     void transitionSwapchainImages();
 
@@ -132,6 +130,8 @@ namespace cassidy
 
     // Inlined methods:
     inline FrameData& getCurrentFrameData() { return m_frameData[m_currentFrameIndex]; }
+    inline uint32_t getCurrentFrameIndex() { return m_currentFrameIndex; }
+    inline uint32_t getCurrentSwapchainImageIndex() { return m_swapchainImageIndex; }
 
     cassidy::Engine* m_engineRef;
 
@@ -207,6 +207,8 @@ namespace cassidy
     std::vector<VkFramebuffer>    m_viewportFramebuffers;
     std::vector<VkCommandBuffer>  m_viewportCommandBuffers;
     std::vector<VkDescriptorSet>  m_viewportDescSets;
+
+    PostProcessStack m_postProcessStack;
 
     // Misc.:
     DeletionQueue m_deletionQueue;
