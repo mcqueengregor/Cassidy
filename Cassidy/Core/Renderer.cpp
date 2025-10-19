@@ -184,7 +184,7 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
   vkCmdEndRenderPass(cmd);
   
   // Record post process dispatch commands:
-  m_postProcessStack.recordCommands(cmd, m_currentFrameIndex);
+  m_postProcessStack.recordCommands(cmd, imageIndex);
 
   VK_CHECK(vkEndCommandBuffer(cmd));
 }
@@ -214,27 +214,6 @@ void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
     m_editorFramebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
 
   // Draw ImGui contents:
-  
-  const VkImage image = m_postProcessStack.get(0).resultsImages[imageIndex].image;
-  VkImageMemoryBarrier resultsImageBarrier = {
-    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-    .pNext = nullptr,
-    .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-    .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-    .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
-    .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .image = image,
-    .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-  };
-
-  vkCmdPipelineBarrier(cmd, 
-    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-    0, 
-    0, nullptr,
-    0, nullptr,
-    1, &resultsImageBarrier);
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
   vkCmdEndRenderPass(cmd);
@@ -1114,11 +1093,11 @@ void cassidy::Renderer::initViewportImages()
   
   VK_CHECK(vkCreateImageView(m_device, &depthViewInfo, nullptr, &m_viewportDepthImage.view));
 
-  m_viewportDescSets.resize(m_swapchain.imageViews.size());
-  for (uint32_t i = 0; i < m_viewportImages.size(); ++i)
+  m_viewportDescSets.resize(m_swapchain.images.size());
+  for (uint32_t i = 0; i < m_viewportDescSets.size(); ++i)
   {
-    m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
-      m_viewportImages[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    //m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
+    //  m_viewportImages[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   }
   CS_LOG_INFO("Created viewport images!");
 

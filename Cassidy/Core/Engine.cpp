@@ -205,7 +205,7 @@ void cassidy::Engine::buildGUI()
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
       ImGui::Text("Engine stats:");
       {
-        ImGui::Text("Frametime: %fms", getDeltaTimeSecs());
+        ImGui::Text("Frametime: %.3fms", getDeltaTimeSecs());
 
         constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
         constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
@@ -354,9 +354,10 @@ void cassidy::Engine::buildGUI()
 
     ImGui::Begin("Debug");
     {
-      ImGui::Text("Seconds since engine start: %f", m_debugContext.timeSinceEngineStartSecs);
+      ImGui::Text("Seconds since engine start: %.3f", m_debugContext.timeSinceEngineStartSecs);
       ImGui::Text("Swapchain image index: %u", m_debugContext.currentSwapchainImageIndex);
       ImGui::Text("Current frame: %u", m_debugContext.currentFrame);
+      if (m_debugContext.currentSwapchainImageIndex == 2) ImGui::Text("Flicker?");
     }
     ImGui::End();
   }
