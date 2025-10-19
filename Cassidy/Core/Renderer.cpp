@@ -1096,8 +1096,8 @@ void cassidy::Renderer::initViewportImages()
   m_viewportDescSets.resize(m_swapchain.images.size());
   for (uint32_t i = 0; i < m_viewportDescSets.size(); ++i)
   {
-    //m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
-    //  m_viewportImages[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    m_viewportDescSets[i] = ImGui_ImplVulkan_AddTexture(m_viewportSampler,
+      m_viewportImages[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   }
   CS_LOG_INFO("Created viewport images!");
 
