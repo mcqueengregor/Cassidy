@@ -71,6 +71,8 @@ namespace cassidy
       uint32_t importPostProcessSteps = 0;
     } m_uiContext;
 
+    DebugContext m_debugContext;
+
     DeletionQueue m_deletionQueue;
 
     // Constant/static members and methods: ----------------------------------------------------------------------
@@ -118,5 +120,6 @@ namespace cassidy
     inline double           getDeltaTimeSecs()  { return GlobalTimer::deltaTime(); }
     inline UIContext        getUIContext()      { return m_uiContext; }
     inline WorkerThread&    getWorkerThread()   { return m_workerThread; }
+    inline DebugContext&    getDebugContext()   { return m_debugContext; }
   };
 }

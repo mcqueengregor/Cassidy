@@ -195,3 +195,10 @@ struct UploadContext
   VkQueue uploadQueue;
   VkQueue graphicsQueueRef;
 };
+
+struct DebugContext
+{
+  uint64_t currentFrame;
+  double timeSinceEngineStartSecs;
+  uint32_t currentSwapchainImageIndex;
+};

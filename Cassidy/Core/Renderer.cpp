@@ -68,6 +68,10 @@ void cassidy::Renderer::draw()
   constexpr ModelManager& modelManager = cassidy::globals::g_resourceManager.modelManager;
   m_currentModel = modelManager.getModelsPtrTable()[currentModelIndex];
 
+  DebugContext& engineDebugContext = m_engineRef->getDebugContext();
+  engineDebugContext.currentFrame = m_currentFrame;
+  engineDebugContext.currentSwapchainImageIndex = m_swapchainImageIndex;
+
   updateBuffers(currentFrameData);
   recordViewportCommands(m_swapchainImageIndex);
   recordEditorCommands(m_swapchainImageIndex);
@@ -210,6 +214,27 @@ void cassidy::Renderer::recordEditorCommands(uint32_t imageIndex)
     m_editorFramebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
 
   // Draw ImGui contents:
+  
+  const VkImage image = m_postProcessStack.get(0).resultsImages[imageIndex].image;
+  VkImageMemoryBarrier resultsImageBarrier = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .pNext = nullptr,
+    .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+    .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+    .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+    .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = image,
+    .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+  };
+
+  vkCmdPipelineBarrier(cmd, 
+    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+    0, 
+    0, nullptr,
+    0, nullptr,
+    1, &resultsImageBarrier);
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
   vkCmdEndRenderPass(cmd);
@@ -407,11 +432,6 @@ void cassidy::Renderer::initLogicalDevice()
 
   VkPhysicalDeviceFeatures deviceFeatures = {};
   deviceFeatures.samplerAnisotropy = VK_TRUE;
-
-  // TODO: Add synchronisation between texture data transfers and blitting for mipmap generation
-  // https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples#transfer-dependencies
-  // https://www.reddit.com/r/vulkan/comments/cbg3k5/problems_synchronizing_between_transfer_queue_and/
-  // https://stackoverflow.com/questions/48081352/vulkan-queue-synchronization-in-multithreading
 
   VkDeviceCreateInfo deviceInfo = cassidy::init::deviceCreateInfo(
     static_cast<uint32_t>(queueInfos.size()), queueInfos.data(), &deviceFeatures,
@@ -1423,4 +1443,7 @@ void cassidy::Renderer::rebuildSwapchain()
   initEditorFramebuffers();
   initViewportImages();
   initViewportFramebuffers();
+  
+  // TODO: Recreate post process stack images and descriptor sets on swapchain rebuild
+  initPostProcessResources();
 }

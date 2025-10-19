@@ -80,6 +80,7 @@ void cassidy::Engine::run()
 
     // Update delta time and time since engine was initialised:
     GlobalTimer::updateGlobalTimer();
+    m_debugContext.timeSinceEngineStartSecs = GlobalTimer::engineTime();
 
     processInput();
 
@@ -204,7 +205,7 @@ void cassidy::Engine::buildGUI()
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
       ImGui::Text("Engine stats:");
       {
-        ImGui::Text("Frametime: %fms", getDeltaTimeSecs() * 1000.0f);
+        ImGui::Text("Frametime: %fms", getDeltaTimeSecs());
 
         constexpr TextureLibrary& texLibrary = cassidy::globals::g_resourceManager.textureLibrary;
         constexpr MaterialLibrary& matLibrary = cassidy::globals::g_resourceManager.materialLibrary;
@@ -348,6 +349,14 @@ void cassidy::Engine::buildGUI()
 
       ImGui::SetCursorPos(cursorPos);
       ImGui::Image(m_renderer.getViewportDescSet(), newViewportSize);
+    }
+    ImGui::End();
+
+    ImGui::Begin("Debug");
+    {
+      ImGui::Text("Seconds since engine start: %f", m_debugContext.timeSinceEngineStartSecs);
+      ImGui::Text("Swapchain image index: %u", m_debugContext.currentSwapchainImageIndex);
+      ImGui::Text("Current frame: %u", m_debugContext.currentFrame);
     }
     ImGui::End();
   }
