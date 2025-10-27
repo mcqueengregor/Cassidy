@@ -1258,6 +1258,9 @@ void cassidy::Renderer::initPostProcessResources()
     }
     res.pipeline = pipelines[i];
 
+    // TODO: If post process is dependent on previous effect's results then add
+    // pipeline barrier command to prevent race conditions!
+    // https://www.khronos.org/blog/understanding-vulkan-synchronization
     m_postProcessStack.push(res);
   }
 
