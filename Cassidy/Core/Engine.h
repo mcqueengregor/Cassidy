@@ -58,6 +58,7 @@ namespace cassidy
     VkSurfaceKHR m_surface;
     VkDebugUtilsMessengerEXT m_debugMessenger;  // TODO: Move this and surface, instance and window to renderer class(?)
     glm::uvec2 m_windowDimensions;
+    glm::uvec2 m_viewportDimensions;
 
     cassidy::Camera m_camera;
 
@@ -114,6 +115,7 @@ namespace cassidy
     // Getters and setters: --------------------------------------------------------------------------------------
     inline SDL_Window*      getWindow()         { return m_window; }
     inline glm::uvec2       getWindowDim()      { return m_windowDimensions; }
+    inline glm::uvec2       getViewportDim()    { return m_viewportDimensions; }
     inline VkInstance       getInstance()       { return m_instance; }
     inline VkSurfaceKHR     getSurface()        { return m_surface; }
     inline cassidy::Camera& getCamera()         { return m_camera; }

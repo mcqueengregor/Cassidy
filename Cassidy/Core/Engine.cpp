@@ -19,17 +19,20 @@
 #include "Utils/Helpers.h"
 
 cassidy::Engine::Engine() :
-  m_windowDimensions(glm::vec2(1920, 1080))
+  m_windowDimensions(glm::uvec2(1920, 1080)),
+  m_viewportDimensions(glm::uvec2(1920, 1080))
 {
 }
 
 cassidy::Engine::Engine(glm::vec2 windowDimensions) :
-  m_windowDimensions(windowDimensions)
+  m_windowDimensions(windowDimensions),
+  m_viewportDimensions(windowDimensions)
 {
 }
 
 cassidy::Engine::Engine(glm::uvec2 windowDimensions) :
-  m_windowDimensions(windowDimensions)
+  m_windowDimensions(windowDimensions),
+  m_viewportDimensions(windowDimensions)
 {
 }
 

@@ -151,17 +151,22 @@ void cassidy::Renderer::recordViewportCommands(uint32_t imageIndex)
   clearValues[0].color = { std::powf(0.2f, 2.2f), std::powf(0.3f, 2.2f), std::powf(0.3f, 2.2f), 1.0f };
   clearValues[1].depthStencil = { 1.0f, 0 };
 
+  const VkExtent2D extent = {
+    m_engineRef->getViewportDim().x,
+    m_engineRef->getViewportDim().y,
+  };
+
   VkRenderPassBeginInfo renderPassInfo = cassidy::init::renderPassBeginInfo(m_viewportRenderPass,
-    m_viewportFramebuffers[imageIndex], { 0, 0 }, m_swapchain.extent, 2, clearValues);
+    m_viewportFramebuffers[imageIndex], { 0, 0 }, extent, 2, clearValues);
 
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_viewportPipeline.getPipeline());
 
-    VkViewport viewport = cassidy::init::viewport(0.0f, 0.0f, m_swapchain.extent.width, m_swapchain.extent.height);
+    VkViewport viewport = cassidy::init::viewport(0.0f, 0.0f, extent.width, extent.height);
     vkCmdSetViewport(cmd, 0, 1, &viewport);
 
-    VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, m_swapchain.extent);
+    VkRect2D scissor = cassidy::init::scissor({ 0, 0 }, extent);
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 
     // Bind per-pass descriptor set to slot 0:
@@ -449,6 +454,7 @@ void cassidy::Renderer::initSwapchain()
     static_cast<uint32_t>(details.presentModes.size()), details.presentModes.data(), desiredMode) ? desiredMode : VK_PRESENT_MODE_FIFO_KHR;
 
   VkExtent2D extent = cassidy::helper::chooseSwapchainExtent(m_engineRef->getWindow(), details.capabilities);
+  CS_LOG_INFO("Building swapchain with extent ({0}, {1})", extent.width, extent.height);
 
   QueueFamilyIndices indices = cassidy::helper::findQueueFamilies(m_physicalDevice, m_engineRef->getSurface());
   uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -912,6 +918,8 @@ void cassidy::Renderer::initImGui()
   VkDescriptorPool imGuiPool;
   VK_CHECK(vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &imGuiPool));
 
+  ImGuiPlatformIO platIO;
+
   ImGui::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -1215,8 +1223,13 @@ void cassidy::Renderer::initViewportFramebuffers()
       m_viewportDepthImage.view,
     };
 
+    const VkExtent2D extent = {
+      m_engineRef->getViewportDim().x,
+      m_engineRef->getViewportDim().y
+    };
+
     VkFramebufferCreateInfo info = cassidy::init::framebufferCreateInfo(m_viewportRenderPass,
-      2, imageViews, m_swapchain.extent);
+      2, imageViews, extent);
 
     VK_CHECK(vkCreateFramebuffer(m_device, &info, nullptr, &m_viewportFramebuffers[i]));
   }
@@ -1404,28 +1417,30 @@ void cassidy::Renderer::rebuildSwapchain()
     vmaDestroyImage(allocator, i.image, i.allocation);
   for (const auto& i : m_editorImages)
     vkDestroyImageView(m_device, i.view, nullptr);
+  vkDestroyRenderPass(m_device, m_editorRenderPass, nullptr);
 
   // Release viewport resources:
-  for (const auto& f : m_viewportFramebuffers)
-    vkDestroyFramebuffer(m_device, f, nullptr);
-  for (const auto& i : m_viewportImages)
-    vmaDestroyImage(allocator, i.image, i.allocation);
-  vmaDestroyImage(allocator, m_viewportDepthImage.image, m_viewportDepthImage.allocation);
-  for (const auto& i : m_viewportImages)
-    vkDestroyImageView(m_device, i.view, nullptr);
-  vkDestroyImageView(m_device, m_viewportDepthImage.view, nullptr);
+  //for (const auto& f : m_viewportFramebuffers)
+  //  vkDestroyFramebuffer(m_device, f, nullptr);
+  //for (const auto& i : m_viewportImages)
+  //  vmaDestroyImage(allocator, i.image, i.allocation);
+  //vmaDestroyImage(allocator, m_viewportDepthImage.image, m_viewportDepthImage.allocation);
+  //for (const auto& i : m_viewportImages)
+  //  vkDestroyImageView(m_device, i.view, nullptr);
+  //vkDestroyImageView(m_device, m_viewportDepthImage.view, nullptr);
 
-  for (size_t i = 0; i < m_viewportDescSets.size(); ++i)
-    ImGui_ImplVulkan_RemoveTexture(m_viewportDescSets[i]);
+  //for (size_t i = 0; i < m_viewportDescSets.size(); ++i)
+  //  ImGui_ImplVulkan_RemoveTexture(m_viewportDescSets[i]);
 
   initSwapchain();
   transitionSwapchainImages();
-  initSwapchainFramebuffers();
   initEditorImages();
+  initEditorRenderPass();
   initEditorFramebuffers();
-  initViewportImages();
-  initViewportFramebuffers();
+  initSwapchainFramebuffers();
+  //initViewportImages();
+  //initViewportFramebuffers();
   
   // TODO: Recreate post process stack images and descriptor sets on swapchain rebuild
-  initPostProcessResources();
+  //initPostProcessResources();
 }
