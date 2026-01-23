@@ -323,35 +323,34 @@ void cassidy::Engine::buildGUI()
 
     if (ImGui::Begin("Viewport"))
     {
-      ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-      ImVec2 newViewportSize = viewportSize;
+      ImVec2 regionSize = ImGui::GetContentRegionAvail();
+      ImVec2 renderedImageSize = regionSize;
 
-      const cassidy::Swapchain& swapchain = m_renderer.getSwapchain();
+      VkExtent2D extent = VkExtent2D(m_viewportDimensions.x, m_viewportDimensions.y);
 
-      float viewportAspect = viewportSize.y / viewportSize.x;
-      float swapchainAspect = static_cast<float>(swapchain.extent.height) / static_cast<float>(swapchain.extent.width);
+      float regionAspect = regionSize.y / regionSize.x;
+      float viewportAspect = static_cast<float>(m_viewportDimensions.y) / static_cast<float>(m_viewportDimensions.x);
 
       // Force viewport aspect ratio to be equal to swapchain extent's aspect ratio:
-      if (viewportAspect > swapchainAspect)
+      if (regionAspect > viewportAspect)
       {
-        newViewportSize.y = std::floor(viewportSize.x * swapchainAspect);
+        renderedImageSize.y = std::floor(regionSize.x * viewportAspect);
       }
 
-      viewportAspect = viewportSize.x / viewportSize.y;
-      swapchainAspect = static_cast<float>(swapchain.extent.width) / static_cast<float>(swapchain.extent.height);
+      viewportAspect = static_cast<float>(m_viewportDimensions.x) / static_cast<float>(m_viewportDimensions.y);
 
-      if (viewportAspect > swapchainAspect)
+      if (regionAspect > viewportAspect)
       {
-        newViewportSize.x = std::floor(viewportSize.y * swapchainAspect);
+        renderedImageSize.x = std::floor(regionSize.y * viewportAspect);
       }
 
       // Centre viewport image in window:
       ImVec2 cursorPos = ImGui::GetCursorPos();
-      cursorPos.x += (viewportSize.x - newViewportSize.x) * 0.5f;
-      cursorPos.y += (viewportSize.y - newViewportSize.y) * 0.5f;
+      cursorPos.x += (regionSize.x - renderedImageSize.x) * 0.5f;
+      cursorPos.y += (regionSize.y - renderedImageSize.y) * 0.5f;
 
       ImGui::SetCursorPos(cursorPos);
-      ImGui::Image(m_renderer.getViewportDescSet(), newViewportSize);
+      ImGui::Image(m_renderer.getViewportDescSet(), renderedImageSize);
     }
     ImGui::End();
 
@@ -360,6 +359,8 @@ void cassidy::Engine::buildGUI()
       ImGui::Text("Seconds since engine start: %.3f", m_debugContext.timeSinceEngineStartSecs);
       ImGui::Text("Swapchain image index: %u", m_debugContext.currentSwapchainImageIndex);
       ImGui::Text("Current frame: %u", m_debugContext.currentFrame);
+      ImGui::Text("Viewport dim: (%u, %u)", m_viewportDimensions.x, m_viewportDimensions.y);
+      ImGui::Text("Window dim: (%u, %u)", m_windowDimensions.x, m_windowDimensions.y);
       if (m_debugContext.currentSwapchainImageIndex == 2) ImGui::Text("Flicker?");
     }
     ImGui::End();

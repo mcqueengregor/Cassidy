@@ -123,5 +123,7 @@ namespace cassidy
     inline UIContext        getUIContext()      { return m_uiContext; }
     inline WorkerThread&    getWorkerThread()   { return m_workerThread; }
     inline DebugContext&    getDebugContext()   { return m_debugContext; }
+
+    inline void             setWindowDim(glm::uvec2 newDim)   { m_windowDimensions = newDim; }
   };
 }

@@ -1,5 +1,6 @@
 #include "PostProcessStack.h"
 #include <Core/Renderer.h>
+#include <Core/Engine.h>
 #include <Core/Logger.h>
 #include <Utils/Initialisers.h>
 #include <Core/ResourceManager.h>
@@ -45,7 +46,7 @@ void cassidy::PostProcessStack::recordCommands(VkCommandBuffer cmd, uint32_t fra
 {
 	if (m_postProcessStack.empty()) return;
 
-	VkExtent2D imageExtent = m_rendererRef->getSwapchain().extent;
+	glm::uvec2 viewportDim = m_rendererRef->getEngineRef()->getViewportDim();
 
 	for (std::vector<PostProcessResources>::iterator it = m_postProcessStack.begin(); it != m_postProcessStack.end(); ++it)
 	{
@@ -55,6 +56,6 @@ void cassidy::PostProcessStack::recordCommands(VkCommandBuffer cmd, uint32_t fra
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, (*it).pipeline.getLayout(), 
 			0, 1, &(*it).descriptorSets[frameIndex], 0, nullptr);
 
-		vkCmdDispatch(cmd, std::ceil(imageExtent.width / 16.0), std::ceil(imageExtent.height / 16.0), 1);
+		vkCmdDispatch(cmd, std::ceil(viewportDim.x / 16.0), std::ceil(viewportDim.y / 16.0), 1);
 	}
 }

@@ -1405,6 +1405,7 @@ void cassidy::Renderer::rebuildSwapchain()
 
   SDL_Window* window = m_engineRef->getWindow();
   SDL_GetWindowSize(window, &width, &height);
+  m_engineRef->setWindowDim(glm::uvec2(static_cast<uint32_t>(width), static_cast<uint32_t>(height)));
   const VmaAllocator allocator = cassidy::globals::g_resourceManager.getVmaAllocator();
 
   vkWaitForFences(m_device,static_cast<uint32_t>(m_inFlightFences.size()), m_inFlightFences.data(), VK_TRUE, UINT64_MAX);
