@@ -33,6 +33,12 @@ add_executable(Cassidy
 	
 	Core/Logger.h
 
+	Core/PostProcessStack.h
+	Core/PostProcessStack.cpp
+
+	Core/WorkerThread.h
+	Core/WorkerThread.cpp
+
 	Core/Pipeline.h
 	Core/Pipeline.cpp
 	Core/Renderer.h
